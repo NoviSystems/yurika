@@ -1,3 +1,5 @@
+import time
+from django.forms import forms
 from django.views.generic import TemplateView, ListView, FormView
 from django.utils.text import slugify 
 from django.urls import reverse
@@ -97,7 +99,7 @@ class TreeDetailView(TemplateView):
         context['tree_auto_open'] = 'true'
         context['autoescape'] = 'true'
         context['use_context_menu'] = 'false'
-        context['paths'] = self.get_all_paths(tree)
+        #context['paths'] = self.get_all_paths(tree)
         context['importform'] = ImportForm(self.request.POST, self.request.FILES)
         return context
 
@@ -139,25 +141,15 @@ class TreeDetailView(TemplateView):
         paths = self.get_all_paths(tree)
         new_rules = self.preprocess_csv(csvfile)
         created = 0
-        for key in new_rules.keys():
-            print("Processing " + str(len(upload)) + " new records")
-            with transaction.atomic():
-                with Category.objects.disable_mptt_updates():
-                    parent, all_paths = self.create_categories(key, tree, paths)
-                    for rule in new_rules[key]:
-                        self.create_rule(parent, tree, rule['name'], rule['regex'])
-                        created += 1
-                        print(str(created) + "/" + str(len(upload)) + " records processed")
-                    paths = all_paths
-#                for line in upload:
-#                    csv = line.strip('\r').split(',')
-#                    if len(csv) == 3:
-#                        if not self.rule_exists(tree, csv[1], csv[2], csv[0]):
-#                            parent,all_paths = self.create_categories(csv[0], tree, paths)
-#                            self.create_rule(parent, tree, csv[1], csv[2])
-#                            paths = all_paths
-            Category.objects.rebuild()
-            
+        with transaction.atomic():
+            for key in new_rules.keys():
+                print("Processing " + str(len(upload)) + " new records")
+                parent, all_paths = self.create_categories(key, tree, paths)
+                for rule in new_rules[key]:
+                    self.create_rule(parent, tree, rule['name'], rule['regex'])
+                    created += 1
+                    print(str(created) + "/" + str(len(upload)) + " records processed")
+                paths = all_paths
 
     def preprocess_csv(self, csvfile):
         processed = {}
@@ -194,7 +186,7 @@ class TreeDetailView(TemplateView):
         for leaf in leaves:
             path = leaf.full_path_name
             if path not in paths:
-                paths.append(leaf.full_path_name)
+                paths.append(path)
         return paths
 
     def create_categories(self, new_path, tree, all_paths):
@@ -230,10 +222,13 @@ class TreeDetailView(TemplateView):
     def create_rule(self, parent, tree, name, regex):
         try:
             re.compile(regex)
-            rule,created = Category.objects.get_or_create(projecttree=tree, is_rule=True, name=name, regex=regex, parent=parent)
+            rule,created = Category.objects.get_or_create(projecttree=tree,
+                                                          is_rule=True,
+                                                          name=name,
+                                                          regex=regex,
+                                                          parent=parent)
             if created:
                 print("New Rule: %s" % regex)
-                rule.save()
         except re.error:
             print("%s: Invalid Regex" % name)
             raise forms.ValidationError("Invalid Regex")
@@ -268,7 +263,7 @@ class TreeJsonApi(APIView):
             if cat.level == min_level:
                 tree.append(node_info)
             else:
-                parent_id = getattr(cat.parent, pk_attname)
+                parent_id = cat.parent_id
                 parent_info = node_dict.get(parent_id)
                 if parent_info:
                     if 'children' not in parent_info:
