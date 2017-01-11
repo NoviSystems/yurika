@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>Projects</h1>
+<ul>
+{% for project in project_list %}
+    <li><a href={% url 'project-detail' project.slug %}>{{ project.name }}</a></li>
+{% empty %}
+    <li>No projects yet.</li>
+{% endfor %}
+</ul>
+</div>
+{% endblock %}

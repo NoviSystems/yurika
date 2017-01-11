@@ -18,7 +18,7 @@ from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.auth.views
 
-from appname import urls
+from mortar import urls
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -26,6 +26,7 @@ urlpatterns = [
     # Uncomment for oauth support
     #url(r'^oauth/', include("oauth.urls")),
 
+    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     # Auth urls
     url(r'^accounts/login$', django.contrib.auth.views.login,
         {'template_name': 'login.html'},

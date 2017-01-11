@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>{{ tree.name }}</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+  <table class="table table-striped">
+    <tr>
+    <form action="" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <td>{{ importform.errors }}{{ importform.file }}</td>
+      <td><input class="btn btn-primary" type="submit" name="submit" value="Import" /></td>
+    </form>
+      <td></td>
+    <form action="" method="GET">
+      <td><button class="btn btn-success" type="submit" name="export" value="Export">Export</button></td>
+    </form>
+    </tr>
+  </table>
+</div>
+    <div
+        id="tree"
+        class="block-style"
+        data-url="{{ tree_json_url }}"
+        data-insert_at_url="{{ insert_at_url }}"
+        data-save_state="{{ app_label }}_{{ model_name }}"
+        data-auto_open="{{ tree_auto_open }}"
+        data-autoescape="{{ autoescape }}"
+        data-use_context_menu="{{ use_context_menu }}"
+    ></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'js/tree.jquery.js' %}"></script>
+<script src="{% static 'js/spin.js' %}"></script>
+<script src="{% static 'js/jquery.cookie-1.4.1.min.js' %}"></script>
+<script src="{% static 'js/django_mptt_admin.js' %}"></script>
+{% endblock %}

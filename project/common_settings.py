@@ -49,7 +49,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    'appname',
+    'mptt',
+    'django_mptt_admin',
+    'rest_framework',
+    'mortar',
 
     # Uncomment for oauth
     #'oauth',
@@ -258,6 +261,18 @@ LOGGING = {
         "handlers": ["stderr"],
         "level": "DEBUG" if DEBUG else "INFO",
     }
+}
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+#        'rest_framework.permissions.'
+    ],
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend', ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
 
 from django.core.urlresolvers import reverse_lazy

@@ -3,9 +3,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Project Title{% endblock %}</title>
+    <title>{% block title %}Mortar{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">
+    <link rel="stylesheet" src="{% static 'css/jqtree.css' %}">
     {% block header %}{% endblock %}
 </head>
 <body>
@@ -14,10 +15,13 @@
     <div class="container">
         <div class="navbar-header">
             <a class="navbar-brand" href="{% url 'home' %}">
-                Project Title
+                Mortar
             </a>
         </div>
         {% if request.user.is_authenticated %}
+        <p class="navbar-text navbar-left">
+            <a href="{% url 'project-list' %}">Projects</a>
+        </p>
         <p class="navbar-text navbar-right">
         Logged in as {{ request.user }}
         /

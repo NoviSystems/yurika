@@ -1,0 +1,124 @@
+
+//import "jqtree";
+//import Spinner from "spin";
+
+function initTree($tree, autoopen, autoescape, rtl) {
+    let error_node = null;
+
+    function createLi(node, $li) {
+        // Create edit link
+        const $title = $li.find(".jqtree-title");
+        $title.after(
+            ` <a href="${$tree.data("edit_url")}${node.id}}" class="edit">(${"edit"})</a>`,
+            ` <a href="${$tree.data("insert_at_url")}${node.id}" class="edit">(${"add"})</a>`
+        );
+        if(node.is_rule) {                                                          
+            $title.after(
+                ` : ${node.regex}`
+            );  
+        }
+    }
+
+    function handleMove(e) {
+        const info = e.move_info;
+        const data = {
+            selected_id: info.moved_node.id,
+            target_id: info.target_node.id,
+            position: info.position
+        };
+
+        removeErrorMessage();
+
+        e.preventDefault();
+
+        jQuery.ajax({
+            type: "POST",
+            url: info.moved_node.move_url,
+            data,
+            beforeSend: xhr => {
+                // Set Django csrf token
+                const csrftoken = document.querySelector('[name="csrfmiddlewaretoken"]').value;
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            },
+            success: () => {
+                info.do_move();
+            },
+            error: () => {
+                const $node = jQuery(info.moved_node.element).find(".jqtree-element");
+                $node.append(`<span class="mptt-admin-error">${"move failed"}</span>`);
+
+                error_node = info.moved_node;
+            }
+        });
+
+        function removeErrorMessage() {
+            if (error_node) {
+                jQuery(error_node.element).find(".mptt-admin-error").remove();
+                error_node = null;
+            }
+        }
+    }
+
+    function handleLoadFailed() {
+        $tree.html("Error while loading the data from the server");
+    }
+
+    const spinners = {};
+
+    function handleLoading(is_loading, node, $el) {
+        function getNodeId() {
+            if (!node) {
+                return "__root__";
+            }
+            else {
+                return node.id;
+            }
+        }
+
+        function getContainer() {
+            if (node) {
+                return $el.find(".jqtree-element")[0];
+            }
+            else {
+                return $el[0];
+            }
+        }
+
+        const node_id = getNodeId();
+        if (is_loading) {
+            spinners[node_id] = new Spinner().spin(getContainer());
+        }
+        else {
+            const spinner = spinners[node_id];
+
+            if (spinner) {
+                spinner.stop();
+                spinners[node_id] = null;
+            }
+        }
+    }
+
+    $tree.tree({
+        autoOpen: autoopen,
+        autoEscape: autoescape,
+        buttonLeft: rtl,
+        dragAndDrop: true,
+        onCreateLi: createLi,
+        saveState: $tree.data("save_state"),
+        useContextMenu: $tree.data("use_context_menu"),
+        onLoadFailed: handleLoadFailed,
+        closedIcon: rtl ? "&#x25c0;" : "&#x25ba;",
+        onLoading: handleLoading
+    });
+
+    $tree.bind("tree.move", handleMove);
+}
+
+jQuery(() => {
+    const $tree = jQuery("#tree");
+    const autoopen = $tree.data("auto_open");
+    const autoescape = $tree.data("autoescape");
+    const rtl = $tree.data("rtl") === "1";
+
+    initTree($tree, autoopen, autoescape, rtl);
+});

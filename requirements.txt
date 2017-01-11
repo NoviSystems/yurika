@@ -1,5 +1,9 @@
 Django<1.11
 colorlog
 
+django-mptt
+django-mptt-admin
+djangorestframework
+django-filter
 # Uncomment for oauth
 #oauth2client
