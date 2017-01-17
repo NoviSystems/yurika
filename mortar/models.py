@@ -1,9 +1,11 @@
 from django.db import models
+from django.conf import settings
 from mptt.models import MPTTModel, TreeForeignKey
 
 class Project(models.Model):
     name = models.CharField(max_length=50)
     slug = models.SlugField(unique=True)
+    assigned = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="projects")
 
     def __str__(self):
         return "Project: %s" % self.name
@@ -12,6 +14,8 @@ class ProjectTree(models.Model):
     name = models.CharField(max_length=50)
     slug = models.SlugField(unique=True)
     project = models.ForeignKey(Project, related_name="trees")
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="owned_trees")
+    editors = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="editor_trees")
 
     def __str__(self):
         return "Tree: %s" % self.name

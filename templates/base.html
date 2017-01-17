@@ -27,6 +27,10 @@
         /
         <a href="{% url 'logout' %}">Logout</a>
         </p>
+        {% else %}
+        <p class="navbar-text navbar-right">
+        <a href="{% url 'login' %}">Login</a>
+        </p>
         {% endif %}
     </div>
 </nav>

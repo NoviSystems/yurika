@@ -1,29 +1,42 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if user.is_superuser or user in project_users %}
 <div class="visible-desktop container body-wrapper">
 <h1>{{ project.name }}</h2>
 <div class="table=responsive" data-toggle="tooltip" data-html="true">
 <table class="table table-striped">
-    <tr>
-       <th>Tree</th>
-       <th>Owner(s)</th>
-       <th></th>
-       <th></th>
-    </tr>
 {% for tree in project_trees %}
     <tr>
     <td><a class="btn btn-primary" href="{% url 'tree-detail' project.slug tree.slug %}">{{ tree.name }}</a></td>
-    <td>owners</td>
+    <td>
+<!--        <table>
+            <tr>-->
+                <b>Owner: {{ tree.owner }}</b>
+            <!--</tr>
+            <tr>
+                <td>Editors: {% for editor in tree.editors.all %} {{ editor }} {% if not forloop.last %},{% endif%}{% endfor %}</td>
+                <td>{% if tree.owner == user %}
+                    <form action="" method="POST">
+                    {% csrf_token %}
+                    <button class="btn btn-success" name="{{ tree.pk }}-add-editor">+</button>
+                    </form>
+                    {% endif %}
+                </td>
+           </tr>
+        </table>-->
+    </td>
     <td>
       <form action="" method="GET">
         <button class="btn btn-success" name="{{ tree.pk }}-duplicate" value="True">Duplicate</button>
       </form> 
     </td>
     <td>
+      {% if tree.owner == user %}
       <form action="" method="GET">
         <button class="btn btn-danger" name="{{ tree.pk }}-delete" value="True" onclick="return confirm('Are you sure?')">Delete</button>
       </form>
+      {% endif %}
     </td>
     </tr>
 {% endfor %}
@@ -31,7 +44,7 @@
   {% csrf_token %}
   <tr>
     <td>{{ form.name.label }}: {{ form.name }}</td>
-    <td>owners or import</td>
+    <td></td>
     <td>{{ form.populate.label }}: {{ form.populate }}</td>
     <td><button class="btn btn-success" type="submit" id="new_tree" value="Create">Create</button>
   </tr>
@@ -39,4 +52,8 @@
 </table>
 </div>
 </div>
+{% else %}
+    {% include '404.html' %}
+{% endif %}
+
 {% endblock %}

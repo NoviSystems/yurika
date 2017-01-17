@@ -12,6 +12,8 @@ urlpatterns = [
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/insert/$", views.tree_insert, name="tree-insert"),
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/edit/(?P<id>[\d]+)/$", views.tree_edit, name="tree-edit-at"),
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/edit/$", views.tree_edit, name="tree-edit"),
+    url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/branch/(?P<id>[\d]+)/$", views.tree_branch, name="tree-branch-new"),
+    url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/branch/$", views.tree_branch, name="tree-branch"),
     url(r"^api/trees/(?P<slug>[-\w]+)/$", views.tree_json, name="tree-json"),
     url(r"^$", views.home, name="home"),
 ]

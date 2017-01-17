@@ -10,7 +10,8 @@ function initTree($tree, autoopen, autoescape, rtl) {
         const $title = $li.find(".jqtree-title");
         $title.after(
             ` <a href="${$tree.data("edit_url")}${node.id}}" class="edit">(${"edit"})</a>`,
-            ` <a href="${$tree.data("insert_at_url")}${node.id}" class="edit">(${"add"})</a>`
+            ` <a href="${$tree.data("insert_at_url")}${node.id}" class="edit">(${"add"})</a>`,
+            ` <a href="${$tree.data("branch_url")}${node.id}" class="edit">(${"branch"})</a>`
         );
         if(node.is_rule) {                                                          
             $title.after(

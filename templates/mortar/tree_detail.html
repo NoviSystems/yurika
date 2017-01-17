@@ -1,34 +1,50 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 {% block content %}
+{% if user.is_superuser or user in tree.project.assigned.all %}
 <div class="visible-desktop container body-wrapper">
 <h1>{{ tree.name }}</h1>
+{% if tree.owner == user or user in tree.editors.all %}
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
   <table class="table table-striped">
     <tr>
-    <form action="" method="POST" enctype="multipart/form-data">
+    <td>
+    <form style="display:inline-block;" action="" method="POST" enctype="multipart/form-data">
       {% csrf_token %}
-      <td>{{ importform.errors }}{{ importform.file }}</td>
-      <td><input class="btn btn-primary" type="submit" name="submit" value="Import" /></td>
+      <label class="btn btn-primary btn-file">
+          Browse <input type="file" name="file" style="display:none;">
+      </label>
+      <input class="btn btn-primary" type="submit" name="submit" value="Import" />
     </form>
-      <td></td>
-    <form action="" method="GET">
-      <td><button class="btn btn-success" type="submit" name="export" value="Export">Export</button></td>
+    </td>
+    <td>
+        {{ importform.errors }}
+    </td>
+    <td>
+    <form action="" method="POST">
+      {% csrf_token %}
+      <button class="btn btn-success" type="submit" name="export" value="Export">Export</button>
     </form>
+    </td>
     </tr>
   </table>
 </div>
+  {% endif %}
     <div
         id="tree"
         class="block-style"
         data-url="{{ tree_json_url }}"
         data-insert_at_url="{{ insert_at_url }}"
+        data-branch_url="{{ branch_url }}"
         data-save_state="{{ app_label }}_{{ model_name }}"
         data-auto_open="{{ tree_auto_open }}"
         data-autoescape="{{ autoescape }}"
         data-use_context_menu="{{ use_context_menu }}"
     ></div>
 </div>
+{% else %}
+    {% include '404.html' %}
+{% endif %}
 {% endblock %}
 {% block scripts %}
 <script src="{% static 'js/tree.jquery.js' %}"></script>

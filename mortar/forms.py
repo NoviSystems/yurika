@@ -11,6 +11,12 @@ class TreeForm(forms.ModelForm):
 
 class ImportForm(forms.Form):
     file = forms.FileField(label="File", required=False)
+    
+    def clean(self):
+       if self.cleaned_data.get('file'):
+           f = self.cleaned_data['file']
+           if f.name.split('.')[-1] != 'mm' and f.name.split('.')[-1] != 'csv':
+               raise forms.ValidationError("Must be either MindMap (mm) or CSV file") 
 
 class CategoryForm(forms.Form):
     name = forms.CharField(label="Name")
