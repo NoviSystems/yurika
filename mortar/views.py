@@ -113,6 +113,7 @@ class TreeEditView(FormView, LoginRequiredMixin):
         tree.slug=form.cleaned_data['slug']
         tree.save()
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':project.slug,'slug':tree.slug}))
+
 class TreeDetailView(TemplateView, LoginRequiredMixin):
     template_name = 'mortar/tree_detail.html'
     selected_node = None
@@ -184,9 +185,25 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
 
     def read_mindmap(self, tree, mmstring):
         root = etree.fromstring(mmstring)
-        
-        for child in root.iter():
-            print(child.tag, child.attrib)
+         
+        for child in root:
+            node,created = Category.objects.get_or_create(
+                name=child.attrib.get('TEXT'),
+                projecttree=tree,
+                parent=None
+            )
+            self.create_mm_children(child, node, tree)
+
+    def create_mm_children(self, xmlparent, nodeparent, tree):
+        children = xmlparent.getchildren()
+        for child in children:
+            node,created = Category.objects.get_or_create(
+                name=child.attrib.get('TEXT'),
+                projecttree=tree,
+                parent=nodeparent
+            )
+            if len(child.getchildren()) > 0:
+                self.create_mm_children(child, node, tree)
 
     def read_csv(self, tree, csvfile):
         upload = csvfile.decode().split('\n')[1:]
