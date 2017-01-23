@@ -5,6 +5,7 @@
 <div class="visible-desktop container body-wrapper">
 <h1>{{ tree.name }}</h1>
 {% if tree.owner == user or user in tree.editors.all %}
+<a class="btn btn-default" href="{% url 'tree-edit' tree.project.slug tree.slug %}">edit</a>
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
   <table class="table table-striped">
     <tr>

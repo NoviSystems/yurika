@@ -7,7 +7,23 @@ class TreeForm(forms.ModelForm):
     populate = forms.BooleanField(label="Populate default PESTLE?", required=False, initial=False)
     class Meta:
         model = ProjectTree
-        fields = ['name',]
+        fields = ['name','slug']
+    def clean(self):
+        cd = self.cleaned_data
+        slugs = ProjectTree.objects.filter(slug=cd['slug'])
+        if len(slugs) > 0:
+            raise forms.ValidationError("That slug is already taken.") 
+
+class TreeEditForm(forms.ModelForm):
+    class Meta:
+        model = ProjectTree
+        fields = ['name','slug']
+
+    def clean(self):
+        cd = self.cleaned_data
+        slugs = ProjectTree.objects.filter(slug=cd['slug'])
+        if len(slugs) > 0:
+            raise forms.ValidationError("That slug is already taken.")
 
 class ImportForm(forms.Form):
     file = forms.FileField(label="File", required=False)

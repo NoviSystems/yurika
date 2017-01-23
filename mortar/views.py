@@ -1,4 +1,4 @@
-import time, os
+import time, os, uuid
 from django.forms import forms
 from django.views.generic import TemplateView, ListView, FormView
 from django.utils.text import slugify 
@@ -19,7 +19,7 @@ from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
 from .models import Project, ProjectTree, Category
-from .forms import TreeForm, ImportForm, CategoryForm
+from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm
 import re
 
 class ProjectListView(ListView, LoginRequiredMixin):
@@ -40,7 +40,7 @@ class ProjectDetailView(FormView, LoginRequiredMixin):
             if request.GET.get(str(tree.pk) + ('-duplicate')) == "True" and request.user in context['project_users']:
                 new_tree = ProjectTree(
                     name=tree.name + " (copy)",
-                    slug=slugify(tree.name+" (copy)"),
+                    slug=slugify(uuid.uuid1()),
                     owner=request.user,
                     project=context['project']
                 )
@@ -65,7 +65,7 @@ class ProjectDetailView(FormView, LoginRequiredMixin):
         context = self.get_context_data(*args, **kwargs)
         new_tree = ProjectTree(
             name=form.cleaned_data['name'],
-            slug=slugify(form.cleaned_data['name']),
+            slug=slugify(form.cleaned_data['slug']),
             owner=self.request.user,
             project=context['project']
         )
@@ -86,15 +86,33 @@ class ProjectDetailView(FormView, LoginRequiredMixin):
                     possibles = Category.objects.filter(projecttree=new_tree, name=node.parent.name)
                     parent = [p for p in possibles if p.full_path_name==node.parent.full_path_name]
                     parent = parent[0]
-                new_node = Category.objects.create(
-                    name=node.name,
-                    parent=parent,
-                    projecttree=new_tree,
-                    is_rule=node.is_rule,
-                    regex=node.regex
-                )    
-                new_node.save()
+                with transaction.atomic():
+                    new_node = Category.objects.create(
+                        name=node.name,
+                        parent=parent,
+                        projecttree=new_tree,
+                        is_rule=node.is_rule,
+                        regex=node.regex
+                    )    
+                    new_node.save()
 
+class TreeEditView(FormView, LoginRequiredMixin):
+    form_class = TreeEditForm
+    template_name = 'mortar/tree_edit.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(TreeEditView, self).get_context_data(**kwargs)
+        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        return context
+
+    def form_valid(self, form, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        tree = context['tree']
+        project = tree.project
+        tree.name=form.cleaned_data['name']
+        tree.slug=form.cleaned_data['slug']
+        tree.save()
+        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':project.slug,'slug':tree.slug}))
 class TreeDetailView(TemplateView, LoginRequiredMixin):
     template_name = 'mortar/tree_detail.html'
     selected_node = None
@@ -105,16 +123,15 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
         context['user'] = self.request.user
         context['tree'] = tree
         context['tree_json_url'] = reverse('tree-json', kwargs={'slug': tree.slug})
-        context['insert_at_url'] = reverse('tree-insert', kwargs={'project_slug': self.kwargs.get('project_slug'), 'slug': tree.slug})
-        context['branch_url'] = reverse('tree-branch', kwargs={'project_slug': self.kwargs.get('project_slug'), 'slug': tree.slug})
-        context['edit_url'] = reverse('tree-edit', kwargs={'project_slug': self.kwargs.get('project_slug'), 'slug': tree.slug})
+        context['insert_at_url'] = reverse('cat-insert', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
+        context['branch_url'] = reverse('tree-branch', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
+        context['edit_url'] = reverse('cat-edit', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
         context['app_label'] = "mortar"
         context['model_name'] = "category"
         context['tree_auto_open'] = 'true'
         context['autoescape'] = 'true'
         context['use_context_menu'] = 'false'
         context['importform'] = ImportForm(self.request.POST, self.request.FILES)
-        print(context)
         return context
 
     def post(self, request, *args, **kwargs):
@@ -167,6 +184,9 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
 
     def read_mindmap(self, tree, mmstring):
         root = etree.fromstring(mmstring)
+        
+        for child in root.iter():
+            print(child.tag, child.attrib)
 
     def read_csv(self, tree, csvfile):
         upload = csvfile.decode().split('\n')[1:]
@@ -221,12 +241,10 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
         for cat in cats:
             with transaction.atomic():
                 new_cat,created = Category.objects.get_or_create(projecttree=tree, name=cat, parent=last_cat)
-            print(new_cat)
             if created:
                 print("New Category: %s" % cat)
                 if new_cat.full_path_name not in all_paths:
                     all_paths.append(new_path)
-                new_cat.save()
             last_cat = new_cat
         return last_cat,all_paths
 
@@ -285,8 +303,17 @@ class TreeJsonApi(APIView, LoginRequiredMixin):
             node_dict[pk] = node_info
         return tree
                     
+class TreeRegexApi(APIView, LoginRequiredMixin):
+    def get(self, request, *args, **kwargs):
+        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        nodes = Category.objects.filter(projecttree=tree)
+        regexs = []
+        for node in nodes:
+            if node.is_rule:
+                regexs.append(node.regex)
+        return Response(regexs)
 
-class TreeInsertView(FormView, LoginRequiredMixin):
+class CategoryInsertView(FormView, LoginRequiredMixin):
     form_class = CategoryForm
     template_name = 'mortar/tree_insert.html'
 
@@ -308,21 +335,19 @@ class TreeInsertView(FormView, LoginRequiredMixin):
         #    parent=parent,
             projecttree=context['tree']
         )
-        print(context)
         node.insert_at(context['insert_at'], position="first-child", save=False)
-        print(node.parent)
         node.save()
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project_slug'], 'slug':context['tree'].slug}))
 
 class TreeBranchView(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
-        project = Project.objects.get(slug=self.kwargs.get('project_slug'))
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        project = tree.project
         root = Category.objects.get(id=self.kwargs.get('id'))
         branch = root.get_descendants(include_self=True)
         new_tree = ProjectTree.objects.create(
             name='Branch of ' + str(root.id),
-            slug=slugify('Branch of ' + str(root.id)),
+            slug=slugify(uuid.uuid1()),
             owner=request.user,
             project=project,
         )
@@ -344,7 +369,7 @@ class TreeBranchView(APIView, LoginRequiredMixin):
  
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug': project.slug, 'slug': new_tree.slug}))
 
-class TreeEditView(FormView, LoginRequiredMixin):
+class CategoryEditView(FormView, LoginRequiredMixin):
     form_class = CategoryForm
     template_name = 'mortar/tree_insert.html'
 
@@ -372,6 +397,8 @@ project_list = ProjectListView.as_view()
 project_detail = ProjectDetailView.as_view()
 tree_detail = TreeDetailView.as_view()
 tree_json = TreeJsonApi.as_view()
-tree_insert = TreeInsertView.as_view()
-tree_edit = TreeInsertView.as_view()
+tree_rules = TreeRegexApi.as_view()
+tree_edit = TreeEditView.as_view()
+cat_insert = CategoryInsertView.as_view()
+cat_edit = CategoryInsertView.as_view()
 tree_branch = TreeBranchView.as_view()

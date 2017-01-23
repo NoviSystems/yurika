@@ -44,7 +44,7 @@
   {% csrf_token %}
   <tr>
     <td>{{ form.name.label }}: {{ form.name }}</td>
-    <td></td>
+    <td>{{ form.slug.label }}: {{ form.slug }}</td>
     <td>{{ form.populate.label }}: {{ form.populate }}</td>
     <td><button class="btn btn-success" type="submit" id="new_tree" value="Create">Create</button>
   </tr>
