@@ -1,6 +1,8 @@
 Django<1.11
 colorlog
-
+requests
+simplejson
+celery
 django-mptt
 django-mptt-admin
 djangorestframework

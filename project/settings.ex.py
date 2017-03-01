@@ -46,3 +46,5 @@ ADMINS = [
 # each time you redeploy with changes to static files.
 #STATIC_ROOT = os.path.join(BASE_DIR, "static_root")
 #STATIC_URL = "/static/"
+
+SOLR_UPDATE_URL = "http://localhost:8983/solr/mortar-test/dataimport"

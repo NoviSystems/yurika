@@ -15,7 +15,9 @@ urlpatterns = [
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/branch/(?P<id>[\d]+)/$", views.tree_branch, name="tree-branch-new"),
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/branch/$", views.tree_branch, name="tree-branch"),
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/edit-name/$", views.tree_edit, name="tree-edit"),
+    url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/query/$", views.tree_query, name="tree-query"),
     url(r"^api/trees/(?P<slug>[-\w]+)/$", views.tree_json, name="tree-json"),
     url(r"^api/trees/(?P<slug>[-\w]+)/rules/$", views.tree_rules, name="tree-rules"),
+    url(r"^api/query/(?P<slug>[-\w]+)/$", views.solr_query, name="solr-query"),
     url(r"^$", views.home, name="home"),
 ]

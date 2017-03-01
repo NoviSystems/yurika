@@ -3,12 +3,13 @@ from django.forms import forms
 from django.views.generic import TemplateView, ListView, FormView
 from django.utils.text import slugify 
 from django.urls import reverse
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.conf import settings
 from xml.etree import ElementTree as etree
 from django_mptt_admin.admin import DjangoMpttAdminMixin
 from django_mptt_admin.util import *
@@ -20,7 +21,10 @@ from wsgiref.util import FileWrapper
 import mimetypes
 from .models import Project, ProjectTree, Category
 from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm
+from .tree_utils import get_regex_list, get_json_tree, search_solr
 import re
+import urllib.request, json
+import simplejson, requests
 
 class ProjectListView(ListView, LoginRequiredMixin):
     model = Project
@@ -123,6 +127,7 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
         context['user'] = self.request.user
         context['tree'] = tree
+        context['project'] = tree.project
         context['tree_json_url'] = reverse('tree-json', kwargs={'slug': tree.slug})
         context['insert_at_url'] = reverse('cat-insert', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
         context['branch_url'] = reverse('tree-branch', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
@@ -134,6 +139,13 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
         context['use_context_menu'] = 'false'
         context['importform'] = ImportForm(self.request.POST, self.request.FILES)
         return context
+
+    #def get(self, request, *args, **kwargs):
+    #    context = self.get_context_data(**kwargs)
+    #    if request.GET.get('search-solr'):
+    #        print("Searching Solr")
+    #        results = search_solr(context['tree'])
+    #    return self.render_to_response(context)
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
@@ -280,54 +292,15 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
             raise forms.ValidationError("Invalid Regex")
 
 class TreeJsonApi(APIView, LoginRequiredMixin):
-        
     def get(self, request, format=None, **kwargs):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
         qs = Category.objects.filter(projecttree=tree)
-        return Response(self.get_json_from_queryset(qs))
+        return Response(get_json_tree(qs))
     
-    def get_json_from_queryset(self, qs, max_level=None):
-        # adopted from django_mptt_admin.utils, adding in more fields for nodes
-        pk_attname = 'id'
-        tree = []
-        node_dict = dict()
-        min_level = None
-        for cat in qs:
-            if min_level is None:
-                min_level = cat.level
-            pk = getattr(cat, pk_attname)
-            node_info = dict(
-                label=cat.name,
-                id=pk,
-                is_rule=cat.is_rule,
-                regex=cat.regex
-            )
-
-            if max_level is not None and not cat.is_leaf_node():
-                node_info['load_on_demand'] = True
-
-            if cat.level == min_level:
-                tree.append(node_info)
-            else:
-                parent_id = cat.parent_id
-                parent_info = node_dict.get(parent_id)
-                if parent_info:
-                    if 'children' not in parent_info:
-                        parent_info['children'] = []
-                    parent_info['children'].append(node_info)
-                    if max_level is not None:
-                        parent_info['load_on_demand'] = False
-            node_dict[pk] = node_info
-        return tree
-                    
 class TreeRegexApi(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        nodes = Category.objects.filter(projecttree=tree)
-        regexs = []
-        for node in nodes:
-            if node.is_rule:
-                regexs.append(node.regex)
+        regexs = get_regex_list(tree)
         return Response(regexs)
 
 class CategoryInsertView(FormView, LoginRequiredMixin):
@@ -344,12 +317,10 @@ class CategoryInsertView(FormView, LoginRequiredMixin):
 
     def form_valid(self, form, format=None, **kwargs):
         context = self.get_context_data(**kwargs)
-        #parent = Category.objects.get(id=int(context['insert_at']))
         node = Category(
             name=form.cleaned_data['name'],
             is_rule=form.cleaned_data['is_rule'],
             regex=form.cleaned_data['regex'],
-        #    parent=parent,
             projecttree=context['tree']
         )
         node.insert_at(context['insert_at'], position="first-child", save=False)
@@ -406,6 +377,67 @@ class CategoryEditView(FormView, LoginRequiredMixin):
         context['edit'].save() 
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project_slug'], 'slug':context['tree'].slug}))
 
+class SolrSearchApi(APIView):
+    def get(self, request, *args, **kwargs):
+        solr = settings.SOLR_URL + "?wt=json"
+        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        regex_list = get_regex_list(tree)
+        results = {}
+        for regex in regex_list:  
+            docs = {}
+            req = urllib.request.Request(solr)
+            query = json.dumps({'params': {'q': 'content:/'+regex+"/", 'df': 'content'}}).encode('utf-8')
+            req.add_header('Content-Length', len(query))
+            req.add_header('Content-Type', 'application/json')
+            with urllib.request.urlopen(req, data=query) as f:
+                #resp = f.read().decode('utf-8').strip('  ')
+                
+                resp = simplejson.load(f)
+            docs['count'] = int(resp['response']['numFound'])
+            if docs['count'] > 0:
+                docs['docs'] = []
+                for entry in resp['response']['docs']:
+                    doc = {'url': entry['url'], 'content': entry['content']}
+                    docs['docs'].append(doc)
+                results[regex] = docs    
+        return HttpResponseRedirect(reverse('query-view', kwargs={'slug': tree.slug}))
+
+class TreeQuerySelectView(TemplateView):
+    template_name = 'mortar/tree_query.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(TreeQuerySelectView, self).get_context_data(**kwargs)
+        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        context['project'] = context['tree'].project
+        context['tree_json_url'] = reverse('tree-json', kwargs={'slug': context['tree'].slug})
+        return context
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        tree = context['tree']
+        and_filter = []
+        print(request.POST)
+        for node in Category.objects.filter(projecttree=tree):
+            if request.POST.get(str(node.id) + '-add'):
+                if node.regex:
+                    and_filter.append(node.regex)
+                else:
+                    and_filter.append(node.name)
+        # do solr stuff
+        self.update_solr_core(and_filter)
+        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project'].slug, 'slug':context['tree'].slug}))
+
+    def update_solr_core(self, and_filter):
+        solr = settings.SOLR_UPDATE_URL + "?command=full-import&commit=true&clean=false&query="
+        content = ""
+        for word in and_filter:
+             content += "+content:" + word + " "
+        
+        print(content)
+        solr += content
+        r = requests.get(solr)
+        print(r)
+
 class Home(TemplateView):
     template_name = "home.html"
 
@@ -413,9 +445,11 @@ home = Home.as_view()
 project_list = ProjectListView.as_view()
 project_detail = ProjectDetailView.as_view()
 tree_detail = TreeDetailView.as_view()
+tree_query = TreeQuerySelectView.as_view()
 tree_json = TreeJsonApi.as_view()
 tree_rules = TreeRegexApi.as_view()
 tree_edit = TreeEditView.as_view()
 cat_insert = CategoryInsertView.as_view()
 cat_edit = CategoryInsertView.as_view()
 tree_branch = TreeBranchView.as_view()
+solr_query = SolrSearchApi.as_view()
