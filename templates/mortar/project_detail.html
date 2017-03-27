@@ -4,11 +4,11 @@
 {% if user.is_superuser or user in project_users %}
 <div class="visible-desktop container body-wrapper">
 <h1>{{ project.name }}</h2>
-<div class="table=responsive" data-toggle="tooltip" data-html="true">
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
 <table class="table table-striped">
 {% for tree in project_trees %}
     <tr>
-    <td><a class="btn btn-primary" href="{% url 'tree-detail' project.slug tree.slug %}">{{ tree.name }}</a></td>
+    <td><a href="{% url 'tree-detail' project.slug tree.slug %}">{{ tree.name }}</a></td>
     <td>
 <!--        <table>
             <tr>-->

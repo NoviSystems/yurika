@@ -54,6 +54,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'mortar',
 
+    'explorer',
+    'portrait',
+
     # Uncomment for oauth
     #'oauth',
 ]
