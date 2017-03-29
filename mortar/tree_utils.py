@@ -65,3 +65,9 @@ def search_solr(tree):
                 docs['docs'].append(doc)                                    
         results[regex] = docs
     return results
+
+def search_elastic(tree):
+    results = {}
+    es = settings.ES_CLIENT
+    regex_list = get_regex_list(tree)
+    return results

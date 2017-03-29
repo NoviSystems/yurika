@@ -13,6 +13,8 @@ django-mptt-admin
 djangorestframework
 django-filter
 elasticsearch
+nltk
+numpy
 
 # portrait
 django-sql-explorer<1.1

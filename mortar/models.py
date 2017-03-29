@@ -50,3 +50,27 @@ class Category(MPTTModel):
 
     class MPTTMeta:
         order_insertion_by = ['name']
+
+class AIDictionary(models.Model):
+    name = models.CharField(max_length=50)
+    filepath = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Dictionary"
+        verbose_name_plural = "Dictionaries"
+    
+class AIDictionaryObject(models.Model):
+    word = models.CharField(max_length=255)
+    dictionary = models.ForeignKey(AIDictionary, related_name="words")
+
+    def __str__(self):
+        return self.word
+
+    class Meta:
+        verbose_name = "Word"
+        verbose_name_plural = "Words"
