@@ -1,5 +1,4 @@
 """URL Configuration
-
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.10/topics/http/urls/
 Examples:
@@ -17,9 +16,7 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.auth.views
-
-from mortar import urls
-
+from mortar.views import Home
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
@@ -44,5 +41,11 @@ urlpatterns = [
         django.contrib.auth.views.password_change_done,
         {'template_name': 'password_change_done.html'}),
 
-    url(r'', include(urls)),
+#    url(r"^explorer/", include("explorer.urls")),
+
+    url(r'^mortar/', include("mortar.urls")),
+
+    url(r'^portrait/',include("portrait.urls")),
+
+    url(r'', Home.as_view()),
 ]

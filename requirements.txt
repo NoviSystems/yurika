@@ -7,5 +7,7 @@ django-mptt
 django-mptt-admin
 djangorestframework
 django-filter
+
+django-sql-explorer
 # Uncomment for oauth
 #oauth2client
