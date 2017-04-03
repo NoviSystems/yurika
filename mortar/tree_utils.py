@@ -10,6 +10,8 @@ def get_regex_list(tree):
     for node in nodes:
         if node.is_rule:
             regexes.append(node.regex)
+        else:
+            regexes.append(node.name)
     return regexes
 
 def get_json_tree(queryset, max_level=None):
