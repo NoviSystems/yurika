@@ -10,6 +10,8 @@ def get_regex_list(tree):
     for node in nodes:
         if node.is_rule:
             regexes.append(node.regex)
+        else:
+            regexes.append(node.name)
     return regexes
 
 def get_json_tree(queryset, max_level=None):
@@ -64,4 +66,10 @@ def search_solr(tree):
                     doc = {'url': entry['url'], 'content': entry['content']}
                 docs['docs'].append(doc)                                    
         results[regex] = docs
+    return results
+
+def search_elastic(tree):
+    results = {}
+    es = settings.ES_CLIENT
+    regex_list = get_regex_list(tree)
     return results

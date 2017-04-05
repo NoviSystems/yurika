@@ -21,6 +21,7 @@ from wsgiref.util import FileWrapper
 import mimetypes
 from .models import Project, ProjectTree, Category
 from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm
+from .elastic_utils import build_mortar_query, reindex, create_index
 from .tree_utils import get_regex_list, get_json_tree, search_solr
 import re
 import urllib.request, json
@@ -423,20 +424,24 @@ class TreeQuerySelectView(TemplateView):
                     and_filter.append(node.regex)
                 else:
                     and_filter.append(node.name)
-        # do solr stuff
-        self.update_solr_core(and_filter)
+        query = build_mortar_query(and_filter)
+        create_index('filter_' + tree.slug)
+        reindex('nutch', 'filter_' + tree.slug, query)
+
+       # do solr stuff
+ #       self.update_solr_core(and_filter)
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project'].slug, 'slug':context['tree'].slug}))
 
-    def update_solr_core(self, and_filter):
-        solr = settings.SOLR_UPDATE_URL + "?command=full-import&commit=true&clean=false&query="
-        content = ""
-        for word in and_filter:
-             content += "+content:" + word + " "
+#    def update_solr_core(self, and_filter):
+#        solr = settings.SOLR_UPDATE_URL + "?command=full-import&commit=true&clean=false&query="
+#        content = ""
+#        for word in and_filter:
+#             content += "+content:" + word + " "
         
-        print(content)
-        solr += content
-        r = requests.get(solr)
-        print(r)
+#        print(content)
+#        solr += content
+#        r = requests.get(solr)
+#        print(r)
 
 class Home(TemplateView):
     template_name = "home.html"

@@ -2,13 +2,17 @@
 
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-<h1>Projects</h1>
-<ul>
+<h1>Mortar Projects</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<table class="table table-striped">
 {% for project in project_list %}
-    <li><a href={% url 'project-detail' project.slug %}>{{ project.name }}</a></li>
+    <tr>
+        <td><a href={% url 'project-detail' project.slug %}>{{ project.name }}</a></td>
+    </tr>
 {% empty %}
-    <li>No projects yet.</li>
+    <tr><td>No projects yet.</td></tr>
 {% endfor %}
-</ul>
+</table>
+</div>
 </div>
 {% endblock %}

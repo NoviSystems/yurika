@@ -47,4 +47,10 @@ ADMINS = [
 #STATIC_ROOT = os.path.join(BASE_DIR, "static_root")
 #STATIC_URL = "/static/"
 
-SOLR_UPDATE_URL = "http://localhost:8983/solr/mortar-test/dataimport"
+from elasticsearch import Elasticsearch, RequestsHttpConnection
+ES_CLIENT = Elasticsearch(
+    ['http://127.0.0.1:9200/'],
+    connection_class=RequestsHttpConnection
+)
+
+DICTIONARIES_PATH = 'path/to/dictionaries'

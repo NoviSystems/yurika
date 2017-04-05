@@ -10,9 +10,10 @@
     <tr>
     <td>
       {% csrf_token %}
-      <button class="btn btn-success" type="submit" name="query" value="submit">Run Query</button>
+      <button class="btn btn-success" type="submit" name="query" value="submit">Reindex with Filter</button>
     </td>
     </tr>
+    <tr><td>New Index will be created in ElasticSearch with name "filter_{{ tree.slug }}", with Nutch-crawled documents filtered by selected terms below.</td></tr>
   </table>
 </div>
     <div

@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 
     'explorer',
     'portrait',
+
     # Uncomment for oauth
     #'oauth',
 ]
