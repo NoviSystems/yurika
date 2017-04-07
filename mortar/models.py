@@ -24,12 +24,37 @@ class ProjectTree(models.Model):
         verbose_name = "Tree"
         verbose_name_plural = "Trees"
 
+class AIDictionary(models.Model):
+    # id 
+    name = models.CharField(max_length=50)
+    filepath = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Dictionary"
+        verbose_name_plural = "Dictionaries"
+        
+class AIDictionaryObject(models.Model):
+    word = models.CharField(max_length=255)
+    dictionary = models.ForeignKey(AIDictionary, related_name="words")
+
+    def __str__(self):
+        return self.word
+
+    class Meta:
+        verbose_name = "Word"
+        verbose_name_plural = "Words"
+
 class Category(MPTTModel):
     name = models.CharField(max_length=50)
-    is_rule = models.BooleanField(default=False)
     regex = models.CharField(max_length=255, null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
     projecttree = models.ForeignKey(ProjectTree, related_name="categories")
+    dictionary = models.ForeignKey(AIDictionary)
 
     @property
     def full_path_name(self):
@@ -51,26 +76,21 @@ class Category(MPTTModel):
     class MPTTMeta:
         order_insertion_by = ['name']
 
-class AIDictionary(models.Model):
-    name = models.CharField(max_length=50)
-    filepath = models.CharField(max_length=50)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+class Document(models.Model):
+    uri = models.URLField()
+    crawled_at = models.DateTimeField()
 
-    def __str__(self):
-        return self.name
+class Annotation(models.Model):
+    document = models.ForeignKey(Document, related_name="annotations")
+    annotype = models.CharField(max_length=1, choices=(('S', 'Sentence'),('P', 'Paragraph')), default='P', verbose_name="Annotation Type")
+    content = models.TextField()
+    begin = models.IntegerField(default=0)
+    end = models.IntegerField(default=0)
+    score = models.FloatField(default=0)
+    projecttree = models.ForeignKey(ProjectTree, related_name="annotations")
 
-    class Meta:
-        verbose_name = "Dictionary"
-        verbose_name_plural = "Dictionaries"
-    
-class AIDictionaryObject(models.Model):
-    word = models.CharField(max_length=255)
-    dictionary = models.ForeignKey(AIDictionary, related_name="words")
+class DictionaryAnnotation(Annotation):
+    rule = models.ForeignKey(AIDictionaryObject)
 
-    def __str__(self):
-        return self.word
-
-    class Meta:
-        verbose_name = "Word"
-        verbose_name_plural = "Words"
+class RegexAnnotation(Annotation):    
+    rule = models.ForeignKey(Category)

@@ -11,7 +11,7 @@ function initTree($tree, autoopen, autoescape, rtl) {
         $title.before(
             `<input type="checkbox" name="${node.id}-add" value="True" />`
         );
-        if(node.is_rule) {                                                          
+        if(node.regex) {                                                          
             $title.after(
                 ` : ${node.regex}`
             );  

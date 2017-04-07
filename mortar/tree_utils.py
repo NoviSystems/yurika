@@ -8,7 +8,7 @@ def get_regex_list(tree):
     nodes = Category.objects.filter(projecttree=tree)
     regexes = []
     for node in nodes:
-        if node.is_rule:
+        if node.regex:
             regexes.append(node.regex)
         else:
             regexes.append(node.name)
@@ -27,7 +27,6 @@ def get_json_tree(queryset, max_level=None):
         node_info = dict(
             label=cat.name,
             id=pk,
-            is_rule=cat.is_rule,
             regex=cat.regex
         )
         if max_level is not None and not cat.is_leaf_node():

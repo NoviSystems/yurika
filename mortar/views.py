@@ -96,7 +96,6 @@ class ProjectDetailView(FormView, LoginRequiredMixin):
                         name=node.name,
                         parent=parent,
                         projecttree=new_tree,
-                        is_rule=node.is_rule,
                         regex=node.regex
                     )    
                     new_node.save()
@@ -172,8 +171,9 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
         filename = tree.slug + ".csv"
         with open(filename, "w") as f:
             f.write("fullPathName,name,regex\n")
-            for cat in Category.objects.filter(projecttree=tree, is_rule=True):
-                f.write(",".join([cat.full_path_name, cat.name, cat.regex]) + "\n")
+            for cat in Category.objects.filter(projecttree=tree):
+                if cat.is_leaf_node():
+                    f.write(",".join([cat.full_path_name, cat.name, cat.regex]) + "\n")
         f = open(filename, 'rb')
         wrapper = FileWrapper(f)
         mt = mimetypes.guess_type(filename)[0]
@@ -228,12 +228,8 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
             parent, all_paths = self.create_categories(key, tree, paths)
             #to_create = []
             for rule in new_rules[key]:
-                #to_create.append(Category(parent=parent, projecttree=tree, name=rule['name'], is_rule=True, regex=rule['regex']))
                 self.create_rule(parent, tree, rule['name'], rule['regex'])
                 created += 1
-
-            #with transaction.atomic():
-            #    Category.objects.bulk_create(to_create)
                 print(str(created) + "/" + str(len(upload)) + " records processed")
             paths = all_paths
 
@@ -282,7 +278,6 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
         try:
             re.compile(regex)
             rule,created = Category.objects.get_or_create(projecttree=tree,
-                                                          is_rule=True,
                                                           name=name,
                                                           regex=regex,
                                                           parent=parent)
@@ -320,7 +315,6 @@ class CategoryInsertView(FormView, LoginRequiredMixin):
         context = self.get_context_data(**kwargs)
         node = Category(
             name=form.cleaned_data['name'],
-            is_rule=form.cleaned_data['is_rule'],
             regex=form.cleaned_data['regex'],
             projecttree=context['tree']
         )
@@ -351,7 +345,6 @@ class TreeBranchView(APIView, LoginRequiredMixin):
                 name=node.name,
                 parent=parent,
                 projecttree=new_tree,
-                is_rule=node.is_rule,
                 regex=node.regex
             )                                                                   
             new_node.save()
@@ -373,7 +366,6 @@ class CategoryEditView(FormView, LoginRequiredMixin):
     def form_valid(self, form, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         context['edit'].name = form.cleaned_data['name']
-        context['edit'].is_rule = form.cleaned_data['is_rule']
         context['edit'].regex = form.cleaned_data['regex']
         context['edit'].save() 
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project_slug'], 'slug':context['tree'].slug}))
