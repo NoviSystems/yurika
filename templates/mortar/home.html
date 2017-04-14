@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>Mortar Projects</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<table class="table table-striped">
+{% for project in project_list %}
+    <tr>
+        <td><a href={% url 'project-detail' project.slug %}>{{ project.name }}</a></td>
+    </tr>
+{% empty %}
+    <tr><td>No projects yet.</td></tr>
+{% endfor %}
+</table>
+</div>
+<h1>Mortar Dictionaries</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<table class="table table-striped">
+{% for dictionary in dict_list %}
+    <tr>
+        <td><a href={% url 'dictionary-detail' dictionary.pk %}>{{ dictionary.name }}</a></td>
+    </tr>
+{% empty %}
+    <tr><td>No dictionaries yet.</td></tr>
+{% endfor %}
+</table>
+</div>
+
+</div>
+{% endblock %}

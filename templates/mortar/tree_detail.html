@@ -3,9 +3,12 @@
 {% block content %}
 {% if user.is_superuser or user in tree.project.assigned.all %}
 <div class="visible-desktop container body-wrapper">
-<h1>{{ tree.name }}</h1>
+<h1>
+  <a href="{% url 'project-detail' tree.project.slug %}">{{ tree.project.name }}</a> > 
 {% if tree.owner == user or user in tree.editors.all %}
-<a class="btn btn-default" href="{% url 'tree-edit' tree.project.slug tree.slug %}">edit</a>
+  <a href="{% url 'tree-edit' tree.project.slug tree.slug %}">{{ tree.name }}</a>
+</h1>
+
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
   <table class="table table-striped">
     <tr>
@@ -28,18 +31,27 @@
     </form>
     </td>
     <td>
-      <a class="btn btn-default" type="submit" name="search-solr" href="{% url 'tree-query' project.slug tree.slug %}" >Filter Documents</a>
+      <a class="btn btn-default" type="submit" name="filter-es" href="{% url 'tree-query' project.slug tree.slug %}" >Filter ES</a>
+      <a class="btn btn-default" type="submit" name="view-es" href="{{ elastic_url }}" >View ES</a>
+    </td>
+    <td>
+      <a class="btn btn-danger" type="submit" name="annotate" href="{% url 'annotation-list' tree.slug %}">View Annotations</a>
     </td>
     </tr>
   </table>
 </div>
-  {% endif %}
-    <div
+{% else %}
+{{ tree.name }}                                                                                                                                                           
+{% endif %}
+    
+<div
         id="tree"
         class="block-style"
         data-url="{{ tree_json_url }}"
         data-insert_at_url="{{ insert_at_url }}"
         data-branch_url="{{ branch_url }}"
+        data-edit_url="{{ edit_url }}"
+        data-dict_url="{{ dict_url }}"
         data-save_state="{{ app_label }}_{{ model_name }}"
         data-auto_open="{{ tree_auto_open }}"
         data-autoescape="{{ autoescape }}"

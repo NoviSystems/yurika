@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>
+    <a href="{% url "tree-detail" tree.project.slug tree.slug %}">{{ tree.name }}</a>
+    : Annotations
+</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<a href="{% url 'make-annotations' tree.slug %}" class="btn btn-success">Make Annotations</a>
+<table class="table table-striped">
+    <tr>
+        <th>ID</th>
+        <th>Content</th>
+        <th>URI</th>
+        <th>Type</th>
+        <th>Score</th>
+    </tr>
+{% for anno in anno_list %}
+    <tr>
+        <td>{{ anno.id }}</td>
+        <td>{{ anno.content }}</td>
+        <td>{{ anno.document.uri }}</td>
+        <td>{{ anno.annotype }}</td>
+        <td>{{ anno.score }}</td>
+    </tr>
+{% empty %}
+    <tr><td>No annotations yet.</td></tr>
+{% endfor %}
+</table>
+</div>
+</div>
+{% endblock %}

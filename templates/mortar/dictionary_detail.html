@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>
+    <a href="{% url 'dictionary-list' %}">Dictionaries</a> : 
+    {{ dict.name }}
+</h1>
+<h2>Words</h2>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<table class="table table-striped">
+{% for word in words %}
+    <tr>
+        <td>{{ word }}</td>
+    </tr>
+{% empty %}
+    <tr><td>No dictionaries yet.</td></tr>
+{% endfor %}
+</table>
+</div>
+<h2>Related</h2>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<table class="table table-striped">
+    <tr>
+        <th>Tree</th>
+        <th>Category</th>
+    </tr>
+{% for cat in categories %}
+    <tr>
+        <td><a href="{% url 'tree-detail' cat.projecttree.project.slug cat.projecttree.slug %}">{{ cat.projecttree.name }}</a>
+        <td>{{ cat.full_path_name }}.{{ cat.name}}</td>
+    </tr>
+{% empty %}
+    <tr><td>No relations yet.</td></tr>
+{% endfor %}
+</table>
+</div>
+</div>
+{% endblock %}

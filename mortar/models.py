@@ -54,7 +54,7 @@ class Category(MPTTModel):
     regex = models.CharField(max_length=255, null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
     projecttree = models.ForeignKey(ProjectTree, related_name="categories")
-    dictionary = models.ForeignKey(AIDictionary)
+    dictionary = models.ForeignKey(AIDictionary, null=True, blank=True, related_name="categories")
 
     @property
     def full_path_name(self):
@@ -66,6 +66,10 @@ class Category(MPTTModel):
             else:
                 path = path + '.' +  ancestor.name
         return path
+
+    @property
+    def has_dictionary(self):
+        return self.dictionary is not None
 
     def __str__(self):
         return self.name

@@ -47,5 +47,5 @@ urlpatterns = [
 
     url(r'^portrait/',include("portrait.urls")),
 
-    url(r'', Home.as_view()),
+    url(r'', Home.as_view(), name="home"),
 ]

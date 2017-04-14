@@ -40,12 +40,12 @@
     </td>
     </tr>
 {% endfor %}
-<form action="" method="POST">
+<form action="" method="POST" enctype="multipart/form-data">
   {% csrf_token %}
   <tr>
     <td>{{ form.name.label }}: {{ form.name }}</td>
     <td>{{ form.slug.label }}: {{ form.slug }}</td>
-    <td>{{ form.populate.label }}: {{ form.populate }}</td>
+    <td>{{ form.file.label }}: <label class="btn btn-primary btn-file">Browse <input type="file" name="file" style="display:none;"></label></td>
     <td><button class="btn btn-success" type="submit" id="new_tree" value="Create">Create</button>
   </tr>
 </form>

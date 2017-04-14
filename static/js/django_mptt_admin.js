@@ -9,14 +9,19 @@ function initTree($tree, autoopen, autoescape, rtl) {
         // Create edit link
         const $title = $li.find(".jqtree-title");
         $title.after(
-            ` <a href="${$tree.data("edit_url")}${node.id}}" class="edit">(${"edit"})</a>`,
-            ` <a href="${$tree.data("insert_at_url")}${node.id}" class="edit">(${"add"})</a>`,
-            ` <a href="${$tree.data("branch_url")}${node.id}" class="edit">(${"branch"})</a>`
+            ` <a href="${$tree.data("edit_url")}${node.id}/" class="edit">(${"edit"})</a>`,
+            ` <a href="${$tree.data("insert_at_url")}${node.id}/" class="edit">(${"add"})</a>`,
+            ` <a href="${$tree.data("branch_url")}${node.id}/" class="edit">(${"branch"})</a>`
         );
         if(node.is_rule) {                                                          
             $title.after(
                 ` : ${node.regex}`
             );  
+        }
+        if(node.dictionary) {
+            console.log(node.name);
+            var name = $title.text();
+            $title.html(`<a href="${$tree.data("dict_url")}${node.dictionary}/">` + name + "</a>");
         }
     }
 
