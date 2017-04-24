@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
-from .models import Project, ProjectTree, Category, Annotation, AIDictionary, AIDictionaryObject
+from .models import Project, ProjectTree, Category, Annotation, AIDictionary, AIDictionaryObject, DictionaryAnnotation, RegexAnnotation
 from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm
 import mortar.elastic_utils as elastic_utils
 import mortar.tree_utils as tree_utils
@@ -314,7 +314,8 @@ class AnnotationView(TemplateView, LoginRequiredMixin):
     def get_context_data(self, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree'])
+        context['dict_anno_list'] = DictionaryAnnotation.objects.filter(projecttree=context['tree'])
+        context['regex_anno_list'] = RegexAnnotation.objects.filter(projecttree=context['tree'])
         return context
 
 class AnnotateApi(APIView, LoginRequiredMixin):
@@ -322,7 +323,7 @@ class AnnotateApi(APIView, LoginRequiredMixin):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
         dictionary_utils.update_dictionaries()
         dictionary_utils.associate_tree(tree)
-        dictionary_utils.annotate(tree)
+        dictionary_utils.process(tree)
         return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
 
 class DictionaryDetailView(TemplateView, LoginRequiredMixin):

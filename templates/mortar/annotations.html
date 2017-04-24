@@ -8,20 +8,44 @@
 </h1>
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
 <a href="{% url 'make-annotations' tree.slug %}" class="btn btn-success">Make Annotations</a>
+<h2>Dictionary Annotations</h2>
 <table class="table table-striped">
     <tr>
-        <th>ID</th>
+        <th>Dictionary Word</th>
         <th>Content</th>
-        <th>URI</th>
-        <th>Type</th>
+        <th>Document ID</th>
+        <th>Part of Speech</th>
         <th>Score</th>
     </tr>
-{% for anno in anno_list %}
+{% for anno in dict_anno_list %}
     <tr>
-        <td>{{ anno.id }}</td>
+        <td>{{ anno.rule.word }}</td>
         <td>{{ anno.content }}</td>
-        <td>{{ anno.document.uri }}</td>
-        <td>{{ anno.annotype }}</td>
+        <td>{{ anno.document.id }}</td>
+        <td>{{ anno.pos }}</td>
+        <td>{{ anno.score }}</td>
+    </tr>
+{% empty %}
+    <tr><td>No annotations yet.</td></tr>
+{% endfor %}
+</table>
+</div>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<h2>Regex Annotations</h2>
+<table class="table table-striped">
+    <tr>
+        <th>Regex</th>
+        <th>Content</th>
+        <th>Document ID</th>
+        <th>Part of Speech</th>
+        <th>Score</th>
+    </tr>
+{% for anno in regex_anno_list %}
+    <tr>
+        <td>{{ anno.rule.regex | default_if_none:anno.rule.name }}</td>
+        <td>{{ anno.content }}</td>
+        <td>{{ anno.document.id }}</td>
+        <td>{{ anno.pos }}</td>
         <td>{{ anno.score }}</td>
     </tr>
 {% empty %}
