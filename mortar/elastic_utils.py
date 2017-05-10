@@ -2,11 +2,10 @@ from .models import ProjectTree, Category
 from django.conf import settings
 import urllib.request
 import simplejson, json
-
+import string
 from elasticsearch.client import IndicesClient
 from elasticsearch import helpers
 
-from .tree_utils import get_regex_list
 
 def create_index(name, analysis_conf=None):
     es = settings.ES_CLIENT
@@ -66,3 +65,66 @@ def create_analyzer_conf():
           }
         }
     }
+
+def create_pos_index(slug):
+    i_client = IndicesClient(client=settings.ES_CLIENT)
+    i_name = "pos_" + slug
+    if i_client.exists(i_name):
+        i_client.delete(index=i_name)
+    i_settings = {
+      'settings': {
+        'analysis': {
+          'analyzer': {
+            'payloads': {
+              'type': 'custom',
+              'tokenizer': 'whitespace',
+              'filter': [
+                'lowercase',
+                'delimited_payload_filter'
+              ]
+            }
+          }
+        }
+      }
+    }
+    i_client.create(index=i_name, body=i_settings)
+    i_client.put_mapping(
+        doc_type="sentence",
+        index=i_name,
+        body={
+          'properties': {
+            'content': {'type': 'string', 'analyzer': 'english'},
+            'tokens': {'type': 'string', 'analyzer': 'payloads'},
+          }
+        }   
+    )
+    i_client.put_mapping(
+        doc_type="doc",
+        index=i_name,
+        body={
+          'properties': {
+            'url': {'type': 'string', 'index': 'not_analyzed'},
+            'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},
+            'sentence': {'type': 'nested'}
+          }
+        }
+    )
+
+def pos_tokens_to_es(pos_tokens):
+    out = []
+    for sent in pos_tokens:
+        body = {}
+        body['content'] = "".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in sent])
+        body['tokens'] = "".join([" "+i[0]+"|"+i[1] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0]+"|"+i[1] for i in sent])
+        out.append(body)
+    return out
+
+def insert_pos_record(slug, esdoc, pos_tokens):
+    print("I tried")
+    es = settings.ES_CLIENT
+    body = {
+      'url': esdoc['_source']['url'],
+      'tstamp': esdoc['_source']['tstamp'][:-1],
+      'sentence': pos_tokens_to_es(pos_tokens)
+    }
+    es.create(index='pos_' + slug, id=esdoc['_source']['url'], doc_type="doc", body=body)

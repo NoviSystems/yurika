@@ -7,22 +7,21 @@ import simplejson, json
 import os
 import re, string
 import nltk
+import mortar.elastic_utils as elastic_utils
 
 def update_dictionaries():
     dict_path = settings.DICTIONARIES_PATH
-    all_dicts = models.AIDictionary.objects.all()
     for root, dirs, files in os.walk(dict_path):
         for f in files:
-            if f.endswith(".txt"):
+            if f.endswith(".txt") and os.path.getsize(os.sep.join([root, f])) > 1:
                 filepath = os.sep.join([root, f])
-                with open(filepath, "r") as dictfile:
-                   name = dictfile.readline().strip('\n')
-                   id = dictfile.readline().strip('\n')
-                   words = dictfile.read().split('\n')
-                   d,created = models.AIDictionary.objects.get_or_create( name=name, id=id, filepath=os.sep.join([root, f]) )
-                   for word in words:
-                       if len(word) > 0:
-                           w,created = models.AIDictionaryObject.objects.get_or_create( word=word, dictionary=d )
+                with open(filepath, "r+") as dictfile:
+                    with transaction.atomic():
+                        d,created = models.AIDictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]) )
+                        print(d.name)
+                        for line in dictfile:
+                            word = dictfile.readline().strip('\n')
+                            w = models.AIDictionaryObject.objects.create( word=word, dictionary=d )
 
 def associate_tree(tree):
     categories = tree.categories.all()
@@ -67,11 +66,14 @@ def get_indexed_docs(tree):
 #    Distance Relationship
 
 def clean_doc(esdoc):
-     url = esdoc['_source']['url']
-     tstamp = esdoc['_source']['tstamp'][:-1]
-     dt_tstamp = datetime.datetime.strptime(tstamp, "%Y-%m-%dT%H:%M:%S.%f")
-     doc,created = models.Document.objects.get_or_create(uri=url, crawled_at=dt_tstamp)
-     return doc
+    try:
+        url = esdoc['_source']['url']
+        tstamp = esdoc['_source']['tstamp'][:-1]
+        dt_tstamp = datetime.datetime.strptime(tstamp, "%Y-%m-%dT%H:%M:%S.%f")
+        doc,created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp)
+        return doc
+    except Exception as e:
+        return None
 
 def tokenize_doc(esdoc, paragraph=False): 
      content = esdoc['_source']['content']
@@ -88,12 +90,12 @@ def pos_tokens(tokens):
 def dict_annotate(pos_tokens, dicts, tree, doc):
      for d in dicts:
          for obj in d.words.all():
-             [ models.DictionaryAnnotation.objects.create(document=doc, rule=obj, pos=token[1], content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), annotype='S', projecttree=tree) for s in pos_tokens for token in s if token[0]==obj.word ]
+             [ models.Annotation.objects.get_or_create(dictionary=d, document=doc, rule=obj.word, pos=token[1], content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), anno_type='S', projecttree=tree) for s in pos_tokens for token in s if token[0]==obj.word ]
 
 def regex_annotate(pos_tokens, tree, doc):
     for cat in tree.categories.all():
         regex = re.compile(cat.regex if cat.regex else cat.name)
-        [ models.RegexAnnotation.objects.create(document=doc, rule=cat, pos=token[1], content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), annotype='S', projecttree=tree) for s in pos_tokens for token in s if regex.fullmatch(token[0])]
+        [ models.Annotation.objects.get_or_create(regex=cat, document=doc, rule=cat.name, pos=token[1], content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), anno_type='S', projecttree=tree) for s in pos_tokens for token in s if regex.fullmatch(token[0])]
 
 def ngram():
     pass
@@ -106,7 +108,7 @@ def frequencies(tree):
     words = models.AIDictionaryObject.objects.filter(dictionary__categories__projecttree=tree)
     out = {}
     for word in words:
-        out[word.word] = len(models.DictionaryAnnotation.objects.filter(rule=word, projecttree=tree))
+        out[word.word] = len(models.Annotation.objects.filter(dictionary=word.dictionary, projecttree=tree))
     return out
 
 def frequency(word):
@@ -116,12 +118,15 @@ def process(tree):
     tree_dicts = get_tree_dictionaries(tree)
     docs = get_indexed_docs(tree)
     #annotate_doc(docs[0], tree_dicts, tree)
+    elastic_utils.create_pos_index(tree.slug)
     for esdoc in docs:
         doc = clean_doc(esdoc)
-        tokens = tokenize_doc(esdoc)
-        pos = pos_tokens(tokens)
-        #dict_annotate(pos, tree_dicts, tree, doc)
-        regex_annotate(pos, tree, doc)
+        if doc is not None:
+            tokens = tokenize_doc(esdoc)
+            pos = pos_tokens(tokens)
+            elastic_utils.insert_pos_record(tree.slug, esdoc, pos)
+            dict_annotate(pos, tree_dicts, tree, doc)
+            regex_annotate(pos, tree, doc)
     frequencies(tree)
 
 #find . -size  0 -print0 |xargs -0 rm

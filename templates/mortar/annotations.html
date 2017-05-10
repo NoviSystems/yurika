@@ -19,7 +19,7 @@
     </tr>
 {% for anno in dict_anno_list %}
     <tr>
-        <td>{{ anno.rule.word }}</td>
+        <td>{{ anno.dictionary }}</td>
         <td>{{ anno.content }}</td>
         <td>{{ anno.document.id }}</td>
         <td>{{ anno.pos }}</td>
@@ -42,7 +42,7 @@
     </tr>
 {% for anno in regex_anno_list %}
     <tr>
-        <td>{{ anno.rule.regex | default_if_none:anno.rule.name }}</td>
+        <td>{{ anno.regex.regex | default_if_none:anno.regex.name }}</td>
         <td>{{ anno.content }}</td>
         <td>{{ anno.document.id }}</td>
         <td>{{ anno.pos }}</td>

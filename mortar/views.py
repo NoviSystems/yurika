@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
-from .models import Project, ProjectTree, Category, Annotation, AIDictionary, AIDictionaryObject, DictionaryAnnotation, RegexAnnotation
+from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, QueryLog
 from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm
 import mortar.elastic_utils as elastic_utils
 import mortar.tree_utils as tree_utils
@@ -77,9 +77,9 @@ class ProjectDetailView(TemplateView, LoginRequiredMixin):
                 project=context['project']
             )
             new_tree.save() 
-            if request.FILES['file'].name.split('.')[-1] == 'mm':
+            if request.FILES.get('file') and request.FILES['file'].name.split('.')[-1] == 'mm':
                 tree_utils.read_mindmap(new_tree, request.FILES['file'].read())
-            else:
+            elif request.FILES.get('file'):
                 tree_utils.read_csv(new_tree, request.FILES['file'].read())
             return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project'].slug,'slug':new_tree.slug}))
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
@@ -296,7 +296,6 @@ class TreeQuerySelectView(TemplateView):
         context = self.get_context_data(**kwargs)
         tree = context['tree']
         and_filter = []
-        print(request.POST)
         for node in Category.objects.filter(projecttree=tree):
             if request.POST.get(str(node.id) + '-add'):
                 if node.regex:
@@ -314,8 +313,8 @@ class AnnotationView(TemplateView, LoginRequiredMixin):
     def get_context_data(self, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['dict_anno_list'] = DictionaryAnnotation.objects.filter(projecttree=context['tree'])
-        context['regex_anno_list'] = RegexAnnotation.objects.filter(projecttree=context['tree'])
+        context['dict_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], dictionary__isnull=False)
+        context['regex_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], regex__isnull=False)
         return context
 
 class AnnotateApi(APIView, LoginRequiredMixin):

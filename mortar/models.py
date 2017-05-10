@@ -118,24 +118,31 @@ class Category(MPTTModel):
         order_insertion_by = ['name']
 
 class Document(models.Model):
-    uri = models.URLField()
+    url = models.URLField()
     crawled_at = models.DateTimeField()
 
+    def __str__(self):
+        return self.uri
+
 class Annotation(models.Model):
-    document = models.ForeignKey(Document, related_name="annotations")
-    annotype = models.CharField(max_length=1, choices=(('S', 'Sentence'),('P', 'Paragraph')), default='P', verbose_name="Annotation Type")
-    pos = models.CharField(max_length=4, choices=PARTS_OF_SPEECH, verbose_name="Part of Speech")
+    document = models.ForeignKey('Document', related_name="annotations")
     content = models.TextField()
     begin = models.IntegerField(default=0)
     end = models.IntegerField(default=0)
     score = models.FloatField(default=0)
-    projecttree = models.ForeignKey(ProjectTree, related_name="annotations")
+    rule = models.CharField(max_length=255)
+    projecttree = models.ForeignKey('ProjectTree', related_name="annotations")
+    dictionary = models.ForeignKey('AIDictionary', blank=True, null=True, related_name="annotations")
+    regex = models.ForeignKey('Category', blank=True, null=True, related_name="annotations")
+    anno_type = models.CharField(max_length=1, choices=(('S', 'Sentence'),('P', 'Paragraph')))
+    pos = models.CharField(max_length=5, choices=PARTS_OF_SPEECH)
 
     def __str__(self):
         return str(self.id)
 
-class DictionaryAnnotation(Annotation):
-    rule = models.ForeignKey(AIDictionaryObject)
+class QueryLog(models.Model):
+    annotation = models.ForeignKey('Annotation', related_name="queries")
+    es_body = models.TextField()
 
-class RegexAnnotation(Annotation):    
-    rule = models.ForeignKey(Category)
+    class Meta:
+        verbose_name_plural = "Queries"
