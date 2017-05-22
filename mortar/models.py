@@ -120,22 +120,25 @@ class Category(MPTTModel):
 class Document(models.Model):
     url = models.URLField()
     crawled_at = models.DateTimeField()
+    projecttree = models.ForeignKey('ProjectTree', related_name="documents")
 
     def __str__(self):
         return self.uri
 
+class TermVector(models.Model):
+    term = models.CharField(max_length=255)
+    document = models.ForeignKey('Document', related_name="found_terms")
+    start_offset = models.IntegerField(default=0)
+    end_offset = models.IntegerField(default=0)
+
 class Annotation(models.Model):
-    document = models.ForeignKey('Document', related_name="annotations")
     content = models.TextField()
-    begin = models.IntegerField(default=0)
-    end = models.IntegerField(default=0)
     score = models.FloatField(default=0)
-    rule = models.CharField(max_length=255)
     projecttree = models.ForeignKey('ProjectTree', related_name="annotations")
-    dictionary = models.ForeignKey('AIDictionary', blank=True, null=True, related_name="annotations")
-    regex = models.ForeignKey('Category', blank=True, null=True, related_name="annotations")
+    words = models.ManyToManyField('AIDictionaryObject', blank=True, related_name="annotations")
+    regexs = models.ManyToManyField('Category', blank=True, related_name="annotations")
+    termvectors = models.ManyToManyField('TermVector', blank=True, related_name="annotations")
     anno_type = models.CharField(max_length=1, choices=(('S', 'Sentence'),('P', 'Paragraph')))
-    pos = models.CharField(max_length=5, choices=PARTS_OF_SPEECH)
 
     def __str__(self):
         return str(self.id)

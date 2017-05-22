@@ -80,51 +80,75 @@ def create_pos_index(slug):
               'tokenizer': 'whitespace',
               'filter': [
                 'lowercase',
-                'delimited_payload_filter'
+                {'delimited_payload_filter': {
+                  'encoding': 'identity'
+                }}
+              ]
+            },
+            'fulltext': {
+              'type': 'custom',
+              'stopwords': '_english_',
+              'tokenizer': 'whitespace',
+              'filter': [
+                'lowercase',
+                'type_as_payload'
               ]
             }
           }
         }
-      }
-    }
-    i_client.create(index=i_name, body=i_settings)
-    i_client.put_mapping(
-        doc_type="sentence",
-        index=i_name,
-        body={
-          'properties': {
-            'content': {'type': 'string', 'analyzer': 'english'},
-            'tokens': {'type': 'string', 'analyzer': 'payloads'},
-          }
-        }   
-    )
-    i_client.put_mapping(
-        doc_type="doc",
-        index=i_name,
-        body={
+      },
+      'mappings': {
+        'doc': {
           'properties': {
             'url': {'type': 'string', 'index': 'not_analyzed'},
             'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},
-            'sentence': {'type': 'nested'}
+          }
+        },
+        'sentence': {
+          '_parent': { 'type': 'doc' },
+          'properties': {
+            'content': {'type': 'string', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'string', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+          }
+        },
+        'paragraph': {
+          '_parent': { 'type': 'doc' },
+          'properties': {
+            'content': {'type': 'string', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'string', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
           }
         }
-    )
+      }
+    }
+    i_client.create(index=i_name, body=json.dumps(i_settings))
 
 def pos_tokens_to_es(pos_tokens):
     out = []
     for sent in pos_tokens:
-        body = {}
-        body['content'] = "".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in sent])
-        body['tokens'] = "".join([" "+i[0]+"|"+i[1] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0]+"|"+i[1] for i in sent])
+        body = {
+            '_op_type': 'index',
+            '_type': 'sentence',
+            '_source': {}
+        }
+        body['_source']['content'] = "".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in sent])
+        body['_source']['tokens'] = "".join([" "+i[0]+"|"+i[1] for i in sent if len(i[1]) and i[0] not in string.punctuation])
         out.append(body)
     return out
 
-def insert_pos_record(slug, esdoc, pos_tokens):
-    print("I tried")
+def insert_pos_record(slug, id, esdoc, pos_tokens):
     es = settings.ES_CLIENT
     body = {
       'url': esdoc['_source']['url'],
       'tstamp': esdoc['_source']['tstamp'][:-1],
-      'sentence': pos_tokens_to_es(pos_tokens)
     }
-    es.create(index='pos_' + slug, id=esdoc['_source']['url'], doc_type="doc", body=body)
+    es.index(index='pos_' + slug, id=id, doc_type="doc", body=json.dumps(body))
+    sentences = pos_tokens_to_es(pos_tokens)
+    for sentence in sentences:
+        sentence['_index'] = 'pos_' + slug
+        sentence['_parent'] = id
+    helpers.bulk(client=es, actions=sentences)
+    #es.index(index='pos_' + slug, parent=id, doc_type="sentence", body=json.dumps(sentence))
+
+def build_es_annotations(tree):
+    docs = models.Document.objects.filter(projecttree=tree)
+    

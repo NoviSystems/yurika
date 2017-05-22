@@ -65,12 +65,12 @@ def get_indexed_docs(tree):
 #  N-Gram
 #    Distance Relationship
 
-def clean_doc(esdoc):
+def clean_doc(esdoc, tree):
     try:
         url = esdoc['_source']['url']
         tstamp = esdoc['_source']['tstamp'][:-1]
         dt_tstamp = datetime.datetime.strptime(tstamp, "%Y-%m-%dT%H:%M:%S.%f")
-        doc,created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp)
+        doc,created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp, projecttree=tree)
         return doc
     except Exception as e:
         return None
@@ -108,27 +108,79 @@ def frequencies(tree):
     words = models.AIDictionaryObject.objects.filter(dictionary__categories__projecttree=tree)
     out = {}
     for word in words:
-        out[word.word] = len(models.Annotation.objects.filter(dictionary=word.dictionary, projecttree=tree))
+        out[word.word] = len(models.Annotation.objects.filter(words__word=word, projecttree=tree))
     return out
 
-def frequency(word):
-    pass
-
 def process(tree):
-    tree_dicts = get_tree_dictionaries(tree)
     docs = get_indexed_docs(tree)
-    #annotate_doc(docs[0], tree_dicts, tree)
     elastic_utils.create_pos_index(tree.slug)
     for esdoc in docs:
-        doc = clean_doc(esdoc)
+        doc = clean_doc(esdoc, tree)
         if doc is not None:
             tokens = tokenize_doc(esdoc)
             pos = pos_tokens(tokens)
-            elastic_utils.insert_pos_record(tree.slug, esdoc, pos)
-            dict_annotate(pos, tree_dicts, tree, doc)
-            regex_annotate(pos, tree, doc)
-    frequencies(tree)
+            elastic_utils.insert_pos_record(tree.slug, doc.id, esdoc, pos)
 
+def annotate_by_query(tree, annotype, dictionaries, andor, regexs):
+    query = make_query(dictionaries, andor, regexs)
+    body = { "query" : {
+        "filtered": {
+         "filter": query
+        }
+    }}
+    es = settings.ES_CLIENT
+
+    if annotype == 'P':
+        search = es.search(index="pos_" + tree.slug, doc_type="paragraph", body=body, size=10000)['hits']
+    else:
+        search = es.search(index="pos_" + tree.slug, doc_type="sentence", body=body, size=10000)['hits']
+
+    if search['total']:
+        sentences = []
+        for hit in search['hits']:
+          sentences.append({'_id': hit['_id'], '_routing': hit['_routing']})
+        body = { 'docs': sentences }
+        termvectors = es.mtermvectors(index='pos_' + tree.slug, doc_type="sentence", body=json.dumps(body), fields=['content']) 
+        print(len(termvectors['docs']))
+
+def make_query(dictionaries, andor, regexs):
+    dicts = { 'bool': {'must': [] }}
+    for d in dictionaries:
+        dicts['bool']['must'].append({"bool": {"should":  or_dictionary(d)}} )
+
+    regs = { 'bool': {'must': [] }}
+    for r in regexs:
+        regs['bool']['must'].append({"match": {"content": r.regex if r.regex is not None else r.name }}
+)
+
+    out = {}
+    q = []
+    if len(dicts['bool']['must']):
+        q.append(dicts)
+    if len(regs['bool']['must']):
+        q.append(regs)
+   
+    if andor == 'or':
+        out = { 'bool': {'should': q }}
+    if andor == 'and': 
+        out = { 'bool': { 'must': q }}
+    else:
+        out = q[0]
+
+    return out
+
+def or_dictionary(dictionary):
+    out = []
+    for word in dictionary.words.all():
+        out.append({"match": {"content": word.word}})
+    return out
+ 
+def annotate_by_tree(tree, pos):
+    tree_dicts = get_tree_dictionaries(tree)
+    for doc in docs:
+        dict_annotate(pos, tree_dicts, tree, doc)
+        regex_annotate(pos, tree, doc)
+    
 #find . -size  0 -print0 |xargs -0 rm
 #for f in *.csv; do sed -i -e '1iDOC_ID,ID\' $f; done; # brg
 #for f in *.csv; do sed -i -e '1iID,VALUE\' $f; done; # csv 

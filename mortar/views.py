@@ -19,7 +19,7 @@ from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
 from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, QueryLog
-from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm
+from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm
 import mortar.elastic_utils as elastic_utils
 import mortar.tree_utils as tree_utils
 import mortar.dictionary_utils as dictionary_utils
@@ -313,16 +313,41 @@ class AnnotationView(TemplateView, LoginRequiredMixin):
     def get_context_data(self, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['dict_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], dictionary__isnull=False)
-        context['regex_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], regex__isnull=False)
+        context['dict_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], words__isnull=False)
+        context['regex_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], regexs__isnull=False)
         return context
+
+class AnnotationQueryView(FormView, LoginRequiredMixin):
+    template_name = 'mortar/annotation_query.html'
+    form_class = AnnotationQueryForm
+
+    def get_form(self, *args, **kwargs):
+        form = super(AnnotationQueryView, self).get_form(*args, **kwargs)
+        form.fields['regexs'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')))
+        return form
+ 
+    def get_context_data(self, *args, **kwargs):
+        context = super(AnnotationQueryView, self).get_context_data(**kwargs)
+        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        #context['form']['regexs'].choices = Category.objects.filter(projecttree=context['tree'])
+        return context
+
+    def form_valid(self, form, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        tree = context['tree']
+        cd = form.cleaned_data
+        #dictionary_utils.process(tree)
+        dictionary_utils.annotate_by_query(tree, cd['annotype'], cd['dictionaries'], cd['andor'], cd['regexs'])
+
+        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
 
 class AnnotateApi(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        dictionary_utils.update_dictionaries()
+        #dictionary_utils.update_dictionaries()
         dictionary_utils.associate_tree(tree)
         dictionary_utils.process(tree)
+        dictionary_utils.annotate_by_tree(tree, pos)
         return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
 
 class DictionaryDetailView(TemplateView, LoginRequiredMixin):
@@ -369,5 +394,6 @@ cat_edit = CategoryEditView.as_view()
 tree_branch = TreeBranchView.as_view()
 annotation_list = AnnotationView.as_view()
 make_annotations = AnnotateApi.as_view()
+annotation_query = AnnotationQueryView.as_view()
 dictionary_detail = DictionaryDetailView.as_view()
 dictionary_list = DictionaryListView.as_view()

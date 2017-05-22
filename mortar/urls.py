@@ -17,6 +17,7 @@ urlpatterns = [
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/edit-name/$", views.tree_edit, name="tree-edit"),
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/query/$", views.tree_query, name="tree-query"),
     url(r"^annotations/(?P<slug>[-\w]+)/$", views.annotation_list, name="annotation-list"),
+    url(r"^annotations/(?P<slug>[-\w]+)/query/$", views.annotation_query, name="annotation-query"),
     url(r"^dictionaries/$", views.dictionary_list, name='dictionary-list'),
     url(r"^dictionaries/(?P<pk>\d+)/$", views.dictionary_detail, name="dictionary-detail"),
     url(r"^api/trees/(?P<slug>[-\w]+)/$", views.tree_json, name="tree-json"),
