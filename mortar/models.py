@@ -123,11 +123,13 @@ class Document(models.Model):
     projecttree = models.ForeignKey('ProjectTree', related_name="documents")
 
     def __str__(self):
-        return self.uri
+        return self.url
 
 class TermVector(models.Model):
     term = models.CharField(max_length=255)
+    matched = models.CharField(max_length=255)
     document = models.ForeignKey('Document', related_name="found_terms")
+    position = models.IntegerField(default=0)
     start_offset = models.IntegerField(default=0)
     end_offset = models.IntegerField(default=0)
 

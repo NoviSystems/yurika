@@ -19,7 +19,7 @@ from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
 from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, QueryLog
-from .forms import TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm
+from .forms import ProjectForm, TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm
 import mortar.elastic_utils as elastic_utils
 import mortar.tree_utils as tree_utils
 import mortar.dictionary_utils as dictionary_utils
@@ -27,12 +27,27 @@ import re
 import urllib.request, json
 import simplejson, requests
 
-class ProjectListView(ListView, LoginRequiredMixin):
-    model = Project
-    context_object_list = 'project_list'
+class ProjectListView(TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/project_list.html'
+    
+    def get_context_data(self, *args, **kwargs):
+        context = super(ProjectListView, self).get_context_data(*args, **kwargs)
+        context['project_list'] = Project.objects.filter(assigned=self.request.user)
+        context['form'] = ProjectForm(self.request.POST)
+        return context
 
-    def get_queryset(self):
-        return Project.objects.filter(assigned=self.request.user)
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(*args, **kwargs)
+        form = context['form']
+        if form.is_valid():
+            new_project = Project.objects.create(
+                name=form.cleaned_data['name'],
+                slug=form.cleaned_data['slug'],
+            )
+            new_project.assigned = self.request.user
+            new_project.save()
+            return HttpResponseRedirect(reverse('project-detail', kwargs={'project_slug':new_project.slug}))
+        return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
 class ProjectDetailView(TemplateView, LoginRequiredMixin):
     template_name = 'mortar/project_detail.html'
@@ -313,8 +328,7 @@ class AnnotationView(TemplateView, LoginRequiredMixin):
     def get_context_data(self, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['dict_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], words__isnull=False)
-        context['regex_anno_list'] = Annotation.objects.filter(projecttree=context['tree'], regexs__isnull=False)
+        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree'])
         return context
 
 class AnnotationQueryView(FormView, LoginRequiredMixin):
@@ -323,7 +337,7 @@ class AnnotationQueryView(FormView, LoginRequiredMixin):
 
     def get_form(self, *args, **kwargs):
         form = super(AnnotationQueryView, self).get_form(*args, **kwargs)
-        form.fields['regexs'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')))
+        form.fields['regexs'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
         return form
  
     def get_context_data(self, *args, **kwargs):
@@ -344,7 +358,6 @@ class AnnotationQueryView(FormView, LoginRequiredMixin):
 class AnnotateApi(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        #dictionary_utils.update_dictionaries()
         dictionary_utils.associate_tree(tree)
         dictionary_utils.process(tree)
         dictionary_utils.annotate_by_tree(tree, pos)
@@ -368,14 +381,48 @@ class DictionaryListView(TemplateView, LoginRequiredMixin):
         context['dict_list'] = AIDictionary.objects.all()
         return context
 
+class DictionaryUpdateApi(APIView, LoginRequiredMixin):
+    def get(self, request, *args, **kwargs):
+        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        dictionary_utils.update_dictionaries()
+        dictionary_utils.associate_tree(tree)
+        dictionary_utils.process(tree)
+        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
+
+class TermVectorView(TemplateView, LoginRequiredMixin):
+    template_name = "mortar/termvectors.html"
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(TermVectorView, self).get_context_data(*args, **kwargs)
+        context['annotation'] = Annotation.objects.get(id=self.kwargs.get('pk'))
+        context['tree'] = context['annotation'].projecttree
+        context['termvectors'] = context['annotation'].termvectors.all()
+        # all termvectors should have the same document
+        context['document'] = context['termvectors'].first().document
+        return context
+
 class MortarHome(TemplateView, LoginRequiredMixin):
     template_name = "mortar/home.html"
 
     def get_context_data(self, *args, **kwargs):
         context= super(MortarHome, self).get_context_data(*args, **kwargs)
         context['project_list'] = Project.objects.all()
+        context['form'] = ProjectForm(self.request.POST)
         context['dict_list'] = AIDictionary.objects.all()
         return context
+
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(*args, **kwargs)
+        form = context['form']
+        if form.is_valid():
+            new_project = Project.objects.create(
+                name=form.cleaned_data['name'],
+                slug=form.cleaned_data['slug'],
+            )   
+            new_project.assigned = get_user_model().objects.filter(username=self.request.user.username)
+            new_project.save()
+        return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
 class Home(TemplateView):
     template_name="home.html"
@@ -397,3 +444,5 @@ make_annotations = AnnotateApi.as_view()
 annotation_query = AnnotationQueryView.as_view()
 dictionary_detail = DictionaryDetailView.as_view()
 dictionary_list = DictionaryListView.as_view()
+update_dictionaries = DictionaryUpdateApi.as_view()
+term_vectors = TermVectorView.as_view()

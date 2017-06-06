@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>
+    <a href="{% url "tree-detail" tree.project.slug tree.slug %}">{{ tree.name }}</a>
+    : <a href="{% url "annotation-list" tree.slug %}">Annotations</a> 
+    : Term Vectors
+</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<h2>Annotation {{ annotation.id }}</h2>
+<p><b>Type</b> : {% if annotation.anno_type == 'S' %}Sentence{% else %}Paragraph{% endif %}</p>
+<p><b>Content</b> : {{ annotation.content }}</p>
+<p><b>Document</b> : {{ document.url }}</p>
+<p><b>Crawled At</b> : {{ document.crawled_at }}</p>
+<h2>Term Vectors</h2>
+<table class="table table-striped">
+    <tr>
+        <th>Term</th>
+        <th>Matched</th>
+        <th>Position</th>
+        <th>Start Offset</th>
+        <th>End Offset</th>
+    </tr>
+{% for tv in termvectors %}
+    <tr>
+        <td>{{ tv.term }}</td>
+        <td>{% for word in annotation.words.all %}
+                {% if word.word == tv.matched %}
+                    {{ word }} (<a href="{% url 'dictionary-detail' word.dictionary.id %}">{{ word.dictionary.name }}</a>)
+                {% endif %}
+            {% endfor %}
+            {% for regex in annotation.regexs.all %}
+                {% if regex.regex == tv.matched %}
+                    <a href="{% url 'tree-detail' annotation.projecttree.project.slug annotation.projecttree.slug %}">{{ regex.name }}</a> : {{ regex.regex }}
+                {% endif %}
+            {% endfor %}
+        </td>
+        <td>{{ tv.position }}</td>
+        <td>{{ tv.start_offset }}</td>
+        <td>{{ tv.end_offset }}</td>
+    </tr>
+{% empty %}
+    <tr><td>No term vectors.</td></tr>
+{% endfor %}
+</table>
+</div>
+</div>
+{% endblock %}

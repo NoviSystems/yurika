@@ -7,46 +7,37 @@
     : Annotations
 </h1>
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
+<a href="{% url 'update-dictionaries' tree.slug %}" class="btn btn-default">Update Dictionaries</a>
 <a href="{% url 'make-annotations' tree.slug %}" class="btn btn-primary">Run Tree Annotations</a>
 <a href="{% url 'annotation-query' tree.slug %}" class="btn btn-success">Make Complex Query</a>
-<h2>Dictionary Annotations</h2>
+<h2>Annotations</h2>
 <table class="table table-striped">
     <tr>
-        <th>Dictionary Word</th>
+        <th>ID</th>
         <th>Content</th>
         <th>Document ID</th>
-        <th>Part of Speech</th>
+        <th>Words</th>
+        <th>Regexs</th>
         <th>Score</th>
     </tr>
-{% for anno in dict_anno_list %}
+{% for anno in anno_list %}
     <tr>
-        <td>{{ anno.dictionary }}</td>
+        <td><a href="{% url 'term-vectors' anno.id%}">{{ anno.id }}</a></td>
         <td>{{ anno.content }}</td>
-        <td>{{ anno.document.id }}</td>
-        <td>{{ anno.pos }}</td>
-        <td>{{ anno.score }}</td>
-    </tr>
-{% empty %}
-    <tr><td>No annotations yet.</td></tr>
-{% endfor %}
-</table>
-</div>
-<div class="table-responsive" data-toggle="tooltip" data-html="true">
-<h2>Regex Annotations</h2>
-<table class="table table-striped">
-    <tr>
-        <th>Regex</th>
-        <th>Content</th>
-        <th>Document ID</th>
-        <th>Part of Speech</th>
-        <th>Score</th>
-    </tr>
-{% for anno in regex_anno_list %}
-    <tr>
-        <td>{{ anno.regex.regex | default_if_none:anno.regex.name }}</td>
-        <td>{{ anno.content }}</td>
-        <td>{{ anno.document.id }}</td>
-        <td>{{ anno.pos }}</td>
+        <td>{{ anno.termvectors.first.document.id }}</td>
+        <td>{% for word in anno.words.all %}
+                <a href="{% url 'dictionary-detail' word.dictionary.id %}">{{ word }}</a><br />
+            {% empty %}
+                None
+            {% endfor %}
+        </td>
+        <td>{% for regex in anno.regexs.all %}
+                {% if regex.regex %} {{regex.regex}} <br />
+                {% endif %}
+            {% empty %}
+                None
+            {% endfor %}
+        </td>
         <td>{{ anno.score }}</td>
     </tr>
 {% empty %}

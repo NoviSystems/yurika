@@ -18,10 +18,12 @@ urlpatterns = [
     url(r"^projects/(?P<project_slug>[-\w]+)/(?P<slug>[-\w]+)/query/$", views.tree_query, name="tree-query"),
     url(r"^annotations/(?P<slug>[-\w]+)/$", views.annotation_list, name="annotation-list"),
     url(r"^annotations/(?P<slug>[-\w]+)/query/$", views.annotation_query, name="annotation-query"),
+    url(r"^annotations/terms/(?P<pk>\d+)/$", views.term_vectors, name="term-vectors"),
     url(r"^dictionaries/$", views.dictionary_list, name='dictionary-list'),
     url(r"^dictionaries/(?P<pk>\d+)/$", views.dictionary_detail, name="dictionary-detail"),
     url(r"^api/trees/(?P<slug>[-\w]+)/$", views.tree_json, name="tree-json"),
     url(r"^api/trees/(?P<slug>[-\w]+)/rules/$", views.tree_rules, name="tree-rules"),
     url(r"^api/annotate/(?P<slug>[-\w]+)/$", views.make_annotations, name="make-annotations"),
+    url(r"^api/dictionaries/update/(?P<slug>[-\w]+)/$", views.update_dictionaries, name="update-dictionaries"),
     url(r"^$", views.mortar_home, name="mortar-home"),
 ]

@@ -3,6 +3,11 @@ from django.utils.text import slugify
 import mortar.models as models
 import re
 
+class ProjectForm(forms.ModelForm):
+    class Meta:
+        model = models.Project
+        fields = ['name', 'slug']
+
 class TreeForm(forms.ModelForm):
     file = forms.FileField(label="Import", required=False)
     class Meta:
@@ -57,7 +62,7 @@ class CategoryForm(forms.ModelForm):
 class AnnotationQueryForm(forms.Form):
     dictionaries = forms.ModelMultipleChoiceField(queryset=models.AIDictionary.objects.all(), label="Dictionaries", required=False)
     andor = forms.ChoiceField(widget=forms.RadioSelect, choices=(('and', 'AND'), ('or', 'OR')), label="And/Or", required=False)
-    regexs = forms.ModelMultipleChoiceField(queryset=models.Category.objects.all(), label="Tree Nodes", required=False)
+    regexs = forms.ModelMultipleChoiceField(queryset=models.Category.objects.all(), label="Regexs", required=False)
     annotype = forms.ChoiceField(widget=forms.RadioSelect, choices=(('S', 'Sentence'), ('P', 'Paragraph')), label="Annotation Type", initial='S')
 
     def clean(self):

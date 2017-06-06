@@ -82,7 +82,7 @@ def tokenize_doc(esdoc, paragraph=False):
          return None
      sentences = nltk.tokenize.sent_tokenize(content)
      tokens = [nltk.tokenize.word_tokenize(s) for s in sentences]
-     return tokens
+     return (sentences,tokens)
 
 def pos_tokens(tokens):
      return nltk.pos_tag_sents(tokens)
@@ -113,13 +113,14 @@ def frequencies(tree):
 
 def process(tree):
     docs = get_indexed_docs(tree)
-    elastic_utils.create_pos_index(tree.slug)
+    tree_has_regex = elastic_utils.create_pos_index(tree)
     for esdoc in docs:
         doc = clean_doc(esdoc, tree)
         if doc is not None:
-            tokens = tokenize_doc(esdoc)
+            sentences, tokens = tokenize_doc(esdoc)
             pos = pos_tokens(tokens)
-            elastic_utils.insert_pos_record(tree.slug, doc.id, esdoc, pos)
+            content = list(zip(sentences, pos))
+            elastic_utils.insert_pos_record(tree.slug, doc.id, esdoc, content, tree)
 
 def annotate_by_query(tree, annotype, dictionaries, andor, regexs):
     query = make_query(dictionaries, andor, regexs)
@@ -141,8 +142,48 @@ def annotate_by_query(tree, annotype, dictionaries, andor, regexs):
           sentences.append({'_id': hit['_id'], '_routing': hit['_routing']})
         body = { 'docs': sentences }
         termvectors = es.mtermvectors(index='pos_' + tree.slug, doc_type="sentence", body=json.dumps(body), fields=['content']) 
-        print(len(termvectors['docs']))
+        for doc in termvectors['docs']:
+            parent = [s['_routing'] for s in sentences if s['_id'] == doc['_id']]
+            print(parent)
+            make_annos_from_tokens(doc, parent[0], dictionaries, andor, regexs, tree)
 
+def make_annos_from_tokens(term_doc, parent, dictionaries, andor, regexs, tree):
+    es = settings.ES_CLIENT
+    esdoc = es.get(index='pos_' + tree.slug, doc_type="sentence", id=term_doc['_id'], parent=parent)    
+    doc = models.Document.objects.get(id=int(parent))
+    anno = models.Annotation.objects.create(content=esdoc['_source']['content'], projecttree=tree, anno_type="S")
+
+    # create termvectors
+    words = models.AIDictionaryObject.objects.filter(dictionary__in=dictionaries)
+    words_matched = []
+    cats_matched = []
+    terms_created = []
+    matched = False
+    for term in term_doc['term_vectors']['content']['terms']:        
+        for word in words:
+            if term == word.word:
+                words_matched.append(word)
+                for token in term_doc['term_vectors']['content']['terms'][term]['tokens']:
+                    t = models.TermVector.objects.create(term=term, matched=word.word, document=doc, position=token['position'], start_offset=token['start_offset'], end_offset=token['end_offset'])
+                    terms_created.append(t)
+        for regex in regexs:
+            r = regex.regex
+            pattern = re.compile(r)
+            result = pattern.search(term)
+            if result:
+                cats_matched.append(regex)
+                for token in term_doc['term_vectors']['content']['terms'][term]['tokens']:
+                    t = models.TermVector.objects.create(term=term, matched=r, document=doc, position=token['position'], start_offset=token['start_offset'], end_offset=token['end_offset'])
+                    terms_created.append(t)
+
+    # update anno object
+    anno.words.set(words_matched)
+    anno.regexs.set(cats_matched)
+    anno.termvectors.set(terms_created)
+
+    
+                
+    
 def make_query(dictionaries, andor, regexs):
     dicts = { 'bool': {'must': [] }}
     for d in dictionaries:
@@ -150,7 +191,7 @@ def make_query(dictionaries, andor, regexs):
 
     regs = { 'bool': {'must': [] }}
     for r in regexs:
-        regs['bool']['must'].append({"match": {"content": r.regex if r.regex is not None else r.name }}
+        regs['bool']['must'].append({"regexp": {"content": r.regex }}
 )
 
     out = {}
