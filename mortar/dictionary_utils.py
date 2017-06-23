@@ -15,13 +15,12 @@ def update_dictionaries():
         for f in files:
             if f.endswith(".txt") and os.path.getsize(os.sep.join([root, f])) > 1:
                 filepath = os.sep.join([root, f])
-                with open(filepath, "r+") as dictfile:
-                    with transaction.atomic():
-                        d,created = models.AIDictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]) )
-                        print(d.name)
-                        for line in dictfile:
-                            word = dictfile.readline().strip('\n')
-                            w = models.AIDictionaryObject.objects.create( word=word, dictionary=d )
+                with open(filepath, "rb+") as dictfile:
+                    d,created = models.AIDictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]) )
+                    print(d.name)
+                    for line in dictfile:
+                        word = line.decode("utf-8").strip('\n')
+                        w,created = models.AIDictionaryObject.objects.get_or_create( word=word, dictionary=d )
 
 def associate_tree(tree):
     categories = tree.categories.all()
@@ -144,7 +143,6 @@ def annotate_by_query(tree, annotype, dictionaries, andor, regexs):
         termvectors = es.mtermvectors(index='pos_' + tree.slug, doc_type="sentence", body=json.dumps(body), fields=['content']) 
         for doc in termvectors['docs']:
             parent = [s['_routing'] for s in sentences if s['_id'] == doc['_id']]
-            print(parent)
             make_annos_from_tokens(doc, parent[0], dictionaries, andor, regexs, tree)
 
 def make_annos_from_tokens(term_doc, parent, dictionaries, andor, regexs, tree):
@@ -159,14 +157,29 @@ def make_annos_from_tokens(term_doc, parent, dictionaries, andor, regexs, tree):
     cats_matched = []
     terms_created = []
     matched = False
-    for term in term_doc['term_vectors']['content']['terms']:        
-        for word in words:
-            if term == word.word:
-                words_matched.append(word)
-                for token in term_doc['term_vectors']['content']['terms'][term]['tokens']:
-                    t = models.TermVector.objects.create(term=term, matched=word.word, document=doc, position=token['position'], start_offset=token['start_offset'], end_offset=token['end_offset'])
-                    terms_created.append(t)
-        for regex in regexs:
+    all_terms = term_doc['term_vectors']['content']['terms']
+    for word in words:
+        multi = word.word.lower().split(' ')
+        chains = token_chains(multi, all_terms)
+        for chain in chains:
+            for token in chain:
+                index = chain.index(token)
+                t = models.TermVector.objects.create(term=multi[index], matched=word.word, document=doc, position=token['position'], start_offset=token['start_offset'], end_offset=token['end_offset'])
+                terms_created.append(t)
+                if word not in words_matched:
+                    words_matched.append(word)
+
+        #else:
+        #    for term in all_terms:
+        #@        if term == word.word:
+        #            words_matched.append(word)
+        #            for token in all_terms[term]['tokens']:
+        #                t = models.TermVector.objects.create(term=term, matched=word.word, document=doc, position=token['position'], start_offset=token['start_offset'], end_offset=token['end_offset'])
+        #                terms_created.append(t)
+
+
+    for regex in regexs:
+        for term in all_terms:        
             r = regex.regex
             pattern = re.compile(r)
             result = pattern.search(term)
@@ -181,9 +194,102 @@ def make_annos_from_tokens(term_doc, parent, dictionaries, andor, regexs, tree):
     anno.regexs.set(cats_matched)
     anno.termvectors.set(terms_created)
 
+def token_chain(current_token, remaining_terms, term_tokens):
+    if not remaining_terms:
+        return [current_token]
+
+    next_term = remaining_terms[0] 
+    next_pos = current_token['position'] + 1
+   
+ 
+    if next_term not in term_tokens:
+        return
+
+    for token in term_tokens[next_term]['tokens']:
+        if token['position'] == next_pos:
+            sub_chain = token_chain(token, remaining_terms[1:], term_tokens)
+            return None if sub_chain is None else [current_token] + sub_chain
+
+def token_chains(terms, term_tokens):
+    chains = []
+
+    #import pdb; pdb.set_trace()
+    if terms[0] not in term_tokens:
+        return []
+
+    for token in term_tokens[terms[0]]['tokens']:
+        chain = token_chain(token, terms[1:], term_tokens)
+        if chain is not None:
+            chains.append(chain)
+    return chains
+
+
+#def match_multi(found, match_len):
+#    matched = []
+#    for term in found:
+#        for token in term['tokens']:
+#            place = term['tokens'].index(token)
+#            if not len(matched[place]):
+#                matched
+#                matched[place].append({'term': term['term'], 
+
+#def find_all_multi(multi, all_terms):
+#    found = []
+#    for word in multi:
+#        tokens = all_terms.get(word).get('tokens')
+#        if tokens is None:
+#             return []
+#        else:
+#           found.append({'term': word, 'tokens': tokens})
+
+#    out = []
+#    if len(found) == len(multi):
+        
+        
+#def recurse_tokens(multi, parts_matched, next_position, all_terms):
+    # start with recurse_tokens(multi, 0, 0, [], all_terms)
+#    if len(multi) == parts_matched:
+#        return token_chain
     
-                
+    # match next word in multi to term
+#    word = multi[parts_matched]
+ #   for term in all_terms:
+ #       if term == word:
+ #           print(term)
+ #           for token in all_terms[term]['tokens']:
+ #               current_position = token['position']
+ #               if (not next_position) or (current_position == next_position):
+ #                   print(token_chain)
+ #                   token_chain.append({'term': term, 'token': token})
+ #                   next_position = current_position + 1
+ #                   recurse_tokens(multi, parts_matched+1, next_position, all_terms)
+
     
+#def find_multi_words(multiword, all_terms):
+#    terms = []
+#    last_pos = []
+#    first_pos = []
+#    for word in multiword:
+#        term,last_pos = match_next_part(word, last_pos, all_terms)
+#        if word == multiword[0]:
+#            first_pos = last_pos
+#        if term is not None:
+#            terms.append(term)
+#        if not len(last_pos):
+#            return [],[]
+#    return terms,first_pos
+        
+
+#def match_next_part(part, last_pos, all_terms):
+#    for term in all_terms:
+#        if term == part:
+#            for token in all_terms[term]['tokens']:
+#                if token['position'] == last_pos + 1:
+#                    return term,token['position']
+#    return None,-1
+    
+
+
 def make_query(dictionaries, andor, regexs):
     dicts = { 'bool': {'must': [] }}
     for d in dictionaries:

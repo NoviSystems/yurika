@@ -3,7 +3,8 @@ Django<1.11
 colorlog
 
 # Uncomment in production
-#psycopg2
+psycopg2
+gunicorn 
 
 # mortar
 requests

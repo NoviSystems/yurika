@@ -328,7 +328,7 @@ class AnnotationView(TemplateView, LoginRequiredMixin):
     def get_context_data(self, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree'])
+        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree']).exclude(termvectors=None)
         return context
 
 class AnnotationQueryView(FormView, LoginRequiredMixin):
