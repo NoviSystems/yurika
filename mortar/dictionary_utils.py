@@ -89,12 +89,17 @@ def pos_tokens(tokens):
 def dict_annotate(pos_tokens, dicts, tree, doc):
      for d in dicts:
          for obj in d.words.all():
-             [ models.Annotation.objects.get_or_create(dictionary=d, document=doc, rule=obj.word, pos=token[1], content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), anno_type='S', projecttree=tree) for s in pos_tokens for token in s if token[0]==obj.word ]
+             created = [ models.Annotation.objects.get_or_create(document=doc, content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), anno_type='S', projecttree=tree) for s in pos_tokens for token in s if token[0]==obj.word ]
+             for c in created:
+                 c.words.add(obj)
+                 c.save()
 
 def regex_annotate(pos_tokens, tree, doc):
     for cat in tree.categories.all():
         regex = re.compile(cat.regex if cat.regex else cat.name)
-        [ models.Annotation.objects.get_or_create(regex=cat, document=doc, rule=cat.name, pos=token[1], content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), anno_type='S', projecttree=tree) for s in pos_tokens for token in s if regex.fullmatch(token[0])]
+        created = [ models.Annotation.objects.get_or_create(document=doc, content="".join([" "+i[0] if not i[0].startswith("'") and i[0] not in string.punctuation else i[0] for i in s]).strip(), anno_type='S', projecttree=tree) for s in pos_tokens for token in s if regex.fullmatch(token[0])]
+        for c in created:
+            c.regexs.add(cat)
 
 def ngram():
     pass

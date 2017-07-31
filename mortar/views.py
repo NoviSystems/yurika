@@ -350,7 +350,7 @@ class AnnotationQueryView(FormView, LoginRequiredMixin):
         context = self.get_context_data(**kwargs)
         tree = context['tree']
         cd = form.cleaned_data
-        #dictionary_utils.process(tree)
+        dictionary_utils.process(tree)
         dictionary_utils.annotate_by_query(tree, cd['annotype'], cd['dictionaries'], cd['andor'], cd['regexs'])
 
         return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
