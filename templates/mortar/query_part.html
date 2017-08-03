@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>{{ tree.name }}</h1>
+<form id="form" action="" method="POST" novalidate>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+  <table class="table table-striped">
+      {% csrf_token %}
+    <tr>
+      <td>
+        <select id="form_select">
+          <option value="---">-----</option>
+          <option value="dict">Dictionary</option>
+          <option value="regex">Regular Expression</option>
+          <option value"subquery">Combined Query</option>
+        </select>
+      </td>
+    <tr>
+      <tr id ="dict_form" class="collapse">
+        <td>{{ dict_form.op }}</td>
+        <td>{{ dict_form.dictionary }}</td>
+      </tr>
+      <tr id="regex_form" class="collapse">
+        <td>{{ regex_form.op }}</td>
+        <td>{{ regex_form.regex }}</td>
+      </tr>
+      <tr id="subquery_form" class="collapse">
+        <td>{{ subquery_form.op }}</td>
+        <td>{{ subquery_form.subquery }}</td>
+      </tr>
+  </table>
+</div>
+  <button class="btn btn-success" type="submit" name="query" value="submit">Create Query</button>
+</div>
+</form>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function check_form_selection(val) {
+    if(val == 'dict') {
+        $("#dict_form").removeClass('collapse');
+        $("#regex_form").addClass('collapse');
+        $("#subquery_form").addClass('collapse');
+        $("#form").append('<input type="hidden" name="form_type" value="dict_form" />');
+    }
+    else if(val == 'regex') {
+        $("#regex_form").removeClass('collapse');
+        $("#dict_form").addClass('collapse');
+        $("#subquery_form").addClass('collapse');
+        $("#form").append('<input type="hidden" name="form_type" value="regex_form" />');
+    }
+    else {
+        $("#subquery_form").removeClass('collapse');
+        $("#dict_form").addClass('collapse');
+        $("#regex_form").addClass('collapse');
+        $("#form").append('<input type="hidden" name="form_type" value="subquery_form" />');
+    }
+}
+
+$('document').ready(function() {
+    $("#form_select").change(function() {
+        check_form_selection(this.value);
+    });
+});
+</script>
+{% endblock %}

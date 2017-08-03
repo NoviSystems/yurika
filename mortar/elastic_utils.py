@@ -189,4 +189,29 @@ def insert_pos_record(slug, id, esdoc, content, tree):
 
 def build_es_annotations(tree):
     docs = models.Document.objects.filter(projecttree=tree)
-    
+   
+def create_query_from_parts(query):
+    parts = query.parts
+    for part in parts:
+        if part.dictionary_part:
+            out.append(and_or(part.op, make_dict_query(part.dictionary_part.dictionary)))
+        elif part.regex_part:
+            out.append(and_or(part.op, make_regex_query(part.regex_part.regex)))
+        elif part.sub_query_part:
+            out.append(and_or(part.op, create_query_from_parts(query)))
+    return out
+
+def and_or(op):
+    if op == '+':
+        return {'bool': {'must': []}}
+    else:
+        return {'bool': {'should': []}}
+
+def make_dict_query(dictionary):
+    out = { 'bool': {'should': []}}
+    for word in dictionary.words.all():
+        out.append({'match': {'content': word.word}})
+    return out
+
+def make_regex_query(regex):
+    return {'bool': {'must': {'regexp': {'content': regex.regex}}}}

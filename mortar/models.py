@@ -145,9 +145,24 @@ class Annotation(models.Model):
     def __str__(self):
         return str(self.id)
 
-class QueryLog(models.Model):
-    annotation = models.ForeignKey('Annotation', related_name="queries")
-    es_body = models.TextField()
+class Query(models.Model):
+    name = models.CharField(max_length=30, blank=True)
+    elastic_json = models.TextField(blank=True)
+    def __str__(self):
+        return name
 
-    class Meta:
-        verbose_name_plural = "Queries"
+class QueryPart(models.Model):
+    query = models.ForeignKey('Query', related_name="parts")
+    op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR')))
+    name = models.CharField(max_length=30)
+    def __str__(self):
+        return "QueryPart: %d" % self.id
+    
+class DictionaryPart(QueryPart):
+    dictionary = models.ForeignKey('AIDictionary', related_name="dictionaries")
+    
+class RegexPart(QueryPart):
+    regex = models.ForeignKey('Category', related_name="regexs")
+    
+class SubQueryPart(QueryPart):
+    subquery = models.ForeignKey('Query', related_name="subqueries")

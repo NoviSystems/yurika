@@ -18,8 +18,8 @@ from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
-from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, QueryLog
-from .forms import ProjectForm, TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm
+from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart
+from .forms import ProjectForm, TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm, DictionaryPartForm, RegexPartForm, SubQueryPartForm, QuerySelectForm
 import mortar.elastic_utils as elastic_utils
 import mortar.tree_utils as tree_utils
 import mortar.dictionary_utils as dictionary_utils
@@ -322,14 +322,75 @@ class TreeQuerySelectView(TemplateView):
         elastic_utils.reindex('nutch', 'filter_' + tree.slug, query)
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project'].slug, 'slug':context['tree'].slug}))
 
+class QueryPartView(TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/query_part.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(QueryPartView, self).get_context_data(**kwargs)
+        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        context['tree'] = tree
+        context['project'] = tree.project
+        context['dict_form'] = DictionaryPartForm() 
+        context['regex_form'] = RegexPartForm()
+        context['subquery_form'] = SubQueryPartForm()
+        # hidden input for type, create one subtype at a time
+        return context
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(*args, **kwargs)
+        form_type = request.POST.get('form_type')
+        form = context[form_type]
+        print(request.POST) 
+        if form.is_valid():
+            part = form.save(commit=False)
+            if form.cleaned_data.get('dictionary'):
+                d = form.cleaned_data.get('dictionary')
+                part.name = part.name + " " + form.cleaned_data.get('op') + " " + d.name
+
+            elif form.cleaned_data.get('regex'):
+                r = form.cleaned_data.get('regex')
+                part.name = part.name + " " + form.cleaned_data.get('op') + " " + r.name
+                
+            elif form.cleaned_data.get('subquery'):
+                q = form.cleaned_data.get('subquery')
+                part.name = part.name + " " + form.cleaned_data.get('op') + " " + q.name
+                
+            query = Query.objects.create()
+            query.name = part.name
+            query.save()
+
+            part.query = query
+            part.save()
+            
+            return HttpResponseRedirect(reverse('annotation-list', kwargs={'project_slug': context['project'].slug, 'slug': context['tree'].slug}))
+
+        return render(request, self.template_name, context=self.get_context_data(**kwargs))
+
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(*args, **kwargs)
+        context['dict_form'].fields['dictionary'].queryset = AIDictionary.objects.all()
+        context['regex_form'].fields['regex'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
+        context['subquery_form'].fields['subquery'].queryset = Query.objects.all()
+        return self.render_to_response(context)
+
 class AnnotationView(TemplateView, LoginRequiredMixin):
     template_name = 'mortar/annotations.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        context['query_select'] = Query.objects.all()
         context['anno_list'] = Annotation.objects.filter(projecttree=context['tree']).exclude(termvectors=None)
         return context
+
+    def post(self, request, *args, **kwargs):
+        context = super(AnnotationView, self).get_context_data(**kwargs)
+        if request.POST.get('query'):
+            query = Query.objects.get(id=request.POST.get('query'))
+            query.elastic_json = elastic_utils.create_query_from_parts(query)
+            query.save()
+            dictionary_utils.annotate_by_query_parts(tree, query.elastic_json)
+        return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
 class AnnotationQueryView(FormView, LoginRequiredMixin):
     template_name = 'mortar/annotation_query.html'
@@ -350,7 +411,6 @@ class AnnotationQueryView(FormView, LoginRequiredMixin):
         context = self.get_context_data(**kwargs)
         tree = context['tree']
         cd = form.cleaned_data
-        dictionary_utils.process(tree)
         dictionary_utils.annotate_by_query(tree, cd['annotype'], cd['dictionaries'], cd['andor'], cd['regexs'])
 
         return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
@@ -359,7 +419,6 @@ class AnnotateApi(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
         dictionary_utils.associate_tree(tree)
-        dictionary_utils.process(tree)
         dictionary_utils.annotate_by_tree(tree, pos)
         return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
 
@@ -386,8 +445,13 @@ class DictionaryUpdateApi(APIView, LoginRequiredMixin):
         tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
         dictionary_utils.update_dictionaries()
         dictionary_utils.associate_tree(tree)
-        dictionary_utils.process(tree)
         return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
+
+class ProcessTreeApi(APIView):
+    def get(self, request, *args, **kwargs):
+        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        dictionary_utils.process(tree)
+        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': tree.slug}))
 
 class TermVectorView(TemplateView, LoginRequiredMixin):
     template_name = "mortar/termvectors.html"
@@ -442,7 +506,9 @@ tree_branch = TreeBranchView.as_view()
 annotation_list = AnnotationView.as_view()
 make_annotations = AnnotateApi.as_view()
 annotation_query = AnnotationQueryView.as_view()
+query_part = QueryPartView.as_view()
 dictionary_detail = DictionaryDetailView.as_view()
 dictionary_list = DictionaryListView.as_view()
 update_dictionaries = DictionaryUpdateApi.as_view()
 term_vectors = TermVectorView.as_view()
+process_tree = ProcessTreeApi.as_view()
