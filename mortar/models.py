@@ -147,16 +147,17 @@ class Annotation(models.Model):
 
 class Query(models.Model):
     name = models.CharField(max_length=30, blank=True)
+    string = models.TextField(blank=True)
     elastic_json = models.TextField(blank=True)
     def __str__(self):
-        return name
+        return self.name
 
 class QueryPart(models.Model):
     query = models.ForeignKey('Query', related_name="parts")
-    op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR')))
+    op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR'))
     name = models.CharField(max_length=30)
     def __str__(self):
-        return "QueryPart: %d" % self.id
+        return self.name
     
 class DictionaryPart(QueryPart):
     dictionary = models.ForeignKey('AIDictionary', related_name="dictionaries")
@@ -166,3 +167,6 @@ class RegexPart(QueryPart):
     
 class SubQueryPart(QueryPart):
     subquery = models.ForeignKey('Query', related_name="subqueries")
+
+class PartOfSpeechPart(QueryPart):
+    part_of_speech = models.CharField(max_length=4, choices=PARTS_OF_SPEECH)

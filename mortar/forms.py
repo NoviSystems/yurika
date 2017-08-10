@@ -74,23 +74,37 @@ class AnnotationQueryForm(forms.Form):
         if not cd['dictionaries'] or not cd['regexs']:
             cd['andor'] = None
 
-class DictionaryPartForm(forms.ModelForm):
+class BSModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = "form-control"
+
+
+class DictionaryPartForm(BSModelForm):
     class Meta:
         model = models.DictionaryPart
         fields = ['dictionary', 'op']
         labels = {'dictionary': 'Dictionary', 'op': 'Operation'}
 
-class RegexPartForm(forms.ModelForm):
+class RegexPartForm(BSModelForm):
     class Meta:
         model = models.RegexPart
         fields = ['regex', 'op']
         labels = {'regex': 'Regular Expression', 'op': 'Operation'}
 
-class SubQueryPartForm(forms.ModelForm):
+class SubQueryPartForm(BSModelForm):
     class Meta:
         model = models.SubQueryPart
         fields = ['subquery', 'op']
         labels = {'subquery': 'Combined Query', 'op': 'Operation'}
 
+class PartOfSpeechPartForm(BSModelForm):
+    class Meta:
+        model = models.PartOfSpeechPart
+        fields = ['part_of_speech', 'op']
+        labels = {'part_of_speech': 'Part of Speech', 'op': 'Operation'}
+
 class QuerySelectForm(forms.Form):
     query = forms.ModelChoiceField(queryset=models.Query.objects.all(), label="Queries", required=False)
+

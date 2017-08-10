@@ -5,7 +5,7 @@ from django.utils.text import slugify
 from django.urls import reverse
 from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.shortcuts import render
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -18,8 +18,8 @@ from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from wsgiref.util import FileWrapper
 import mimetypes
-from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart
-from .forms import ProjectForm, TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm, DictionaryPartForm, RegexPartForm, SubQueryPartForm, QuerySelectForm
+from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart, PartOfSpeechPart, PARTS_OF_SPEECH
+from .forms import ProjectForm, TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm, DictionaryPartForm, RegexPartForm, SubQueryPartForm, PartOfSpeechPartForm, QuerySelectForm
 import mortar.elastic_utils as elastic_utils
 import mortar.tree_utils as tree_utils
 import mortar.dictionary_utils as dictionary_utils
@@ -333,36 +333,84 @@ class QueryPartView(TemplateView, LoginRequiredMixin):
         context['dict_form'] = DictionaryPartForm() 
         context['regex_form'] = RegexPartForm()
         context['subquery_form'] = SubQueryPartForm()
+        context['pos_form'] = PartOfSpeechPartForm()
         # hidden input for type, create one subtype at a time
         return context
 
+    def create_query_part(self, qtype, qid, op, query):
+        
+        if not op:
+            op = '+'
+
+        if qtype == 'dictionary':
+            dictionary = AIDictionary.objects.get(id=qid)
+            part = DictionaryPart.objects.create(query=query, dictionary=dictionary, op=op, name=dictionary.name)
+            return part
+
+        elif qtype == 'regex':
+            regex = Category.objects.get(id=qid)
+            part = RegexPart.objects.create(query=query, regex=regex, op=op, name=regex.name)
+            return part
+
+        elif qtype == 'subquery':
+            subquery = Query.objects.get(id=qid)
+            part = SubQueryPart.objects.create(query=query, subquery=subquery, op=op, name=subquery.name)
+            return part
+
+        elif qtype == 'part_of_speech':
+            name = ""
+            for part in PARTS_OF_SPEECH:
+                if part[0] == qid:
+                    name = part[1]
+            part = PartOfSpeechPart.objects.create(query=query, part_of_speech=qid, op=op, name=name)
+            return part
+
+        return None
+
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-        form_type = request.POST.get('form_type')
-        form = context[form_type]
-        print(request.POST) 
-        if form.is_valid():
-            part = form.save(commit=False)
-            if form.cleaned_data.get('dictionary'):
-                d = form.cleaned_data.get('dictionary')
-                part.name = part.name + " " + form.cleaned_data.get('op') + " " + d.name
+        first_type = request.POST.get('form_type_1')
+        sec_type = request.POST.get('form_type_2')
+        print(request.POST)
+        op = request.POST.get('op')
 
-            elif form.cleaned_data.get('regex'):
-                r = form.cleaned_data.get('regex')
-                part.name = part.name + " " + form.cleaned_data.get('op') + " " + r.name
-                
-            elif form.cleaned_data.get('subquery'):
-                q = form.cleaned_data.get('subquery')
-                part.name = part.name + " " + form.cleaned_data.get('op') + " " + q.name
-                
-            query = Query.objects.create()
-            query.name = part.name
+        # multi-part query
+        if first_type and sec_type and op:
+            query = Query.objects.create() 
+            first_list = request.POST.getlist(first_type)
+            sec_list = request.POST.getlist(sec_type)
+            first_part = self.create_query_part(first_type, first_list[0], op, query)
+            sec_part = self.create_query_part(sec_type, sec_list[1], op, query)
+
+            query.name = "(" + first_part.name + " " + op + " " + sec_part.name + ")"
+            query.string = "(" + first_type + "." + first_list[0] + " " + op + " " + sec_type + "." + sec_list[1] + ")" 
             query.save()
 
-            part.query = query
-            part.save()
-            
-            return HttpResponseRedirect(reverse('annotation-list', kwargs={'project_slug': context['project'].slug, 'slug': context['tree'].slug}))
+            query.elastic_json = elastic_utils.create_query_from_string(query.string)
+            query.save()
+
+            return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
+
+
+        # singular query
+        elif first_type and not sec_type:
+            first_list = request.POST.getlist(first_type)
+            query = Query.objects.create()
+            first_part = self.create_query_part(first_type, first_list[0], op, query)
+
+            if first_part:
+                query.name = first_part.name
+                if first_type == 'dictionary':
+                    query.elastic_json = json.dumps(elastic_utils.make_dict_query(AIDictionary.objects.get(id=first_list[0])))
+                elif first_type == 'regex':
+                    query.elastic_json = json.dumps(elastic_utils.make_regex_query(Category.objects.get(id=first_list[0])))
+                elif first_type == 'part_of_speech':
+                    query.elastic_json = json.dumps(elastic_utils.make_pos_query(first_list[0]))
+                query.save()
+            else:
+                query.delete()
+
+            return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
 
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
@@ -370,7 +418,7 @@ class QueryPartView(TemplateView, LoginRequiredMixin):
         context = self.get_context_data(*args, **kwargs)
         context['dict_form'].fields['dictionary'].queryset = AIDictionary.objects.all()
         context['regex_form'].fields['regex'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
-        context['subquery_form'].fields['subquery'].queryset = Query.objects.all()
+        context['subquery_form'].fields['subquery'].queryset = Query.objects.annotate(num_parts=Count('parts')).filter(num_parts__gt=1)
         return self.render_to_response(context)
 
 class AnnotationView(TemplateView, LoginRequiredMixin):

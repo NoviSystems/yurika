@@ -1,11 +1,11 @@
-from .models import ProjectTree, Category
+from .models import ProjectTree, Category, AIDictionary, Query
 from django.conf import settings
 import urllib.request
 import simplejson, json
 import string
 from elasticsearch.client import IndicesClient
 from elasticsearch import helpers
-
+from pyparsing import nestedExpr
 
 def create_index(name, analysis_conf=None):
     es = settings.ES_CLIENT
@@ -190,28 +190,40 @@ def insert_pos_record(slug, id, esdoc, content, tree):
 def build_es_annotations(tree):
     docs = models.Document.objects.filter(projecttree=tree)
    
-def create_query_from_parts(query):
-    parts = query.parts
-    for part in parts:
-        if part.dictionary_part:
-            out.append(and_or(part.op, make_dict_query(part.dictionary_part.dictionary)))
-        elif part.regex_part:
-            out.append(and_or(part.op, make_regex_query(part.regex_part.regex)))
-        elif part.sub_query_part:
-            out.append(and_or(part.op, create_query_from_parts(query)))
-    return out
-
-def and_or(op):
-    if op == '+':
-        return {'bool': {'must': []}}
-    else:
-        return {'bool': {'should': []}}
-
 def make_dict_query(dictionary):
-    out = { 'bool': {'should': []}}
+    out = []
     for word in dictionary.words.all():
         out.append({'match': {'content': word.word}})
-    return out
+    return { 'bool': {'should': out}}
 
 def make_regex_query(regex):
     return {'bool': {'must': {'regexp': {'content': regex.regex}}}}
+
+def make_pos_query(pos):
+    return {'bool': {'must': {'match': {'tokens': '|' + pos }}}}
+
+def create_query_from_string(string):
+    nest = nestedExpr().parseString(string).asList()
+    
+    # [['regex.1', '+', 'dictionary.2'], '|', [['dictionary.4', '|', 'dictionary.10'], '+', 'regex.5']]
+    # { | : [{ + : [regex.1, dictionary.2]}, { + : [ { | : [dictionary.4, dictionary.10] }, regex.5 ]} ]}
+    
+    def recurse_nest(n):
+        if type(n) == type([]):
+            return {'bool': { 'should' if n[1] == '|' else 'must' : [recurse_nest(n[0]), recurse_nest(n[2])] }}
+        else:
+            s = n.split('.')
+            if s[0] == 'dictionary':
+                return make_dict_query(AIDictionary.objects.get(id=s[1]))
+            elif s[0] == 'regex':
+                return make_regex_query(Category.objects.get(id=s[1]))
+            elif s[0] == 'part_of_speech':
+                return make_pos_query(s[1])
+            else:
+                return json.loads(Query.objects.get(id=s[1]).elastic_json)
+    
+    dnest = json.dumps(recurse_nest(nest[0]))
+    print(dnest)
+    return dnest
+    
+    

@@ -3,34 +3,49 @@
 {% block content %}
 <div class="visible-desktop container body-wrapper">
 <h1>{{ tree.name }}</h1>
+<p>Here you can build complex queries based off three types: all dictionaries, regexs in the tree, and previously created queries.<br /><br />You can also create a simple query by leaving the operator and second form blank.</p>
 <form id="form" action="" method="POST" novalidate>
-<div class="table-responsive" data-toggle="tooltip" data-html="true">
-  <table class="table table-striped">
       {% csrf_token %}
-    <tr>
-      <td>
-        <select id="form_select">
-          <option value="---">-----</option>
+  <div class="form-group row">
+    <div class="col-xs-4">
+        <select id="form_select_1" class="form-control">
+          <option value="">---------</option>
           <option value="dict">Dictionary</option>
           <option value="regex">Regular Expression</option>
-          <option value"subquery">Combined Query</option>
+          <option value="subquery">Combined Query</option>
+          <option value="pos">Part of Speech</option>
         </select>
-      </td>
-    <tr>
-      <tr id ="dict_form" class="collapse">
-        <td>{{ dict_form.op }}</td>
-        <td>{{ dict_form.dictionary }}</td>
-      </tr>
-      <tr id="regex_form" class="collapse">
-        <td>{{ regex_form.op }}</td>
-        <td>{{ regex_form.regex }}</td>
-      </tr>
-      <tr id="subquery_form" class="collapse">
-        <td>{{ subquery_form.op }}</td>
-        <td>{{ subquery_form.subquery }}</td>
-      </tr>
-  </table>
-</div>
+    </div>
+    <div class="col-xs-4">
+      {{ dict_form.op }}
+    </div>
+    <div class="col-xs-4">
+        <select id="form_select_2" class="form-control">
+          <option value="">---------</option>
+          <option value="dict">Dictionary</option>
+          <option value="regex">Regular Expression</option>
+          <option value="subquery">Combined Query</option>
+          <option value="pos">Part of Speech</option>
+        </select>
+    </div>
+  </div>
+  <div class="form-group row">
+    <div class="col-xs-4">
+        <div id="dict_form_1" class="collapse">{{ dict_form.dictionary }}</div>
+        <div id="regex_form_1" class="collapse">{{ regex_form.regex }}</div>
+        <div id="subquery_form_1" class="collapse">{{ subquery_form.subquery }}</div>
+        <div id="pos_form_1" class="collapse">{{ pos_form.part_of_speech }}</div>
+    </div>
+
+    <div class="col-xs-4"></div>
+
+    <div class="col-xs-4">
+        <div id="dict_form_2" class="collapse">{{ dict_form.dictionary }}</div>
+        <div id="regex_form_2" class="collapse">{{ regex_form.regex }}</div>
+        <div id="subquery_form_2" class="collapse">{{ subquery_form.subquery }}</div>
+        <div id="pos_form_2" class="collapse">{{ pos_form.part_of_speech }}</div>
+    </div>
+   </div>
   <button class="btn btn-success" type="submit" name="query" value="submit">Create Query</button>
 </div>
 </form>
@@ -38,30 +53,51 @@
 {% endblock %}
 {% block scripts %}
 <script>
-function check_form_selection(val) {
+function check_form_selection(form_num, val) {
+    console.log("#dict_form" + form_num);
     if(val == 'dict') {
-        $("#dict_form").removeClass('collapse');
-        $("#regex_form").addClass('collapse');
-        $("#subquery_form").addClass('collapse');
-        $("#form").append('<input type="hidden" name="form_type" value="dict_form" />');
+        $("#dict_form_" + form_num).removeClass('collapse');
+        $("#regex_form_" + form_num).addClass('collapse');
+        $("#subquery_form_" + form_num).addClass('collapse');
+        $("#pos_form_" + form_num).addClass('collapse');
+        $("#form_select_" + form_num).append('<input type="hidden" name="form_type_' + form_num + '" value="dictionary" />');
     }
     else if(val == 'regex') {
-        $("#regex_form").removeClass('collapse');
-        $("#dict_form").addClass('collapse');
-        $("#subquery_form").addClass('collapse');
-        $("#form").append('<input type="hidden" name="form_type" value="regex_form" />');
+        $("#regex_form_" + form_num).removeClass('collapse');
+        $("#dict_form_" + form_num).addClass('collapse');
+        $("#subquery_form_" + form_num).addClass('collapse');
+        $("#pos_form_" + form_num).addClass('collapse');
+        $("#form_select_" + form_num).append('<input type="hidden" name="form_type_' + form_num + '" value="regex" />');
+    }
+    else if(val == 'subquery') {
+        $("#subquery_form_" + form_num).removeClass('collapse');
+        $("#dict_form_" + form_num).addClass('collapse');
+        $("#regex_form_" + form_num).addClass('collapse');
+        $("#pos_form_" + form_num).addClass('collapse');
+        $("#form_select_" + form_num).append('<input type="hidden" name="form_type_' + form_num + '" value="subquery" />');
+    }
+    else if(val =='pos') {
+        $("#pos_form_" + form_num).removeClass('collapse');
+        $("#subquery_form_" + form_num).addClass('collapse');
+        $("#dict_form_" + form_num).addClass('collapse');
+        $("#regex_form_" + form_num).addClass('collapse');
+        $("#form_select_" + form_num).append('<input type="hidden" name="form_type_' + form_num + '" value="part_of_speech" />');
     }
     else {
-        $("#subquery_form").removeClass('collapse');
-        $("#dict_form").addClass('collapse');
-        $("#regex_form").addClass('collapse');
-        $("#form").append('<input type="hidden" name="form_type" value="subquery_form" />');
+        $("#subquery_form_" + form_num).addClass('collapse');
+        $("#dict_form_" + form_num).addClass('collapse');
+        $("#regex_form_" + form_num).addClass('collapse');
+        $("#pos_form_" + form_num).addClass('collapse');
+        $("#form_select_" + form_num).append('<input type="hidden" name="form_type_' + form_num + '" value="" />');
     }
 }
 
 $('document').ready(function() {
-    $("#form_select").change(function() {
-        check_form_selection(this.value);
+    $("#form_select_1").change(function() {
+        check_form_selection("1", this.value);
+    });
+    $("#form_select_2").change(function() {
+        check_form_selection("2", this.value);
     });
 });
 </script>

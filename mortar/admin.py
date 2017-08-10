@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django_mptt_admin.admin import FilterableDjangoMpttAdmin
-from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Document, Annotation, TermVector, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart
+from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Document, Annotation, TermVector, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart, PartOfSpeechPart
 
 class CategoryAdmin(FilterableDjangoMpttAdmin):
     list_filter = ('projecttree',)
@@ -18,3 +18,4 @@ admin.site.register(QueryPart)
 admin.site.register(DictionaryPart)
 admin.site.register(RegexPart)
 admin.site.register(SubQueryPart)
+admin.site.register(PartOfSpeechPart)
