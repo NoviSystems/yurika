@@ -137,9 +137,9 @@ class Annotation(models.Model):
     content = models.TextField()
     score = models.FloatField(default=0)
     projecttree = models.ForeignKey('ProjectTree', related_name="annotations")
-    words = models.ManyToManyField('AIDictionaryObject', blank=True, related_name="annotations")
-    regexs = models.ManyToManyField('Category', blank=True, related_name="annotations")
-    termvectors = models.ManyToManyField('TermVector', blank=True, related_name="annotations")
+    query = models.ForeignKey('Query', related_name="annotations")
+    document = models.ForeignKey('Document', related_name="annotations")
+    place = models.IntegerField()
     anno_type = models.CharField(max_length=1, choices=(('S', 'Sentence'),('P', 'Paragraph')))
 
     def __str__(self):
@@ -154,7 +154,7 @@ class Query(models.Model):
 
 class QueryPart(models.Model):
     query = models.ForeignKey('Query', related_name="parts")
-    op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR'))
+    op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR')))
     name = models.CharField(max_length=30)
     def __str__(self):
         return self.name

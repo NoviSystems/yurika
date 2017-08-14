@@ -126,7 +126,7 @@ def process(tree):
             content = list(zip(sentences, pos))
             elastic_utils.insert_pos_record(tree.slug, doc.id, esdoc, content, tree)
 
-def annotate_by_query(tree, annotype, dictionaries, andor, regexs):
+def annotate_by_termvector(tree, annotype, dictionaries, andor, regexs):
     query = make_query(dictionaries, andor, regexs)
     body = { "query" : {
         "filtered": {
@@ -233,7 +233,20 @@ def annotate_by_tree(tree, pos):
     for doc in docs:
         dict_annotate(pos, tree_dicts, tree, doc)
         regex_annotate(pos, tree, doc)
-    
+
+def annotate_by_query(tree, query):
+    body = { "query" : {
+       "filtered": {
+         "filter": json.loads(query.elastic_json)
+       }
+    }}
+    es = settings.ES_CLIENT
+    search = es.search(index="pos_" + tree.slug, doc_type="sentence", body=body, size=10000)['hits']
+    if search['total']:
+        for hit in search['hits']:
+            doc = models.Document.objects.get(id=int(hit['_routing']))
+            anno = models.Annotation.objects.create(content=hit['_source']['content'], projecttree=tree, query=query, document=doc, place=int(hit['_source']['place']),anno_type="S")
+            
 #find . -size  0 -print0 |xargs -0 rm
 #for f in *.csv; do sed -i -e '1iDOC_ID,ID\' $f; done; # brg
 #for f in *.csv; do sed -i -e '1iID,VALUE\' $f; done; # csv 

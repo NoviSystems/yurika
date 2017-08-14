@@ -428,17 +428,30 @@ class AnnotationView(TemplateView, LoginRequiredMixin):
         context = super(AnnotationView, self).get_context_data(**kwargs)
         context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
         context['query_select'] = Query.objects.all()
-        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree']).exclude(termvectors=None)
+        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree'])
+        context['result_count'] = len(Annotation.objects.filter(projecttree=context['tree']))
+        context['query_results'] = self.get_anno_json(context['tree'])
+        context['form'] = QuerySelectForm()
         return context
 
     def post(self, request, *args, **kwargs):
         context = super(AnnotationView, self).get_context_data(**kwargs)
+        tree = ProjectTree.objects.get(slug=context['slug'])
+        print(request.POST)
         if request.POST.get('query'):
             query = Query.objects.get(id=request.POST.get('query'))
-            query.elastic_json = elastic_utils.create_query_from_parts(query)
-            query.save()
-            dictionary_utils.annotate_by_query_parts(tree, query.elastic_json)
+            dictionary_utils.annotate_by_query(tree, query)
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
+
+    def get_anno_json(self, tree):
+        annos = Annotation.objects.filter(projecttree=tree)
+        out = []
+        num = 1
+        for anno in annos:
+            out.append([anno.id, anno.content, anno.document.url, anno.query.name, anno.score])
+            num += 1
+        print(out)
+        return out
 
 class AnnotationQueryView(FormView, LoginRequiredMixin):
     template_name = 'mortar/annotation_query.html'

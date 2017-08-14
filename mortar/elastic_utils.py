@@ -159,6 +159,7 @@ def create_pos_index(tree):
 def pos_tokens_to_es(content, tree):
     regexs = list_tree_patterns(tree)
     out = []
+    place = 0
     for tupl in content:
         sent, pos = tupl
         body = {
@@ -167,6 +168,8 @@ def pos_tokens_to_es(content, tree):
             '_source': {}
         }
         body['_source']['content'] = sent
+        body['_source']['place'] = place
+        place += 1
         for name,regex in regexs:
             body['_source']['patterns'] = sent
         body['_source']['tokens'] = "".join([" "+i[0]+"|"+i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])

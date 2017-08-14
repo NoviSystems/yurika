@@ -108,3 +108,7 @@ class PartOfSpeechPartForm(BSModelForm):
 class QuerySelectForm(forms.Form):
     query = forms.ModelChoiceField(queryset=models.Query.objects.all(), label="Queries", required=False)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = "form-control"
