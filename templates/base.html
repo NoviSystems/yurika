@@ -8,6 +8,17 @@
     <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">
     <link rel="stylesheet" src="{% static 'css/jqtree.css' %}">
     {% block header %}{% endblock %}
+
+    {% if GA %}
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', '{{ GA }}', 'auto');
+      ga('send', 'pageview');
+    </script>
+    {% endif %}
 </head>
 <body>
 
@@ -38,17 +49,18 @@
     </div>
 </nav>
 
-{% for message in messages %}
-    {% if message.level_tag == "info" %}
-        <div class="alert alert-info" role="alert">{{ message }}</div>
-    {% elif message.level_tag == "success" %}
-        <div class="alert alert-success" role="alert">{{ message }}</div>
-    {% elif message.level_tag == "warning" %}
-        <div class="alert alert-warning" role="alert">{{ message }}</div>
-    {% elif message.level_tag == "error" %}
-        <div class="alert alert-danger" role="alert">{{ message }}</div>
-    {% endif %}
-{% endfor %}
+{% block messages %}
+<div class="container">
+    {% for message in messages %}
+    <div class="alert alert-dismissable {{ message.tags }}" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
 
 <div class="container">
     {% block content %}{% endblock %}

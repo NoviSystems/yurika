@@ -1,202 +1,139 @@
-import time, os, uuid
-from django.forms import forms
-from django.views.generic import TemplateView, ListView, FormView
-from django.utils.text import slugify 
-from django.urls import reverse
-from django.http import HttpResponse, HttpResponseRedirect, HttpRequest
-from django.db import transaction
-from django.db.models import Q, Count
+# uncompyle6 version 2.12.0
+# Python bytecode 3.5 (3351)
+# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
+# [GCC 6.3.0 20170118]
+# Embedded file name: /home/mejohn/itng/yurika/mortar/views.py
+# Compiled at: 2017-10-01 19:24:54
+# Size of source mod 2**32: 16771 bytes
+import django.views.generic
+import mortar.models as models
+import mortar.forms as forms
+import mortar.utils as utils
+import subprocess
+import os
+import psutil
+import datetime
 from django.shortcuts import render
-from django.contrib.auth import get_user_model
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse
+from django.utils.text import slugify
+from django.db import transaction
+from django.db.models import Count
 from django.conf import settings
-from django_mptt_admin.admin import DjangoMpttAdminMixin
-from django_mptt_admin.util import *
-from mptt.templatetags.mptt_tags import cache_tree_children
+from django.http import HttpResponse, HttpResponseRedirect
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import authentication, permissions
-from wsgiref.util import FileWrapper
-import mimetypes
-from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Annotation, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart, PartOfSpeechPart, PARTS_OF_SPEECH
-from .forms import ProjectForm, TreeForm, TreeEditForm, ImportForm, CategoryForm, AnnotationQueryForm, DictionaryPartForm, RegexPartForm, SubQueryPartForm, PartOfSpeechPartForm, QuerySelectForm
-import mortar.elastic_utils as elastic_utils
-import mortar.tree_utils as tree_utils
-import mortar.dictionary_utils as dictionary_utils
-import re
-import urllib.request, json
-import simplejson, requests
+from django.contrib.auth.mixins import LoginRequiredMixin
 
-class ProjectListView(TemplateView, LoginRequiredMixin):
-    template_name = 'mortar/project_list.html'
-    
+class CrawlerView(django.views.generic.TemplateView):
+    template_name = 'mortar/crawlers.html'
+
     def get_context_data(self, *args, **kwargs):
-        context = super(ProjectListView, self).get_context_data(*args, **kwargs)
-        context['project_list'] = Project.objects.filter(assigned=self.request.user)
-        context['form'] = ProjectForm(self.request.POST)
+        context = super(CrawlerView, self).get_context_data(*args, **kwargs)
+        context['crawlers'] = models.Crawler.objects.all()
+        context['new_crawler_form'] = forms.CrawlerForm()
         return context
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-        form = context['form']
+        form = forms.CrawlerForm(request.POST)
         if form.is_valid():
-            new_project = Project.objects.create(
-                name=form.cleaned_data['name'],
-                slug=form.cleaned_data['slug'],
-            )
-            new_project.assigned = self.request.user
-            new_project.save()
-            return HttpResponseRedirect(reverse('project-detail', kwargs={'project_slug':new_project.slug}))
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
+            cd = form.cleaned_data
+            new_crawler = models.Crawler.objects.create(name=cd['name'], category=cd['category'], index=cd['index'], status='Stopped')
+            seeds = request.POST.get('seed_list').split('\n')
+            new_seeds = []
+            if cd['category'] == 'txt':
+                for seed in seeds:
+                    fseed, created = models.FileSeed.objects.get_or_create(path=seed.strip())
+                    new_seeds.append(fseed)
 
-class ProjectDetailView(TemplateView, LoginRequiredMixin):
-    template_name = 'mortar/project_detail.html'
+            elif cd['category'] == 'web':
+                for seed in seeds:
+                    useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
+                    new_seeds.append(useed)
 
-    def get(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)    
-        trees = context['project_trees']
-        for tree in trees:
-            if request.GET.get(str(tree.pk) + ('-duplicate')) == "True" and request.user in context['project_users']:
-                new_tree = ProjectTree(
-                    name=tree.name + " (copy)",
-                    slug=slugify(uuid.uuid1()),
-                    owner=request.user,
-                    project=context['project']
-                )
-                new_tree.save()
-                self.copy_nodes(tree, new_tree)
+            new_crawler.seed_list.set(new_seeds)
+        all_crawlers = models.Crawler.objects.all()
+        for crawler in all_crawlers:
+            if request.POST.get(str(crawler.pk) + '-toggle') == 'start':
+                pass
+            if crawler.category == 'web':
+                crawler_dir = os.path.realpath(os.path.dirname('mortar'))
+                crawler_path = os.path.join(crawler_dir, 'mortar/web_crawler.py')
+                crawler_cmd = ['python', crawler_path, crawler.name, crawler.index.name, '--urls']
+                for u in crawler.seed_list.all():
+                    crawler_cmd.append(u.urlseed.url)
 
-            elif request.GET.get(str(tree.pk) + ('-delete')) == "True" and request.user == tree.owner:
-                tree.delete()
+                p = subprocess.Popen(crawler_cmd, cwd='/home/mejohn/itng/yurika/mortar/')
+                crawler.process_id = p.pid
+                crawler.started_at = datetime.datetime.now()
+                crawler.status = 'Running'
+                crawler.save()
+            elif request.POST.get(str(crawler.pk) + '-toggle') == 'stop':
+                if psutil.pid_exists(crawler.process_id):
+                    proc = psutil.Process(pid=crawler.process_id)
+                    proc.terminate()
+                crawler.process_id = 0
+                crawler.finished_at = datetime.datetime.now()
+                crawler.status = 'Stopped'
+                crawler.save()
 
-        context['project_trees'] = ProjectTree.objects.filter(project=context['project'])
-        return self.render_to_response(context)
-    
+        return render(request, self.template_name, context=context)
+
+
+class TreeListView(django.views.generic.TemplateView):
+    template_name = 'mortar/tree_list.html'
+
     def get_context_data(self, *args, **kwargs):
-        context = super(ProjectDetailView, self).get_context_data(**kwargs)
-        context['form'] = TreeForm(self.request.POST, self.request.FILES)
-        context['user'] = self.request.user
-        context['project'] = Project.objects.get(slug=self.kwargs.get('slug'))
-        context['project_users'] = context['project'].assigned.all()
-        context['project_trees'] = ProjectTree.objects.filter(project=context['project'])
+        context = super(TreeListView, self).get_context_data(**kwargs)
+        context['trees'] = models.Tree.objects.all()
+        context['new_tree_form'] = forms.TreeForm()
         return context
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
-        form = context['form']
+        form = forms.TreeForm(request.POST, self.request.FILES)
         if form.is_valid():
-            new_tree = ProjectTree(
-                name=form.cleaned_data['name'],
-                slug=slugify(form.cleaned_data['slug']),
-                owner=self.request.user,
-                project=context['project']
-            )
-            new_tree.save() 
-            if request.FILES.get('file') and request.FILES['file'].name.split('.')[-1] == 'mm':
-                tree_utils.read_mindmap(new_tree, request.FILES['file'].read())
-            elif request.FILES.get('file'):
-                tree_utils.read_csv(new_tree, request.FILES['file'].read())
-            return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project'].slug,'slug':new_tree.slug}))
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
+            cd = form.cleaned_data
+            new_tree = models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=cd['doc_source'], doc_dest_index=cd['doc_dest'])
+            if self.request.FILES['file']:
+                utils.read_mindmap(new_tree, request.FILES['file'].read())
+        return render(request, self.template_name, context=context)
 
 
-    def copy_nodes(self, old_tree, new_tree):
-        old_nodes = old_tree.categories.all()
-        old_roots = [n for n in old_nodes if n.is_root_node()]
-        for root in old_roots:
-            branch = root.get_descendants(include_self=True)
-            for node in branch:
-                parent = None
-                if node.parent:
-                    possibles = Category.objects.filter(projecttree=new_tree, name=node.parent.name)
-                    parent = [p for p in possibles if p.full_path_name==node.parent.full_path_name]
-                    parent = parent[0]
-                with transaction.atomic():
-                    new_node = Category.objects.create(
-                        name=node.name,
-                        parent=parent,
-                        projecttree=new_tree,
-                        regex=node.regex
-                    )    
-                    new_node.save()
-
-class TreeEditView(FormView, LoginRequiredMixin):
-    form_class = TreeEditForm
-    template_name = 'mortar/tree_edit.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(TreeEditView, self).get_context_data(**kwargs)
-        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        return context
-
-    def form_valid(self, form, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        tree = context['tree']
-        project = tree.project
-        tree.name=form.cleaned_data['name']
-        tree.slug=form.cleaned_data['slug']
-        tree.save()
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':project.slug,'slug':tree.slug}))
-
-class TreeDetailView(TemplateView, LoginRequiredMixin):
+class TreeDetailView(django.views.generic.TemplateView):
     template_name = 'mortar/tree_detail.html'
     selected_node = None
 
     def get_context_data(self, *args, **kwargs):
         context = super(TreeDetailView, self).get_context_data(**kwargs)
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         context['user'] = self.request.user
         context['tree'] = tree
-        context['project'] = tree.project
         context['tree_json_url'] = reverse('tree-json', kwargs={'slug': tree.slug})
-        context['insert_at_url'] = reverse('cat-insert', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
-        context['branch_url'] = reverse('tree-branch', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
-        context['edit_url'] = reverse('cat-edit', kwargs={'project_slug': tree.project.slug, 'slug': tree.slug})
-        context['dict_url'] = reverse('dictionary-list')
-        context['app_label'] = "mortar"
-        context['model_name'] = "category"
+        context['insert_at_url'] = reverse('node-insert', kwargs={'slug': tree.slug})
+        context['edit_url'] = reverse('node-edit', kwargs={'slug': tree.slug})
+        context['dict_url'] = reverse('dictionaries')
+        context['app_label'] = 'yurika'
+        context['model_name'] = 'node'
         context['tree_auto_open'] = 'true'
         context['autoescape'] = 'true'
         context['use_context_menu'] = 'false'
         context['elastic_url'] = settings.ES_URL + 'filter_' + tree.slug + '/_search?pretty=true'
-        context['importform'] = ImportForm(self.request.POST, self.request.FILES)
+        context['importform'] = forms.MindMapImportForm(self.request.POST, self.request.FILES)
         return context
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         form = context['importform']
         if request.POST.get('target_id'):
-            instance = Category.objects.get(pk=request.POST.get('selected_id'))
+            instance = models.Node.objects.get(pk=request.POST.get('selected_id'))
             target_id = request.POST.get('target_id')
             position = request.POST.get('position')
-            target_instance = Category.objects.get(pk=target_id)
+            target_instance = models.Node.objects.get(pk=target_id)
             self.move_node(instance, position, target_instance)
-        elif request.POST.get('export'):
-            return self.tree_to_csv()
         elif form.is_valid():
-            if request.FILES['file'].name.split('.')[-1] == 'mm':
-                tree_utils.read_mindmap(context['tree'], request.FILES['file'].read())
-            else:
-                tree_utils.read_csv(context['tree'], request.FILES['file'].read())
+            utils.read_mindmap(context['tree'], request.FILES['file'].read())
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-    def tree_to_csv(self):
-        context = self.get_context_data()
-        tree = context['tree']
-        filename = tree.slug + ".csv"
-        with open(filename, "w") as f:
-            f.write("fullPathName,name,regex\n")
-            for cat in Category.objects.filter(projecttree=tree):
-                if cat.is_leaf_node():
-                    f.write(",".join([cat.full_path_name, cat.name, cat.regex]) + "\n")
-        f = open(filename, 'rb')
-        wrapper = FileWrapper(f)
-        mt = mimetypes.guess_type(filename)[0]
-        response = HttpResponse(wrapper, content_type=mt)
-        response['Content-Length'] = os.path.getsize(filename)
-        response['Content-Disposition'] = 'attachment; filename=%s' % filename
-        response['X-Sendfile'] = os.path.realpath(filename)
-        return response    
 
     @transaction.atomic()
     def move_node(self, instance, position, target_instance):
@@ -204,372 +141,232 @@ class TreeDetailView(TemplateView, LoginRequiredMixin):
             instance.move_to(target_instance, 'left')
         elif position == 'after':
             instance.move_to(target_instance, 'right')
-        elif position == 'inside':
-            instance.move_to(target_instance)
         else:
-            raise Exception("Unknown position")
+            if position == 'inside':
+                instance.move_to(target_instance)
+            else:
+                raise Exception('Unknown position')
+            instance.save()
 
-        instance.save()
+
+class TreeEditView(django.views.generic.FormView, LoginRequiredMixin):
+    form_class = forms.TreeEditForm
+    template_name = 'mortar/tree_edit.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(TreeEditView, self).get_context_data(**kwargs)
+        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        return context
+
+    def form_valid(self, form, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        tree = context['tree']
+        tree.name = form.cleaned_data['name']
+        tree.slug = form.cleaned_data['slug']
+        tree.save()
+        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': tree.slug}))
+
 
 class TreeJsonApi(APIView, LoginRequiredMixin):
-    def get(self, request, format=None, **kwargs):
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        qs = Category.objects.filter(projecttree=tree)
-        return Response(tree_utils.get_json_tree(qs))
-    
-class TreeRegexApi(APIView, LoginRequiredMixin):
-    def get(self, request, *args, **kwargs):
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        regexs = tree_utils.get_regex_list(tree)
-        return Response(regexs)
 
-class CategoryInsertView(FormView, LoginRequiredMixin):
-    form_class = CategoryForm
-    template_name = 'mortar/tree_insert.html'
+    def get(self, request, format=None, **kwargs):
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        qs = models.Node.objects.filter(tree_link=tree)
+        return Response(utils.get_json_tree(qs))
+
+
+class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/tree_query.html'
+
+
+class TreeProcessView(APIView, LoginRequiredMixin):
+    pass
+
+
+class NodeInsertView(django.views.generic.FormView, LoginRequiredMixin):
+    form_class = forms.NodeForm
+    template_name = 'mortar/node_insert.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super(CategoryInsertView, self).get_context_data(**kwargs)
         context['user'] = self.request.user
-        context['project_slug'] = self.kwargs.get('project_slug')
-        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['insert_at'] = Category.objects.get(id=self.kwargs.get('id'))
+        context['tree'] = Tree.objects.get(slug=self.kwargs.get('slug'))
+        context['insert_at'] = models.Node.objects.get(id=self.kwargs.get('id'))
         return context
 
     def form_valid(self, form, format=None, **kwargs):
         context = self.get_context_data(**kwargs)
-        node = Category(
-            name=form.cleaned_data['name'],
-            regex=form.cleaned_data['regex'],
-            projecttree=context['tree']
-        )
-        node.insert_at(context['insert_at'], position="first-child", save=False)
+        node = models.Node(name=form.cleaned_data['name'], regex=form.cleaned_data['regex'], tree_link=context['tree'])
+        node.insert_at(context['insert_at'], position='first-child', save=False)
         node.save()
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project_slug'], 'slug':context['tree'].slug}))
+        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
-class TreeBranchView(APIView, LoginRequiredMixin):
-    def get(self, request, *args, **kwargs):
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        project = tree.project
-        root = Category.objects.get(id=self.kwargs.get('id'))
-        branch = root.get_descendants(include_self=True)
-        new_tree = ProjectTree.objects.create(
-            name='Branch of ' + str(root.id),
-            slug=slugify(uuid.uuid1()),
-            owner=request.user,
-            project=project,
-        )
 
-        for node in branch:
-            parent = None
-            if node.parent and node != root:
-                possibles = Category.objects.filter(projecttree=new_tree, name=node.parent.name)
-                parent = [p for p in possibles if p.full_path_name in node.parent.full_path_name]
-                parent = parent[0]
-            new_node = Category.objects.create(
-                name=node.name,
-                parent=parent,
-                projecttree=new_tree,
-                regex=node.regex
-            )                                                                   
-            new_node.save()
- 
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug': project.slug, 'slug': new_tree.slug}))
-
-class CategoryEditView(FormView, LoginRequiredMixin):
-    form_class = CategoryForm
-    template_name = 'mortar/cat_edit.html'
+class NodeEditView(django.views.generic.FormView, LoginRequiredMixin):
+    form_class = forms.NodeForm
+    template_name = 'mortar/node_edit.html'
 
     def get_context_data(self, *args, **kwargs):
-        context = super(CategoryEditView, self).get_context_data(**kwargs)
+        context = super(NodeEditView, self).get_context_data(**kwargs)
         context['user'] = self.request.user
-        context['project_slug'] = self.kwargs.get('project_slug')
-        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        cat = Category.objects.get(id=self.kwargs.get('id'))
-        context['edit'] = cat
-        data = {'name': cat.name, 'regex': cat.regex}
-        context['form'] = CategoryForm(initial=data)
+        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        node = models.Node.objects.get(id=self.kwargs.get('id'))
+        context['edit'] = node
+        data = {'name': node.name,'regex': node.regex}
+        context['form'] = forms.NodeForm(initial=data)
         return context
 
     def form_valid(self, form, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         context['edit'].name = form.cleaned_data['name']
         context['edit'].regex = form.cleaned_data['regex']
-        context['edit'].save() 
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project_slug'], 'slug':context['tree'].slug}))
+        context['edit'].save()
+        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
-class TreeQuerySelectView(TemplateView):
-    template_name = 'mortar/tree_query.html'
+
+class AnnotationListView(django.views.generic.TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/annotations.html'
 
     def get_context_data(self, *args, **kwargs):
-        context = super(TreeQuerySelectView, self).get_context_data(**kwargs)
-        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['project'] = context['tree'].project
-        context['tree_json_url'] = reverse('tree-json', kwargs={'slug': context['tree'].slug})
+        context = super(AnnotationListView, self).get_context_data(**kwargs)
+        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        context['form'] = forms.QuerySelectForm()
+        context['anno_list'] = models.Annotation.objects.filter(tree=context['tree'])
+        context['result_count'] = len(context['anno_list'])
+        context['query_results'] = utils.get_anno_json(context['tree'])
         return context
 
     def post(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        tree = context['tree']
-        and_filter = []
-        for node in Category.objects.filter(projecttree=tree):
-            if request.POST.get(str(node.id) + '-add'):
-                if node.regex:
-                    and_filter.append(node.regex)
-                else:
-                    and_filter.append(node.name)
-        query = elastic_utils.build_mortar_query(and_filter)
-        elastic_utils.create_index('filter_' + tree.slug)
-        elastic_utils.reindex('nutch', 'filter_' + tree.slug, query)
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'project_slug':context['project'].slug, 'slug':context['tree'].slug}))
+        context = super(AnnotationListView, self).get_context_data(**kwargs)
+        form = forms.QuerySelectForm(request.POST)
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        if form.is_valid():
+            category = form.cleaned_data['category']
+            query = form.cleaned_data['query']
+            utils.annotate(tree, category, query)
+        return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
-class QueryPartView(TemplateView, LoginRequiredMixin):
-    template_name = 'mortar/query_part.html'
+
+class DictionaryListView(django.views.generic.TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/dictionaries.html'
 
     def get_context_data(self, *args, **kwargs):
-        context = super(QueryPartView, self).get_context_data(**kwargs)
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
+        context = super(DictionaryListView, self).get_context_data(*args, **kwargs)
+        context['dict_list'] = models.Dictionary.objects.all()
+        return context
+
+
+class DictionaryUpdateView(APIView, LoginRequiredMixin):
+
+    def get(self, request, *args, **kwargs):
+        utils.update_dictionaries()
+        try:
+            tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+            utils.associate_tree(tree)
+            return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': tree.slug}))
+        except:
+            return HttpResponseRedirect(reverse('dictionaries'))
+
+
+class QueryCreateView(django.views.generic.TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/query.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(QueryCreateView, self).get_context_data(**kwargs)
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         context['tree'] = tree
-        context['project'] = tree.project
-        context['dict_form'] = DictionaryPartForm() 
-        context['regex_form'] = RegexPartForm()
-        context['subquery_form'] = SubQueryPartForm()
-        context['pos_form'] = PartOfSpeechPartForm()
-        # hidden input for type, create one subtype at a time
+        context['dict_form'] = forms.DictionaryPartForm()
+        context['regex_form'] = forms.RegexPartForm()
+        context['subquery_form'] = forms.SubQueryPartForm()
+        context['pos_form'] = forms.PartOfSpeechPartForm()
         return context
 
     def create_query_part(self, qtype, qid, op, query):
-        
         if not op:
             op = '+'
-
         if qtype == 'dictionary':
-            dictionary = AIDictionary.objects.get(id=qid)
-            part = DictionaryPart.objects.create(query=query, dictionary=dictionary, op=op, name=dictionary.name)
+            dictionary = models.Dictionary.objects.get(id=qid)
+            part = models.DictionaryPart.objects.create(query=query, dictionary=dictionary, op=op, name=dictionary.name)
             return part
-
-        elif qtype == 'regex':
-            regex = Category.objects.get(id=qid)
-            part = RegexPart.objects.create(query=query, regex=regex, op=op, name=regex.name)
+        if qtype == 'regex':
+            regex = models.Node.objects.get(id=qid)
+            part = models.RegexPart.objects.create(query=query, regex=regex, op=op, name=regex.name)
             return part
-
-        elif qtype == 'subquery':
-            subquery = Query.objects.get(id=qid)
-            part = SubQueryPart.objects.create(query=query, subquery=subquery, op=op, name=subquery.name)
+        if qtype == 'subquery':
+            subquery = models.Query.objects.get(id=qid)
+            part = models.SubQueryPart.objects.create(query=query, subquery=subquery, op=op, name=subquery.name)
             return part
-
-        elif qtype == 'part_of_speech':
-            name = ""
+        if qtype == 'part_of_speech':
+            name = ''
             for part in PARTS_OF_SPEECH:
                 if part[0] == qid:
                     name = part[1]
-            part = PartOfSpeechPart.objects.create(query=query, part_of_speech=qid, op=op, name=name)
-            return part
 
-        return None
+            part = models.PartOfSpeechPart.objects.create(query=query, part_of_speech=qid, op=op, name=name)
+            return part
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
         first_type = request.POST.get('form_type_1')
         sec_type = request.POST.get('form_type_2')
-        print(request.POST)
         op = request.POST.get('op')
-
-        # multi-part query
         if first_type and sec_type and op:
-            query = Query.objects.create() 
+            query = models.Query.objects.create()
             first_list = request.POST.getlist(first_type)
             sec_list = request.POST.getlist(sec_type)
-            first_part = self.create_query_part(first_type, first_list[0], op, query)
-            sec_part = self.create_query_part(sec_type, sec_list[1], op, query)
-
-            query.name = "(" + first_part.name + " " + op + " " + sec_part.name + ")"
-            query.string = "(" + first_type + "." + first_list[0] + " " + op + " " + sec_type + "." + sec_list[1] + ")" 
+            first_part = utils.create_query_part(first_type, first_list[0], op, query)
+            sec_part = utils.create_query_part(sec_type, sec_list[1], op, query)
+            query.name = '(' + first_part.name + ' ' + op + ' ' + sec_part.name + ')'
+            query.string = '(' + first_type + '.' + first_list[0] + ' ' + op + ' ' + sec_type + '.' + sec_list[1] + ')'
             query.save()
-
-            query.elastic_json = elastic_utils.create_query_from_string(query.string)
+            query.elastic_json = utils.create_query_from_string(query.string)
             query.save()
-
-            return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
-
-
-        # singular query
-        elif first_type and not sec_type:
+            return HttpResponseRedirect(reverse('annotations', kwargs={'slug': context['tree'].slug}))
+        if first_type and not sec_type:
             first_list = request.POST.getlist(first_type)
-            query = Query.objects.create()
-            first_part = self.create_query_part(first_type, first_list[0], op, query)
-
+            query = models.Query.objects.create()
+            first_part = utils.create_query_part(first_type, first_list[0], op, query)
             if first_part:
                 query.name = first_part.name
                 if first_type == 'dictionary':
-                    query.elastic_json = json.dumps(elastic_utils.make_dict_query(AIDictionary.objects.get(id=first_list[0])))
-                elif first_type == 'regex':
-                    query.elastic_json = json.dumps(elastic_utils.make_regex_query(Category.objects.get(id=first_list[0])))
-                elif first_type == 'part_of_speech':
-                    query.elastic_json = json.dumps(elastic_utils.make_pos_query(first_list[0]))
-                query.save()
+                    query.elastic_json = json.dumps(utils.make_dict_query(models.Dictionary.objects.get(id=first_list[0])))
+                else:
+                    if first_type == 'regex':
+                        query.elastic_json = json.dumps(utils.make_regex_query(models.Node.objects.get(id=first_list[0])))
+                    elif first_type == 'part_of_speech':
+                        query.elastic_json = json.dumps(utils.make_pos_query(first_list[0]))
+                    query.save()
             else:
                 query.delete()
-
             return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
-
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-        context['dict_form'].fields['dictionary'].queryset = AIDictionary.objects.all()
-        context['regex_form'].fields['regex'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
-        context['subquery_form'].fields['subquery'].queryset = Query.objects.annotate(num_parts=Count('parts')).filter(num_parts__gt=1)
+        context['dict_form'].fields['dictionary'].queryset = models.Dictionary.objects.all()
+        context['regex_form'].fields['regex'].queryset = models.Node.objects.filter(tree_link=models.Tree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
+        context['subquery_form'].fields['subquery'].queryset = models.Query.objects.annotate(num_parts=Count('parts')).filter(num_parts__gt=1)
         return self.render_to_response(context)
 
-class AnnotationView(TemplateView, LoginRequiredMixin):
-    template_name = 'mortar/annotations.html'
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(AnnotationView, self).get_context_data(**kwargs)
-        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        context['query_select'] = Query.objects.all()
-        context['anno_list'] = Annotation.objects.filter(projecttree=context['tree'])
-        context['result_count'] = len(Annotation.objects.filter(projecttree=context['tree']))
-        context['query_results'] = self.get_anno_json(context['tree'])
-        context['form'] = QuerySelectForm()
-        return context
-
-    def post(self, request, *args, **kwargs):
-        context = super(AnnotationView, self).get_context_data(**kwargs)
-        tree = ProjectTree.objects.get(slug=context['slug'])
-        print(request.POST)
-        if request.POST.get('query'):
-            query = Query.objects.get(id=request.POST.get('query'))
-            dictionary_utils.annotate_by_query(tree, query)
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-    def get_anno_json(self, tree):
-        annos = Annotation.objects.filter(projecttree=tree)
-        out = []
-        num = 1
-        for anno in annos:
-            out.append([anno.id, anno.content, anno.document.url, anno.query.name, anno.score])
-            num += 1
-        print(out)
-        return out
-
-class AnnotationQueryView(FormView, LoginRequiredMixin):
-    template_name = 'mortar/annotation_query.html'
-    form_class = AnnotationQueryForm
-
-    def get_form(self, *args, **kwargs):
-        form = super(AnnotationQueryView, self).get_form(*args, **kwargs)
-        form.fields['regexs'].queryset = Category.objects.filter(projecttree=ProjectTree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
-        return form
- 
-    def get_context_data(self, *args, **kwargs):
-        context = super(AnnotationQueryView, self).get_context_data(**kwargs)
-        context['tree'] = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        #context['form']['regexs'].choices = Category.objects.filter(projecttree=context['tree'])
-        return context
-
-    def form_valid(self, form, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        tree = context['tree']
-        cd = form.cleaned_data
-        dictionary_utils.annotate_by_query(tree, cd['annotype'], cd['dictionaries'], cd['andor'], cd['regexs'])
-
-        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
-
-class AnnotateApi(APIView, LoginRequiredMixin):
-    def get(self, request, *args, **kwargs):
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        dictionary_utils.associate_tree(tree)
-        dictionary_utils.annotate_by_tree(tree, pos)
-        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
-
-class DictionaryDetailView(TemplateView, LoginRequiredMixin):
-    template_name = "mortar/dictionary_detail.html"
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(DictionaryDetailView, self).get_context_data(*args, **kwargs)
-        context['dict'] = AIDictionary.objects.get(id=self.kwargs.get('pk'))
-        context['words'] = context['dict'].words.all()
-        context['categories'] = context['dict'].categories.all()
-        return context
-
-class DictionaryListView(TemplateView, LoginRequiredMixin):
-    template_name = "mortar/dictionary_list.html"
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(DictionaryListView, self).get_context_data(*args, **kwargs)
-        context['dict_list'] = AIDictionary.objects.all()
-        return context
-
-class DictionaryUpdateApi(APIView, LoginRequiredMixin):
-    def get(self, request, *args, **kwargs):
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        dictionary_utils.update_dictionaries()
-        dictionary_utils.associate_tree(tree)
-        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug':tree.slug}))
-
-class ProcessTreeApi(APIView):
-    def get(self, request, *args, **kwargs):
-        tree = ProjectTree.objects.get(slug=self.kwargs.get('slug'))
-        dictionary_utils.process(tree)
-        return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': tree.slug}))
-
-class TermVectorView(TemplateView, LoginRequiredMixin):
-    template_name = "mortar/termvectors.html"
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(TermVectorView, self).get_context_data(*args, **kwargs)
-        context['annotation'] = Annotation.objects.get(id=self.kwargs.get('pk'))
-        context['tree'] = context['annotation'].projecttree
-        context['termvectors'] = context['annotation'].termvectors.all()
-        # all termvectors should have the same document
-        context['document'] = context['termvectors'].first().document
-        return context
-
-class MortarHome(TemplateView, LoginRequiredMixin):
-    template_name = "mortar/home.html"
-
-    def get_context_data(self, *args, **kwargs):
-        context= super(MortarHome, self).get_context_data(*args, **kwargs)
-        context['project_list'] = Project.objects.all()
-        context['form'] = ProjectForm(self.request.POST)
-        context['dict_list'] = AIDictionary.objects.all()
-        return context
+class Home(django.views.generic.TemplateView):
+    template_name = 'home.html'
 
 
-    def post(self, request, *args, **kwargs):
-        context = self.get_context_data(*args, **kwargs)
-        form = context['form']
-        if form.is_valid():
-            new_project = Project.objects.create(
-                name=form.cleaned_data['name'],
-                slug=form.cleaned_data['slug'],
-            )   
-            new_project.assigned = get_user_model().objects.filter(username=self.request.user.username)
-            new_project.save()
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-class Home(TemplateView):
-    template_name="home.html"
-
-home = Home.as_view()
-mortar_home = MortarHome.as_view()
-project_list = ProjectListView.as_view()
-project_detail = ProjectDetailView.as_view()
+crawlers = CrawlerView.as_view()
+trees = TreeListView.as_view()
 tree_detail = TreeDetailView.as_view()
-tree_query = TreeQuerySelectView.as_view()
 tree_json = TreeJsonApi.as_view()
-tree_rules = TreeRegexApi.as_view()
 tree_edit = TreeEditView.as_view()
-cat_insert = CategoryInsertView.as_view()
-cat_edit = CategoryEditView.as_view()
-tree_branch = TreeBranchView.as_view()
-annotation_list = AnnotationView.as_view()
-make_annotations = AnnotateApi.as_view()
-annotation_query = AnnotationQueryView.as_view()
-query_part = QueryPartView.as_view()
-dictionary_detail = DictionaryDetailView.as_view()
-dictionary_list = DictionaryListView.as_view()
-update_dictionaries = DictionaryUpdateApi.as_view()
-term_vectors = TermVectorView.as_view()
-process_tree = ProcessTreeApi.as_view()
+tree_filter = TreeQueryView.as_view()
+tree_process = TreeProcessView.as_view()
+node_insert = NodeInsertView.as_view()
+node_insert_at = NodeInsertView.as_view()
+node_edit = NodeEditView.as_view()
+node_edit_at = NodeEditView.as_view()
+annotations = AnnotationListView.as_view()
+dictionaries = DictionaryListView.as_view()
+update_dictionaries = DictionaryUpdateView.as_view()
+query = QueryCreateView.as_view()
+home = Home.as_view()
+# okay decompiling views.cpython-35.pyc

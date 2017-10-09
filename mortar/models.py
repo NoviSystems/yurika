@@ -1,70 +1,100 @@
+# uncompyle6 version 2.12.0
+# Python bytecode 3.5 (3351)
+# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
+# [GCC 6.3.0 20170118]
+# Embedded file name: /home/mejohn/itng/yurika/mortar/models.py
+# Compiled at: 2017-09-30 10:17:55
+# Size of source mod 2**32: 4995 bytes
 from django.db import models
 from django.conf import settings
 from mptt.models import MPTTModel, TreeForeignKey
+import django.db.models.options as options
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
-# http://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
-PARTS_OF_SPEECH = (('CC', 'Coordinating Conjunction'),
-                   ('CD', 'Cardinal Number'),
-                   ('DT', 'Determiner'),
-                   ('EX', 'Existential there'),
-                   ('FW', 'Foreign Word'),
-                   ('IN', 'Preposition of subordinating conjunction'),
-                   ('JJ', 'Adjective'),
-                   ('JJR', 'Adjective, comparitive'),
-                   ('JJS', 'Adjective, superlative'),
-                   ('LS', 'List item marker'),
-                   ('MD', 'Modal'),
-                   ('NN', 'Noun, singular or mass'),
-                   ('NNS', 'Noun, plural'),
-                   ('NNP', 'Proper Noun, singular'),
-                   ('NNPS', 'Proper Noun, plural'),
-                   ('PDT', 'Predeterminer'),
-                   ('POS', 'Possessive ending'),
-                   ('PRP', 'Personal pronoun'),
-                   ('PRP$', 'Possessive pronoun'),
-                   ('RB', 'Adverb'),
-                   ('RBR', 'Adverb, comparative'),
-                   ('RBS', 'Adverb, superlative'), 
-                   ('RP', 'Particle'),
-                   ('SYM', 'Symbol'),
-                   ('TO', 'to'),
-                   ('UH', 'Interjection'),
-                   ('VB', 'Verb, base form'),
-                   ('VBD', 'Verb, past tense'),
-                   ('VBG', 'Verb, gerund or present participle'),
-                   ('VBN', 'Verb, past participle'),
-                   ('VBP', 'Verb, non-3rd person singular present'),
-                   ('VBZ', 'Verb 3rd person singular present'),
-                   ('WDT', 'Wh-determiner'),
-                   ('WP', 'Wh-pronoun'),
-                   ('WP$', 'Possessive wh-pronoun'),
-                   ('WRB', 'Wh-adverb'))
-class Project(models.Model):
+class Crawler(models.Model):
     name = models.CharField(max_length=50)
-    slug = models.SlugField(unique=True)
-    assigned = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="projects")
+    category = models.CharField(max_length=3, choices=(('txt', 'File System Crawler'),
+                                                       ('web', 'Web Crawler')))
+    index = models.ForeignKey('ElasticIndex', related_name='crawlers')
+    seed_list = models.ManyToManyField('Seed', blank=True, related_name='crawlers')
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=15, choices=(('Running', 'Running'), ('Finished', 'Finished'),
+                                                      ('Stopped', 'Stopped')))
+    process_id = models.IntegerField(default=0)
 
     def __str__(self):
-        return "Project: %s" % self.name
-
-class ProjectTree(models.Model):
-    name = models.CharField(max_length=50)
-    slug = models.SlugField(unique=True)
-    project = models.ForeignKey(Project, related_name="trees")
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="owned_trees")
-    editors = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="editor_trees")
-
-    def __str__(self):
-        return "Tree: %s" % self.name
+        return 'Crawler: %s' % self.name
 
     class Meta:
-        verbose_name = "Tree"
-        verbose_name_plural = "Trees"
+        index_mapping = {'settings': {'mappings': {'doc': {'properties': {'title': {'type': 'string'},
+                                                          'content': {'type': 'string'},
+                                                          'tstamp': {'type': 'date','format': 'yyyy-MM-dd HH:mm'},
+                                                          'url': {'type': 'string'}}
+                                           }
+                                   }
+                      }
+         }
 
-class AIDictionary(models.Model):
-    # id 
+
+class Seed(models.Model):
+
+    class Meta:
+        verbose_name = 'Seed'
+
+
+class URLSeed(Seed):
+    url = models.URLField()
+
+    def __str__(self):
+        return 'URL: %s' % self.url
+
+
+class FileSeed(Seed):
+    path = models.FilePathField()
+
+    def __str__(self):
+        return 'Path: %s' % self.path
+
+
+class ElasticIndex(models.Model):
+    name = models.CharField(max_length=20)
+
+    def __str__(self):
+        return self.name
+
+
+class Tree(models.Model):
     name = models.CharField(max_length=50)
-    filepath = models.CharField(max_length=50)
+    slug = models.SlugField(unique=True)
+    doc_source_index = models.ForeignKey('ElasticIndex', related_name='doc_sources')
+    doc_dest_index = models.ForeignKey('ElasticIndex', related_name='doc_dests')
+
+    def __str__(self):
+        return 'Tree: %s' % self.name
+
+    class Meta:
+        index_mapping = {}
+
+
+class Node(MPTTModel):
+    name = models.CharField(max_length=50)
+    regex = models.CharField(max_length=255, null=True, blank=True)
+    parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
+    tree_link = models.ForeignKey('Tree', related_name='nodes')
+    dictionary = models.ForeignKey('Dictionary', null=True, blank=True, related_name='nodes')
+
+    class MPTTMeta:
+        order_insertion_by = [
+         'name']
+
+    def __str__(self):
+        return self.name
+
+
+class Dictionary(models.Model):
+    name = models.CharField(max_length=50)
+    filepath = models.FilePathField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -72,101 +102,75 @@ class AIDictionary(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = "Dictionary"
-        verbose_name_plural = "Dictionaries"
-        
-class AIDictionaryObject(models.Model):
-    word = models.CharField(max_length=255)
-    dictionary = models.ForeignKey(AIDictionary, related_name="words")
+        verbose_name_plural = 'Dictionaries'
 
-    def __str__(self):
-        return self.word
 
-    class Meta:
-        verbose_name = "Word"
-        verbose_name_plural = "Words"
-
-class Category(MPTTModel):
-    name = models.CharField(max_length=50)
-    regex = models.CharField(max_length=255, null=True, blank=True)
-    parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
-    projecttree = models.ForeignKey(ProjectTree, related_name="categories")
-    dictionary = models.ForeignKey(AIDictionary, null=True, blank=True, related_name="categories")
-
-    @property
-    def full_path_name(self):
-        ancestors = self.get_ancestors()
-        path = ''
-        for ancestor in ancestors:
-            if len(path) == 0:
-                path = ancestor.name
-            else:
-                path = path + '.' +  ancestor.name
-        return path
-
-    @property
-    def has_dictionary(self):
-        return self.dictionary is not None
+class Word(models.Model):
+    name = models.CharField(max_length=255)
+    dictionary = models.ForeignKey('Dictionary', related_name='words')
 
     def __str__(self):
         return self.name
 
-    class Meta:
-        verbose_name_plural = "Categories"
-
-    class MPTTMeta:
-        order_insertion_by = ['name']
 
 class Document(models.Model):
     url = models.URLField()
     crawled_at = models.DateTimeField()
-    projecttree = models.ForeignKey('ProjectTree', related_name="documents")
+    index = models.ForeignKey('ElasticIndex', related_name='documents')
+    tree = models.ForeignKey('Tree', related_name='documents')
 
     def __str__(self):
         return self.url
 
-class TermVector(models.Model):
-    term = models.CharField(max_length=255)
-    matched = models.CharField(max_length=255)
-    document = models.ForeignKey('Document', related_name="found_terms")
-    position = models.IntegerField(default=0)
-    start_offset = models.IntegerField(default=0)
-    end_offset = models.IntegerField(default=0)
 
 class Annotation(models.Model):
     content = models.TextField()
-    score = models.FloatField(default=0)
-    projecttree = models.ForeignKey('ProjectTree', related_name="annotations")
-    query = models.ForeignKey('Query', related_name="annotations")
-    document = models.ForeignKey('Document', related_name="annotations")
-    place = models.IntegerField()
-    anno_type = models.CharField(max_length=1, choices=(('S', 'Sentence'),('P', 'Paragraph')))
+    tree = models.ForeignKey('Tree', related_name='annotations')
+    document = models.ForeignKey('Document', related_name='annotations')
+    category = models.CharField(max_length=1, choices=(('S', 'Sentence'), ('P', 'Paragraph'),
+                                                       ('D', 'Document')))
+    query = models.ForeignKey('Query', related_name='annotations')
 
     def __str__(self):
         return str(self.id)
 
+    class Meta:
+        index_mapping = {}
+
+
 class Query(models.Model):
-    name = models.CharField(max_length=30, blank=True)
+    name = models.CharField(max_length=50, blank=True)
     string = models.TextField(blank=True)
     elastic_json = models.TextField(blank=True)
+
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name_plural = 'Queries'
+
 
 class QueryPart(models.Model):
-    query = models.ForeignKey('Query', related_name="parts")
+    query = models.ForeignKey('Query', related_name='parts')
     op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR')))
-    name = models.CharField(max_length=30)
+    name = models.CharField(max_length=50)
+
     def __str__(self):
         return self.name
-    
+
+
 class DictionaryPart(QueryPart):
-    dictionary = models.ForeignKey('AIDictionary', related_name="dictionaries")
-    
+    dictionary = models.ForeignKey('Dictionary', related_name='query_parts')
+
+
 class RegexPart(QueryPart):
-    regex = models.ForeignKey('Category', related_name="regexs")
-    
+    regex = models.ForeignKey('Node', related_name='query_parts')
+
+
 class SubQueryPart(QueryPart):
-    subquery = models.ForeignKey('Query', related_name="subqueries")
+    subquery = models.ForeignKey('Query', related_name='query_parts')
+
 
 class PartOfSpeechPart(QueryPart):
-    part_of_speech = models.CharField(max_length=4, choices=PARTS_OF_SPEECH)
+    part_of_speech = models.CharField(max_length=4, choices=settings.PARTS_OF_SPEECH)
+# okay decompiling models.cpython-35.pyc
