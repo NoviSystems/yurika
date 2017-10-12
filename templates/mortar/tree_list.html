@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<table class="table table-striped">
+{% for tree in trees %}
+    <tr>
+    <td><a href="{% url 'tree-detail' tree.slug %}">{{ tree.name }}</a></td>
+    <td>
+      <form action="" method="GET">
+        <button class="btn btn-success" name="{{ tree.pk }}-duplicate" value="True">Duplicate</button>
+      </form> 
+    </td>
+    <td>
+      {% if tree.owner == user %}
+      <form action="" method="GET">
+        <button class="btn btn-danger" name="{{ tree.pk }}-delete" value="True" onclick="return confirm('Are you sure?')">Delete</button>
+      </form>
+      {% endif %}
+    </td>
+    </tr>
+{% endfor %}
+<form action="" method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+  <tr>
+    <td>{{ form.name.label }}: {{ form.name }}</td>
+    <td>{{ form.doc_source.label }}: {{ form.doc_source }}
+        {{ form.new_source_index }}</div></td>
+    <td>{{ form.doc_dest.label }}: {{ form.doc_dest }}
+        {{ form.new_dest_index }}</td>
+    <td>{{ form.file.label }}: {{ form.file }}</td>
+    <td><button class="btn btn-success" type="submit" id="new_tree" value="Create">Create</button>
+  </tr>
+</form>
+</table>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  $('#id_doc_source').change(function() {
+    if(this.value > 0) {
+        $('#new_source').addClass('in');
+    } else {
+        $('#new_source').removeClass('in');
+    }
+  });
+  $('#id_doc_dest').change(function() {
+    if(this.value > 0) {
+        $('#id_new_dest_index').addClass('in');
+    } else {
+        $('#id_new_dest_index').removeClass('in');
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,10 +1,3 @@
-# uncompyle6 version 2.12.0
-# Python bytecode 3.5 (3351)
-# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
-# [GCC 6.3.0 20170118]
-# Embedded file name: /home/mejohn/itng/yurika/mortar/models.py
-# Compiled at: 2017-09-30 10:17:55
-# Size of source mod 2**32: 4995 bytes
 from django.db import models
 from django.conf import settings
 from mptt.models import MPTTModel, TreeForeignKey
@@ -173,4 +166,3 @@ class SubQueryPart(QueryPart):
 
 class PartOfSpeechPart(QueryPart):
     part_of_speech = models.CharField(max_length=4, choices=settings.PARTS_OF_SPEECH)
-# okay decompiling models.cpython-35.pyc

@@ -1,10 +1,3 @@
-# uncompyle6 version 2.12.0
-# Python bytecode 3.5 (3351)
-# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
-# [GCC 6.3.0 20170118]
-# Embedded file name: /home/mejohn/itng/yurika/mortar/forms.py
-# Compiled at: 2017-09-27 15:03:37
-# Size of source mod 2**32: 5828 bytes
 from django import forms
 from django.db.models import Q
 from django.utils.text import slugify
@@ -162,4 +155,3 @@ class QuerySelectForm(forms.Form):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
-# okay decompiling forms.cpython-35.pyc

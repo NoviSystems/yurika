@@ -16,7 +16,8 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 import django.contrib.auth.views
-from mortar.views import Home
+from mortar import urls
+
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
@@ -43,9 +44,7 @@ urlpatterns = [
 
 #    url(r"^explorer/", include("explorer.urls")),
 
-    url(r'^mortar/', include("mortar.urls")),
+    url(r'^explorer/',include("explorer.urls")),
 
-    url(r'^portrait/',include("portrait.urls")),
-
-    url(r'', Home.as_view(), name="home"),
+    url(r'', include(urls)),
 ]

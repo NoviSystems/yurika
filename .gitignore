@@ -1,9 +1,6 @@
 # Application
 bundles/
 *.sqlite3
-<<<<<<< HEAD
-.env/
-=======
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -77,10 +74,7 @@ target/
 .ipynb_checkpoints
 
 # pyenv
->>>>>>> 9de4936ccb4a93b2ea566243dc70ed2717c1c783
 .python-version
-
-<<<<<<< HEAD
 settings.py
 =======
 # celery beat schedule file
@@ -94,4 +88,3 @@ celerybeat-schedule
 .env/
 venv/
 env/
->>>>>>> 9de4936ccb4a93b2ea566243dc70ed2717c1c783

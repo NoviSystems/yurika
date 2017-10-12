@@ -80,20 +80,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-<<<<<<< HEAD
     'mptt',
     'django_mptt_admin',
     'rest_framework',
     'mortar',
 
     'explorer',
-    'portrait',
 
-    # Uncomment for oauth
-=======
-    'project.utils',
-    'appname',
->>>>>>> 9de4936ccb4a93b2ea566243dc70ed2717c1c783
     #'oauth',
 ]
 
@@ -342,7 +335,6 @@ LOGGING = {
         "level": "DEBUG" if DEBUG else "INFO",
     }
 }
-<<<<<<< HEAD
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -360,5 +352,3 @@ from django.core.urlresolvers import reverse_lazy
 LOGIN_URL = reverse_lazy("login")
 LOGOUT_URL = reverse_lazy("logout")
 LOGIN_REDIRECT_URL = reverse_lazy("home")
-=======
->>>>>>> 9de4936ccb4a93b2ea566243dc70ed2717c1c783

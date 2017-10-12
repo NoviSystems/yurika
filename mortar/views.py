@@ -1,10 +1,3 @@
-# uncompyle6 version 2.12.0
-# Python bytecode 3.5 (3351)
-# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
-# [GCC 6.3.0 20170118]
-# Embedded file name: /home/mejohn/itng/yurika/mortar/views.py
-# Compiled at: 2017-10-01 19:24:54
-# Size of source mod 2**32: 16771 bytes
 import django.views.generic
 import mortar.models as models
 import mortar.forms as forms
@@ -55,19 +48,18 @@ class CrawlerView(django.views.generic.TemplateView):
         all_crawlers = models.Crawler.objects.all()
         for crawler in all_crawlers:
             if request.POST.get(str(crawler.pk) + '-toggle') == 'start':
-                pass
-            if crawler.category == 'web':
-                crawler_dir = os.path.realpath(os.path.dirname('mortar'))
-                crawler_path = os.path.join(crawler_dir, 'mortar/web_crawler.py')
-                crawler_cmd = ['python', crawler_path, crawler.name, crawler.index.name, '--urls']
-                for u in crawler.seed_list.all():
-                    crawler_cmd.append(u.urlseed.url)
+                if crawler.category == 'web':
+                    crawler_dir = os.path.realpath(os.path.dirname('mortar'))
+                    crawler_path = os.path.join(crawler_dir, 'mortar/web_crawler.py')
+                    crawler_cmd = ['python', crawler_path, crawler.name, crawler.index.name, '--urls']
+                    for u in crawler.seed_list.all():
+                        crawler_cmd.append(u.urlseed.url)
 
-                p = subprocess.Popen(crawler_cmd, cwd='/home/mejohn/itng/yurika/mortar/')
-                crawler.process_id = p.pid
-                crawler.started_at = datetime.datetime.now()
-                crawler.status = 'Running'
-                crawler.save()
+                    p = subprocess.Popen(crawler_cmd, cwd='/home/mejohn/itng/yurika/mortar/')
+                    crawler.process_id = p.pid
+                    crawler.started_at = datetime.datetime.now()
+                    crawler.status = 'Running'
+                    crawler.save()
             elif request.POST.get(str(crawler.pk) + '-toggle') == 'stop':
                 if psutil.pid_exists(crawler.process_id):
                     proc = psutil.Process(pid=crawler.process_id)
@@ -86,7 +78,7 @@ class TreeListView(django.views.generic.TemplateView):
     def get_context_data(self, *args, **kwargs):
         context = super(TreeListView, self).get_context_data(**kwargs)
         context['trees'] = models.Tree.objects.all()
-        context['new_tree_form'] = forms.TreeForm()
+        context['form'] = forms.TreeForm()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -369,4 +361,3 @@ dictionaries = DictionaryListView.as_view()
 update_dictionaries = DictionaryUpdateView.as_view()
 query = QueryCreateView.as_view()
 home = Home.as_view()
-# okay decompiling views.cpython-35.pyc

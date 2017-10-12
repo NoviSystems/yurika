@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Alchemy{% endblock %}</title>
+    <title>{% block title %}Yurika{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">
     <link rel="stylesheet" src="{% static 'css/jqtree.css' %}">
@@ -26,15 +26,21 @@
     <div class="container">
         <div class="navbar-header">
             <a class="navbar-brand" href="{% url 'home' %}">
-                Alchemy
+                Yurika
             </a>
         </div>
         {% if request.user.is_authenticated %}
         <p class="navbar-text navbar-left">
-            <a href="{% url 'mortar-home' %}">Mortar</a>
+            <a href="{% url 'crawlers' %}">Crawlers</a>
         </p>
         <p class="navbar-text navbar-left">
-            <a href="{% url 'portrait' %}">Portrait</a>
+            <a href="{% url 'trees' %}">MindMaps</a>
+        </p>
+        <p class="navbar-text navbar-left">
+            <a href="{% url 'dictionaries' %}">Dictionaries</a>
+        </p>
+        <p class="navbar-text navbar-left">
+            <a href="{% url 'explorer_index' %}">Sql Explorer</a>
         </p>
         <p class="navbar-text navbar-right">
         Logged in as {{ request.user }}

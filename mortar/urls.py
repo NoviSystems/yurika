@@ -1,10 +1,3 @@
-# uncompyle6 version 2.12.0
-# Python bytecode 3.5 (3351)
-# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
-# [GCC 6.3.0 20170118]
-# Embedded file name: /home/mejohn/itng/yurika/mortar/urls.py
-# Compiled at: 2017-09-29 11:19:27
-# Size of source mod 2**32: 1703 bytes
 from django.conf.urls import url
 from . import views
 urlpatterns = [
@@ -25,4 +18,3 @@ urlpatterns = [
  url('^annotations/(?P<slug>[-\\w]+)/$', views.annotations, name='annotations'),
  url('^query/(?P<slug>[-\\w]+)/$', views.query, name='query'),
  url('^$', views.home, name='home')]
-# okay decompiling urls.cpython-35.pyc

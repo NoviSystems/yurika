@@ -1,10 +1,3 @@
-# uncompyle6 version 2.12.0
-# Python bytecode 3.5 (3351)
-# Decompiled from: Python 2.7.13 (default, Jan 19 2017, 14:48:08) 
-# [GCC 6.3.0 20170118]
-# Embedded file name: /home/mejohn/itng/yurika/mortar/utils.py
-# Compiled at: 2017-10-01 19:31:32
-# Size of source mod 2**32: 9656 bytes
 import os
 import json
 from xml.etree import ElementTree as etree
@@ -263,4 +256,3 @@ def annotate(tree, category, query):
             for hit in search['hits']:
                 doc = models.Document.objects.get(id=int(hit['_routing']))
                 anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, place=int(hit['_source']['place']), anno_type=category)
-# okay decompiling utils.cpython-35.pyc
