@@ -245,8 +245,38 @@ class DictionaryListView(django.views.generic.TemplateView, LoginRequiredMixin):
     def get_context_data(self, *args, **kwargs):
         context = super(DictionaryListView, self).get_context_data(*args, **kwargs)
         context['dict_list'] = models.Dictionary.objects.all()
+        context['form'] = forms.DictionaryForm()
         return context
 
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        form = forms.DictionaryForm(request.POST)
+        if form.is_valid():
+            new_dict = models.Dictionary.objects.create(name=form.cleaned_data['name'], filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(form.cleaned_data['name']) + ".txt"]))
+            words = form.cleaned_data['words'].split('\n')
+            for word in words:
+                if len(word):
+                    new_word = models.Word.objects.create(name=word, dictionary=new_dict)
+            utils.write_to_new_dict(new_dict)
+        return render(request, self.template_name, context=self.get_context_data(**kwargs))
+
+class DictionaryDetailView(django.views.generic.TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/dictionary_detail.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(DictionaryDetailView, self).get_context_data(**kwargs)
+        context['dict'] = models.Dictionary.objects.get(id=self.kwargs.get('pk'))
+        context['words'] = context['dict'].words.all()
+        context['nodes'] = context['dict'].nodes.all()
+        context['form'] = forms.WordForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        form = forms.WordForm(request.POST)
+        if form.is_valid():
+            new_word = models.Word.objects.create(name=form.cleaned_data['name'], dictionary=context['dict'])
+        return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
 class DictionaryUpdateView(APIView, LoginRequiredMixin):
 
@@ -359,5 +389,6 @@ node_edit_at = NodeEditView.as_view()
 annotations = AnnotationListView.as_view()
 dictionaries = DictionaryListView.as_view()
 update_dictionaries = DictionaryUpdateView.as_view()
+dictionary_detail = DictionaryDetailView.as_view()
 query = QueryCreateView.as_view()
 home = Home.as_view()

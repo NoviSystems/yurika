@@ -3,17 +3,14 @@
 {% block content %}
 <div class="visible-desktop container body-wrapper">
 <h1>
-    <a href="{% url "tree-detail" tree.project.slug tree.slug %}">{{ tree.name }}</a>
+    <a href="{% url "tree-detail" tree.slug %}">{{ tree.name }}</a>
     : Annotations
 </h1>
 <div class="form-group row">
 <div class="col-xs-6">
 <a href="{% url 'update-dictionaries' tree.slug %}" class="btn btn-default">Update Dictionaries</a>
-<!--<a href="{% url 'make-annotations' tree.slug %}" class="btn btn-primary">Run Tree Annotations</a>
-<a href="{% url 'annotation-query' tree.slug %}" class="btn btn-success">Make Complex Query</a>-->
-
-<a href="{% url 'process-tree' tree.slug %}" class="btn btn-default">Process Tree</a>
-<a href="{% url 'query-part' tree.slug %}" class="btn btn-primary">Create Query</a>
+<a href="{% url 'tree-process' tree.slug %}" class="btn btn-default">Process Tree</a>
+<a href="{% url 'query' tree.slug %}" class="btn btn-primary">Create Query</a>
 </div>
 <form action="" method="POST">
   {% csrf_token %}

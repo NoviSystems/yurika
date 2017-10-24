@@ -1,5 +1,6 @@
 import os
 import json
+from elasticsearch import helpers
 from xml.etree import ElementTree as etree
 from pyparsing import nestedExpr
 from django.conf import settings
@@ -107,6 +108,8 @@ def update_dictionaries():
                         word = line.decode('utf-8').strip('\n')
                         w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
 
+def write_to_new_dict(new_dict):
+    pass
 
 def associate_tree(tree):
     categories = tree.nodes.all()
@@ -185,7 +188,7 @@ def list_tree_patterns(tree):
     return out
 
 
-def pos_tokens_to_es(content, tree):
+def content_to_sentences(content, tree, esdoc):
     regexs = list_tree_patterns(tree)
     out = []
     place = 0
@@ -193,25 +196,39 @@ def pos_tokens_to_es(content, tree):
         sent, pos = tupl
         body = {'_op_type': 'index',
          '_type': 'sentence',
-         '_source': {}}
-        body['_source']['content'] = sent
-        body['_source']['place'] = place
+         '_source': {
+           'content': sent,
+           'place': place,
+           'tokens': ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
+         },
+         '_parent': esdoc['_id'],
+         '_index': 'pos_' + tree.slug 
+        }
         place += 1
-        for name, regex in regexs:
-            body['_source']['patterns'] = sent
-
-        body['_source']['tokens'] = ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
         out.append(body)
 
     return out
 
+def content_to_paragraphs(esdoc, tree):
+    paragraphs = esdoc['_source']['content'].split('\n')
+    out = []
+    for p in paragraphs:
+        body = {'_op_type': 'index',
+         '_type': 'paragraph', 
+         '_source': {
+           'content': p
+         },
+         '_parent': esdoc['_id'],
+         '_index': 'pos_' + slug
+        }
+        out.append(body)
+    return out
 
 def get_indexed_docs(tree):
     es = settings.ES_CLIENT
     query = {'query': {'match_all': {}}}
-    queried = es.search(index='filter_' + tree.slug, _source_include=[
-     'content', 'url', 'tstamp'], body=query, size=10000)
-    return queried['hits']['hits']
+    queried = helpers.scan(es, query=query, index='filter_' + tree.slug, doc_type='doc')
+    return queried
 
 
 def insert_pos_record(slug, id, esdoc, content, tree):
@@ -219,6 +236,8 @@ def insert_pos_record(slug, id, esdoc, content, tree):
     body = {'url': esdoc['_source']['url'],
      'tstamp': esdoc['_source']['tstamp'][:-1]}
     es.index(index='pos_' + slug, id=id, doc_type='doc', body=json.dumps(body))
+    paragraphs = content_to_paragraph(esdoc['_source']['content'])
+    helpers.bulk(client=es, actions=paragraphs)
     sentences = pos_tokens_to_es(content, tree)
     for sentence in sentences:
         sentence['_index'] = 'pos_' + slug
@@ -240,19 +259,14 @@ def process(tree):
 
 
 def annotate(tree, category, query):
+    doc_type = 'doc'
     if category == 'S':
         doc_type = 'sentence'
-    else:
-        if category == 'P':
-            doc_type = 'paragraph'
-        elif category == 'D':
-            doc_type = 'doc'
-        body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}
-                   }
-         }
-        es = settings.ES_CLIENT
-        search = es.search(index='pos_' + tree.slug, doc_type=doc_type, body=body, size=10000)['hits']
-        if search['total']:
-            for hit in search['hits']:
-                doc = models.Document.objects.get(id=int(hit['_routing']))
-                anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, place=int(hit['_source']['place']), anno_type=category)
+    elif category == 'P':
+        doc_type = 'paragraph'
+    body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
+    es = settings.ES_CLIENT
+    search = helpers.scan(es, query=body, index='pos_' + tree.slug, doc_type=doc_type)
+    for hit in search:
+        doc = models.Document.objects.get(id=int(hit['_routing']))
+        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, place=int(hit['_source']['place']), anno_type=category)

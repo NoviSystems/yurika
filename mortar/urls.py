@@ -13,6 +13,7 @@ urlpatterns = [
  url('^mindmaps/(?P<slug>[-\\w]+)/filter/$', views.tree_filter, name='tree-filter'),
  url('^mindmaps/(?P<slug>[-\\w]+)/process/$', views.tree_process, name='tree-process'),
  url('^dictionaries/$', views.dictionaries, name='dictionaries'),
+ url('^dictionaries/(?P<pk>[\\d]+)/$', views.dictionary_detail, name='dictionary-detail'),
  url('^dictionaries/update/$', views.update_dictionaries, name='update-dicts'),
  url('^dictionaries/update/(?P<slug>[-\\w]+)/$', views.update_dictionaries, name='update-dictionaries'),
  url('^annotations/(?P<slug>[-\\w]+)/$', views.annotations, name='annotations'),

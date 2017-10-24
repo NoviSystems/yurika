@@ -2,8 +2,26 @@
 
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-<h1>Mortar Dictionaries</h1>
+<h1>Dictionaries
+<a id="toggle_form" href="#dictionary_form" class="btn btn-xs btn-primary" data-toggle="collapse">+</a>
+</h1>
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
+<div id="dictionary_form" class="form-group row collapse">
+  <form id="new_dictionary" action="" method="POST">
+    {% csrf_token %}
+    <div class="col-xs-2">
+      <b>{{ form.name.label }}</b>
+      {{ form.name }}
+    </div>
+    <div class="col-xs-3">
+      <b>{{ form.words.label }}</b> (one per line)
+      {{ form.words }}
+    </div>
+    <div class="col-xs-2">
+      <button class="btn btn-success" type="submit" name="new_dictionary" value="submit">Create</button>
+    </div>
+  </form>
+</div>
 <table class="table table-striped">
 {% for dictionary in dict_list %}
     <tr>
@@ -15,4 +33,21 @@
 </table>
 </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  $('#toggle_form').click(function() {
+    if($('#dictionary_form').hasClass('in')) {
+      $('#toggle_form').text('+');
+      $('#toggle_form').removeClass('btn-danger');
+      $('#toggle_form').addClass('btn-primary');
+    } else {
+      $('#toggle_form').html('&times;');
+      $('#toggle_form').removeClass('btn-primary');
+      $('#toggle_form').addClass('btn-danger');
+    }
+  });
+});
+</script>
 {% endblock %}

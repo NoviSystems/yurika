@@ -3,12 +3,12 @@
 {% block content %}
 <div class="visible-desktop container body-wrapper">
 <h1>Crawlers
-<a id="toggle_form" href="#crawler_form" class="btn btn-primary" data-toggle="collapse">+</a>
+<a id="toggle_form" href="#crawler_form" class="btn btn-xs btn-primary" data-toggle="collapse">+</a>
 </h1>
 <div id="crawler_form" class="collapse">
 <form id="new_crawler" action="" method="POST" novalidate>
   {% csrf_token %}
-  <div class="form-group-row">
+  <div class="form-group row">
     <div class="col-xs-2">
       <label class="control-label" for="name">
         {{ new_crawler_form.name.label }} 
@@ -84,14 +84,17 @@ $(document).ready(function() {
       $('#toggle_form').removeClass('btn-danger');
       $('#toggle_form').addClass('btn-primary');
     } else {
-      $('#toggle_form').text('x');
+      $('#toggle_form').html('&times;');
       $('#toggle_form').removeClass('btn-primary');
       $('#toggle_form').addClass('btn-danger');
     }
   }); 
   $('#id_index').change(function() {
-    if(this.value == 0) {
-      $('index_form').toggleClass('in');
+    if($("#id_index").val() == null) {
+      $('#index_form').addClass('in');
+    }
+    else {
+      $('#index_form').removeClass('in');
     }
   });
 });

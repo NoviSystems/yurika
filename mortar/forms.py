@@ -72,9 +72,19 @@ class TreeForm(BSModelForm):
         model = models.Tree
         fields = ['name']
 
+class DictionaryForm(BSModelForm):
+    words = forms.CharField(widget=forms.Textarea)
+
+    class Meta:
+        model = models.Dictionary
+        fields = ['name']
+
+class WordForm(BSModelForm):
+    class Meta:
+        model = models.Word
+        fields = ['name']
 
 class TreeEditForm(BSModelForm):
-
     class Meta:
         model = models.Tree
         fields = ['name', 'slug']

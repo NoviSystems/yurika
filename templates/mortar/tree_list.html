@@ -2,6 +2,41 @@
 
 {% block content %}
 <div class="visible-desktop container body-wrapper">
+<h1>MindMaps
+  <a id="toggle_form" href="#tree_form" class="btn btn-xs btn-primary" data-toggle="collapse">+</a>
+</h1>
+<div id="tree_form" class="collapse">
+  <form id="new_tree" action="" method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+   <div class="form-group row">
+    <div class="col-xs-2">
+      {{ form.name.label }}
+      {{ form.name }}
+    </div>
+    <div class="col-xs-2">
+      {{ form.doc_source.label }}
+      {{ form.doc_source }}
+      <div id="new_source" class="collapse in">
+        <br />New Index Name{{ form.new_source_index }}
+      </div>
+    </div>
+    <div class="col-xs-2">
+      {{ form.doc_dest.label }}
+      {{ form.doc_dest }}
+      <div id="new_dest" class="collapse in">
+        <br />New Index Name{{ form.new_dest_index }}
+      </div>
+    </div>
+    <div class="col-xs-3">
+      {{ form.file.label }}
+      {{ form.file }}
+    </div>
+    <div class="col-xs-2">
+      <button class="btn btn-success" type="submit" id="new_tree" value="Create">Create</button>
+    </div>
+   </div>
+  </form>
+</div>
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
 <table class="table table-striped">
 {% for tree in trees %}
@@ -21,18 +56,6 @@
     </td>
     </tr>
 {% endfor %}
-<form action="" method="POST" enctype="multipart/form-data">
-  {% csrf_token %}
-  <tr>
-    <td>{{ form.name.label }}: {{ form.name }}</td>
-    <td>{{ form.doc_source.label }}: {{ form.doc_source }}
-        {{ form.new_source_index }}</div></td>
-    <td>{{ form.doc_dest.label }}: {{ form.doc_dest }}
-        {{ form.new_dest_index }}</td>
-    <td>{{ form.file.label }}: {{ form.file }}</td>
-    <td><button class="btn btn-success" type="submit" id="new_tree" value="Create">Create</button>
-  </tr>
-</form>
 </table>
 </div>
 </div>
@@ -42,17 +65,31 @@
 <script>
 $(document).ready(function() {
   $('#id_doc_source').change(function() {
-    if(this.value > 0) {
-        $('#new_source').addClass('in');
-    } else {
-        $('#new_source').removeClass('in');
+    console.log($("#id_doc_source").val());
+    if($("#id_doc_source").val() == "") {
+      $('#new_source').addClass('in');
+    }
+    else {
+      $('#new_source').removeClass('in');
     }
   });
   $('#id_doc_dest').change(function() {
-    if(this.value > 0) {
-        $('#id_new_dest_index').addClass('in');
+    if($("#id_doc_dest").val() == "") {
+      $('#new_dest').addClass('in');
+    }
+    else {
+      $('#new_dest').removeClass('in');
+    }
+  });
+  $('#toggle_form').click(function() {
+    if($('#tree_form').hasClass('in')) {
+      $('#toggle_form').text('+');
+      $('#toggle_form').removeClass('btn-danger');
+      $('#toggle_form').addClass('btn-primary');
     } else {
-        $('#id_new_dest_index').removeClass('in');
+      $('#toggle_form').html('&times;');
+      $('#toggle_form').removeClass('btn-primary');
+      $('#toggle_form').addClass('btn-danger');
     }
   });
 });
