@@ -88,7 +88,7 @@ def create_query_part(qtype, qid, op, query):
         return part
     if qtype == 'part_of_speech':
         name = ''
-        for part in PARTS_OF_SPEECH:
+        for part in settings.PARTS_OF_SPEECH:
             if part[0] == qid:
                 name = part[1]
 

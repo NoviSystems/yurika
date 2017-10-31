@@ -5,7 +5,7 @@ import mortar.utils as utils
 import subprocess
 import os
 import psutil
-import datetime
+import datetime, json
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.text import slugify
@@ -329,38 +329,29 @@ class QueryCreateView(django.views.generic.TemplateView, LoginRequiredMixin):
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-        first_type = request.POST.get('form_type_1')
-        sec_type = request.POST.get('form_type_2')
-        op = request.POST.get('op')
-        if first_type and sec_type and op:
+        print(request.POST)
+        count = len(request.POST.get('regex'))
+        if count:
             query = models.Query.objects.create()
-            first_list = request.POST.getlist(first_type)
-            sec_list = request.POST.getlist(sec_type)
-            first_part = utils.create_query_part(first_type, first_list[0], op, query)
-            sec_part = utils.create_query_part(sec_type, sec_list[1], op, query)
-            query.name = '(' + first_part.name + ' ' + op + ' ' + sec_part.name + ')'
-            query.string = '(' + first_type + '.' + first_list[0] + ' ' + op + ' ' + sec_type + '.' + sec_list[1] + ')'
-            query.save()
-            query.elastic_json = utils.create_query_from_string(query.string)
+            parts = []
+            string = '('
+            print(count)
+            for part in range(0,count-1):
+                print(part)
+                part_type = request.POST.get('form_type_' + str(part+1))
+                op = request.POST.get('form_op_' + str(part+1), '+')
+                part_list = request.POST.getlist(part_type)
+                print(part_list)
+                part_id = part_list[part]
+                querypart = utils.create_query_part(part_type, part_id, op, query)
+                string += part_type + '.' + part_id + ' ' + op + ' '
+
+            string += ')'
+            query.name = string[25:]
+            query.string = string
+            query.elastic_json = utils.create_query_from_string(string)
             query.save()
             return HttpResponseRedirect(reverse('annotations', kwargs={'slug': context['tree'].slug}))
-        if first_type and not sec_type:
-            first_list = request.POST.getlist(first_type)
-            query = models.Query.objects.create()
-            first_part = utils.create_query_part(first_type, first_list[0], op, query)
-            if first_part:
-                query.name = first_part.name
-                if first_type == 'dictionary':
-                    query.elastic_json = json.dumps(utils.make_dict_query(models.Dictionary.objects.get(id=first_list[0])))
-                else:
-                    if first_type == 'regex':
-                        query.elastic_json = json.dumps(utils.make_regex_query(models.Node.objects.get(id=first_list[0])))
-                    elif first_type == 'part_of_speech':
-                        query.elastic_json = json.dumps(utils.make_pos_query(first_list[0]))
-                    query.save()
-            else:
-                query.delete()
-            return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': context['tree'].slug}))
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
     def get(self, request, *args, **kwargs):
