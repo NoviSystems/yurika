@@ -37,6 +37,9 @@
     </tr>
   </table>
 </div>
+{% if not tree.nodes.all %}
+<a href="{% url 'node-insert' tree.slug %}">Add Node</a>
+{% endif %}
 <div
         id="tree"
         class="block-style"

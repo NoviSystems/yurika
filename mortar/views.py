@@ -87,7 +87,7 @@ class TreeListView(django.views.generic.TemplateView):
         if form.is_valid():
             cd = form.cleaned_data
             new_tree = models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=cd['doc_source'], doc_dest_index=cd['doc_dest'])
-            if self.request.FILES['file']:
+            if self.request.FILES.get('file'):
                 utils.read_mindmap(new_tree, request.FILES['file'].read())
         return render(request, self.template_name, context=context)
 
@@ -123,8 +123,10 @@ class TreeDetailView(django.views.generic.TemplateView):
             position = request.POST.get('position')
             target_instance = models.Node.objects.get(pk=target_id)
             self.move_node(instance, position, target_instance)
-        elif form.is_valid():
+        elif form.is_valid() and not request.POST.get('export'):
             utils.read_mindmap(context['tree'], request.FILES['file'].read())
+        elif request.POST.get('export'):
+            print("Exporting")
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
     @transaction.atomic()
@@ -170,6 +172,25 @@ class TreeJsonApi(APIView, LoginRequiredMixin):
 class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
     template_name = 'mortar/tree_query.html'
 
+    def get_context_data(self, *args, **kwargs):
+        context = super(TreeQueryView, self).get_context_data(**kwargs)
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        context['tree'] = tree
+        context['tree_json_url'] = reverse('tree-json', kwargs={'slug': tree.slug})
+        return context
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        tree = context['tree']
+        doc_filter = {'names': [], 'regexs': []}
+        for node in models.Node.objects.filter(tree_link=tree):
+            if request.POST.get(str(node.id) + '-add'):
+                if node.regex:
+                    doc_filter['regexs'].append(node.regex)
+                else:
+                    doc_filter['names'].append(node.name)
+        utils.process(tree, doc_filter)
+        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 class TreeProcessView(APIView, LoginRequiredMixin):
     pass
@@ -177,19 +198,26 @@ class TreeProcessView(APIView, LoginRequiredMixin):
 
 class NodeInsertView(django.views.generic.FormView, LoginRequiredMixin):
     form_class = forms.NodeForm
-    template_name = 'mortar/node_insert.html'
+    template_name = 'mortar/node_edit.html'
 
     def get_context_data(self, *args, **kwargs):
-        context = super(CategoryInsertView, self).get_context_data(**kwargs)
+        context = super(NodeInsertView, self).get_context_data(**kwargs)
         context['user'] = self.request.user
-        context['tree'] = Tree.objects.get(slug=self.kwargs.get('slug'))
-        context['insert_at'] = models.Node.objects.get(id=self.kwargs.get('id'))
+        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        if self.kwargs.get('id'):
+            context['insert_at'] = models.Node.objects.get(id=self.kwargs.get('id'))
+            context['name'] = context['insert_at'].name + ' >'
+        else:
+            context['insert_at'] = None
         return context
 
     def form_valid(self, form, format=None, **kwargs):
         context = self.get_context_data(**kwargs)
         node = models.Node(name=form.cleaned_data['name'], regex=form.cleaned_data['regex'], tree_link=context['tree'])
-        node.insert_at(context['insert_at'], position='first-child', save=False)
+        if context['insert_at']:
+            node.insert_at(context['insert_at'], position='first-child', save=False)
+        else:
+            node.parent = None
         node.save()
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
@@ -203,7 +231,7 @@ class NodeEditView(django.views.generic.FormView, LoginRequiredMixin):
         context['user'] = self.request.user
         context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         node = models.Node.objects.get(id=self.kwargs.get('id'))
-        context['edit'] = node
+        context['name'] = node.name
         data = {'name': node.name,'regex': node.regex}
         context['form'] = forms.NodeForm(initial=data)
         return context

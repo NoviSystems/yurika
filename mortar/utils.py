@@ -1,6 +1,9 @@
 import os
-import json
+import json, string
+import datetime
+import nltk
 from elasticsearch import helpers
+from elasticsearch.client import IndicesClient
 from xml.etree import ElementTree as etree
 from pyparsing import nestedExpr
 from django.conf import settings
@@ -108,6 +111,7 @@ def update_dictionaries():
                         word = line.decode('utf-8').strip('\n')
                         w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
 
+#TODO
 def write_to_new_dict(new_dict):
     pass
 
@@ -135,6 +139,13 @@ def make_regex_query(regex):
 def make_pos_query(pos):
     return {'bool': {'must': {'match': {'tokens': '|' + pos}}}}
 
+def make_tree_query(nodes):
+    out = []
+    for word in nodes['names']:
+        out.append({'match': {'content': word}})
+    for regex in nodes['regexs']:
+        out.append({'regexp': {'content': regex}})
+    return {'bool': {'should': out}}
 
 def create_query_from_string(string):
     nest = nestedExpr().parseString(string).asList()
@@ -158,12 +169,13 @@ def create_query_from_string(string):
 def clean_doc(esdoc, tree):
     try:
         url = esdoc['_source']['url']
-        tstamp = esdoc['_source']['tstamp'][:-1]
+        tstamp = esdoc['_source']['tstamp']
         dt_tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%dT%H:%M:%S.%f')
-        doc, created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp, projecttree=tree)
+        doc, created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp, tree=tree, index=tree.doc_source_index)
+        print(created)
         return doc
     except Exception as e:
-        return
+        print(e)
 
 
 def tokenize_doc(esdoc):
@@ -179,12 +191,11 @@ def pos_tokens(tokens):
 
 
 def list_tree_patterns(tree):
-    cats = models.Node.objects.filter(projecttree=tree)
+    cats = models.Node.objects.filter(tree_link=tree)
     out = []
     for cat in cats:
         if cat.regex:
             out.append((cat.name, cat.regex))
-
     return out
 
 
@@ -202,7 +213,7 @@ def content_to_sentences(content, tree, esdoc):
            'tokens': ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
          },
          '_parent': esdoc['_id'],
-         '_index': 'pos_' + tree.slug 
+         '_index': tree.doc_dest_index.name
         }
         place += 1
         out.append(body)
@@ -213,49 +224,112 @@ def content_to_paragraphs(esdoc, tree):
     paragraphs = esdoc['_source']['content'].split('\n')
     out = []
     for p in paragraphs:
-        body = {'_op_type': 'index',
-         '_type': 'paragraph', 
-         '_source': {
-           'content': p
-         },
-         '_parent': esdoc['_id'],
-         '_index': 'pos_' + slug
-        }
-        out.append(body)
+        if len(p):
+            body = {'_op_type': 'index',
+             '_type': 'paragraph', 
+             '_source': {
+               'content': p
+             },
+             '_parent': esdoc['_id'],
+             '_index': tree.doc_dest_index.name
+            }
+            out.append(body)
     return out
 
-def get_indexed_docs(tree):
+def get_indexed_docs(tree, filter_query):
     es = settings.ES_CLIENT
     query = {'query': {'match_all': {}}}
-    queried = helpers.scan(es, query=query, index='filter_' + tree.slug, doc_type='doc')
+    if len(filter_query['names']) or len(filter_query['regexs']):
+        query = {'query': {'filtered': {'filter': make_tree_query(filter_query) }}}
+    queried = helpers.scan(es, query=query, index=tree.doc_source_index.name, doc_type='doc')
     return queried
 
 
-def insert_pos_record(slug, id, esdoc, content, tree):
+def insert_pos_record(id, esdoc, content, tree):
     es = settings.ES_CLIENT
     body = {'url': esdoc['_source']['url'],
-     'tstamp': esdoc['_source']['tstamp'][:-1]}
-    es.index(index='pos_' + slug, id=id, doc_type='doc', body=json.dumps(body))
-    paragraphs = content_to_paragraph(esdoc['_source']['content'])
+     'tstamp': esdoc['_source']['tstamp'],
+     'content': esdoc['_source']['content']}
+    es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
+    paragraphs = content_to_paragraphs(esdoc, tree)
     helpers.bulk(client=es, actions=paragraphs)
-    sentences = pos_tokens_to_es(content, tree)
+    sentences = content_to_sentences(content, tree, esdoc)
     for sentence in sentences:
-        sentence['_index'] = 'pos_' + slug
+        sentence['_index'] = tree.doc_dest_index.name
         sentence['_parent'] = id
 
     helpers.bulk(client=es, actions=sentences)
 
+def create_pos_index(tree):
+    es = settings.ES_CLIENT
+    i_client = IndicesClient(client=es)
+    name = tree.doc_dest_index.name
+    if not i_client.exists(name):
+       pos_settings = {
+      'settings': {
+        'analysis': {
+          'tokenizer': {},
+          'filter': {},
+          'analyzer': {
+            'payloads': {
+              'type': 'custom',
+              'tokenizer': 'whitespace',
+              'filter': [
+                'lowercase',
+                {'delimited_payload_filter': {
+                  'encoding': 'identity'
+                }}
+              ]
+            },
+            'fulltext': {
+              'type': 'custom',
+              'stopwords': '_english_',
+              'tokenizer': 'whitespace',
+              'filter': [
+                'lowercase',
+                'type_as_payload'
+              ]
+            },
+          }
+        }
+      },
+      'mappings': {
+        'doc': {
+          'properties': {
+            'content': {'type': 'string', 'analyzer': 'fulltext', 'term_vector': 'with_positions_offsets_payloads'},
+            'url': {'type': 'string', 'index': 'not_analyzed'},
+            'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},
+          }
+        },
+        'sentence': {
+          '_parent': { 'type': 'doc' },
+          'properties': {
+            'content': {'type': 'string', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'string', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+          }
+        },
+        'paragraph': {
+          '_parent': { 'type': 'doc' },
+          'properties': {
+            'content': {'type': 'string', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'string', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+          }
+        }
+      }
+    } 
+       i_client.create(index=name, body=json.dumps(pos_settings))
+    
 
-def process(tree):
-    docs = get_indexed_docs(tree)
-    tree_has_regex = elastic_utils.create_pos_index(tree)
+def process(tree, query):
+    docs = get_indexed_docs(tree, query)
+    create_pos_index(tree)
     for esdoc in docs:
         doc = clean_doc(esdoc, tree)
         if doc is not None:
             sentences, tokens = tokenize_doc(esdoc)
             pos = pos_tokens(tokens)
             content = list(zip(sentences, pos))
-            insert_pos_record(tree.slug, doc.id, esdoc, content, tree)
+            insert_pos_record(doc.id, esdoc, content, tree)
 
 
 def annotate(tree, category, query):
@@ -264,9 +338,11 @@ def annotate(tree, category, query):
         doc_type = 'sentence'
     elif category == 'P':
         doc_type = 'paragraph'
+    else: 
+        doc_type = 'doc'
     body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
     es = settings.ES_CLIENT
-    search = helpers.scan(es, query=body, index='pos_' + tree.slug, doc_type=doc_type)
+    search = helpers.scan(es, query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_routing']))
         anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, place=int(hit['_source']['place']), anno_type=category)

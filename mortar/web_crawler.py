@@ -36,26 +36,20 @@ class WebCrawler(CrawlSpider):
             time.sleep(10)
 
     def parse_item(self, response):
-        #docs = []
-        #links = LinkExtractor(canonicalize=True, unique=True).extract_links(response)
-        #for link in links:
-#            is_allowed = False
-#            for allowed_domain in self.allowed_domains:
-#                if allowed_domain in link.url:
-#                    is_allowed = True
-
- #           if is_allowed:
         soup = BeautifulSoup(response.text, 'lxml')
+
+        for script in soup(["script", "style"]):
+            script.decompose()
+
         doc = {}
         doc['url'] = response.url
         doc['refer_url'] = str(response.request.headers.get('Referer', None))
-        doc['tstamp'] = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H%M%S.%f")
+        doc['tstamp'] = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H:%M:%S.%f")
         doc['content'] = soup.get_text()
         doc['title'] = soup.title.string
         self.client.index(index=self.index_name, id=response.url, doc_type='doc', body=json.dumps(doc))         
 
         doc_item = Document(url=doc['url'], tstamp=doc['tstamp'], content=doc['content'], title=doc['title'])
-        #docs.append(doc_item)
 
         return doc_item
 

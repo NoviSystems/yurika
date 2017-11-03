@@ -48,11 +48,9 @@
       </form> 
     </td>
     <td>
-      {% if tree.owner == user %}
       <form action="" method="GET">
         <button class="btn btn-danger" name="{{ tree.pk }}-delete" value="True" onclick="return confirm('Are you sure?')">Delete</button>
       </form>
-      {% endif %}
     </td>
     </tr>
 {% endfor %}
