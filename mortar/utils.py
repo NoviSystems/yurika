@@ -74,7 +74,7 @@ def create_mm_children(xmlparent, nodeparent, tree):
                 create_mm_children(child, node, tree)
 
 
-def create_query_part(qtype, qid, op, query):
+def create_query_part(qtype, qid, query, op=None):
     if not op:
         op = '+'
     if qtype == 'dictionary':
@@ -146,6 +146,16 @@ def make_tree_query(nodes):
     for regex in nodes['regexs']:
         out.append({'regexp': {'content': regex}})
     return {'bool': {'should': out}}
+
+def create_query_from_part(part_type, part):
+    if part_type == 'dictionary':
+        return make_dict_query(part.dictionary)
+    elif part_type == 'regex':
+        return make_regex_query(part.regex)
+    elif part_type == 'part_of_speech':
+        return make_pos_query(part.part_of_speech)
+    else:
+        return {}
 
 def create_query_from_string(string):
     nest = nestedExpr().parseString(string).asList()

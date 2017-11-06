@@ -331,54 +331,50 @@ class QueryCreateView(django.views.generic.TemplateView, LoginRequiredMixin):
         context['pos_form'] = forms.PartOfSpeechPartForm()
         return context
 
-    def create_query_part(self, qtype, qid, op, query):
-        if not op:
-            op = '+'
-        if qtype == 'dictionary':
-            dictionary = models.Dictionary.objects.get(id=qid)
-            part = models.DictionaryPart.objects.create(query=query, dictionary=dictionary, op=op, name=dictionary.name)
-            return part
-        if qtype == 'regex':
-            regex = models.Node.objects.get(id=qid)
-            part = models.RegexPart.objects.create(query=query, regex=regex, op=op, name=regex.name)
-            return part
-        if qtype == 'subquery':
-            subquery = models.Query.objects.get(id=qid)
-            part = models.SubQueryPart.objects.create(query=query, subquery=subquery, op=op, name=subquery.name)
-            return part
-        if qtype == 'part_of_speech':
-            name = ''
-            for part in PARTS_OF_SPEECH:
-                if part[0] == qid:
-                    name = part[1]
-
-            part = models.PartOfSpeechPart.objects.create(query=query, part_of_speech=qid, op=op, name=name)
-            return part
-
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
         print(request.POST)
-        count = len(request.POST.get('regex'))
-        if count:
+        oplist = request.POST.getlist('op')
+        count = len(oplist)
+        print(count)
+        if count and request.POST.get('form_type_1'):
             query = models.Query.objects.create()
             parts = []
-            string = '('
-            print(count)
-            for part in range(0,count-1):
-                print(part)
-                part_type = request.POST.get('form_type_' + str(part+1))
-                op = request.POST.get('form_op_' + str(part+1), '+')
+            if count == 1 and not len(oplist[0]):
+                part_type = request.POST.get('form_type_1')
                 part_list = request.POST.getlist(part_type)
-                print(part_list)
-                part_id = part_list[part]
-                querypart = utils.create_query_part(part_type, part_id, op, query)
-                string += part_type + '.' + part_id + ' ' + op + ' '
+                part_id = part_list[0]
+                querypart = utils.create_query_part(part_type, part_id, query, op=None)
+                string = part_type + ': ' + querypart.name
+                query.name = string[:50]
+                query.string = string
+                query.elastic_json = utils.create_query_from_part(part_type, querypart)
+                query.save()
+            else:
+                string = ''
+                for part in range(0,count+1):
+                    part_type = request.POST.get('form_type_' + str(part+1))
+                    if part > 0:
+                        op = oplist[part-1]
+                        string = '(' + string
+                    else:
+                        op = oplist[part]
+                    part_list = request.POST.getlist(part_type)
+                    part_id = part_list[part]
+                    querypart = utils.create_query_part(part_type, part_id, query, op=op)
+                    if part == 0:
+                        string += part_type + '.' + part_id + ' ' + op + ' '
+                    elif part == 1:
+                        string += part_type + '.' + part_id + ') '
+                    else:
+                        string += op + ' ' + part_type + '.' + part_id + ') '
 
-            string += ')'
-            query.name = string[25:]
-            query.string = string
-            query.elastic_json = utils.create_query_from_string(string)
-            query.save()
+                string += ')'
+                query.name = string[:50]
+                query.string = string
+                query.elastic_json = utils.create_query_from_string(string)
+                query.save()
+
             return HttpResponseRedirect(reverse('annotations', kwargs={'slug': context['tree'].slug}))
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
