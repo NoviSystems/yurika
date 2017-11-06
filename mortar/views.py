@@ -193,7 +193,10 @@ class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 class TreeProcessView(APIView, LoginRequiredMixin):
-    pass
+    def get(self, request, *args, **kwargs):
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        utils.process(tree, {'names':[], 'regexs':[]})
+        return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
 
 class NodeInsertView(django.views.generic.FormView, LoginRequiredMixin):
