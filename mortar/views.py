@@ -5,7 +5,7 @@ import mortar.utils as utils
 import subprocess
 import os
 import psutil
-import datetime, json
+import datetime, json, uuid
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.text import slugify
@@ -50,12 +50,12 @@ class CrawlerView(django.views.generic.TemplateView):
             if request.POST.get(str(crawler.pk) + '-toggle') == 'start':
                 if crawler.category == 'web':
                     crawler_dir = os.path.realpath(os.path.dirname('mortar'))
-                    crawler_path = os.path.join(crawler_dir, 'mortar/web_crawler.py')
+                    crawler_path = os.path.join(crawler_dir, 'mortar/crawlers/web_crawler.py')
                     crawler_cmd = ['python', crawler_path, crawler.name, crawler.index.name, '--urls']
                     for u in crawler.seed_list.all():
                         crawler_cmd.append(u.urlseed.url)
 
-                    p = subprocess.Popen(crawler_cmd, cwd='/home/mejohn/itng/yurika/mortar/')
+                    p = subprocess.Popen(crawler_cmd, cwd=settings.CRAWLERS_PATH)
                     crawler.process_id = p.pid
                     crawler.started_at = datetime.datetime.now()
                     crawler.status = 'Running'
@@ -89,6 +89,20 @@ class TreeListView(django.views.generic.TemplateView):
             new_tree = models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=cd['doc_source'], doc_dest_index=cd['doc_dest'])
             if self.request.FILES.get('file'):
                 utils.read_mindmap(new_tree, request.FILES['file'].read())
+        for tree in context['trees']:
+            if request.POST.get(str(tree.pk) + '-delete'):
+                tree.delete()
+                context['trees'] = models.Tree.objects.all()
+            elif request.POST.get(str(tree.pk) + '-duplicate'):
+                new_tree = models.Tree.objects.create(
+                    name=tree.name + " (copy)",
+                    slug=slugify(uuid.uuid1()),
+                    doc_dest_index=tree.doc_dest_index,
+                    doc_source_index=tree.doc_source_index
+                )
+                utils.copy_nodes(tree, new_tree)
+                context['trees'] = models.Tree.objects.all()
+
         return render(request, self.template_name, context=context)
 
 
@@ -269,6 +283,13 @@ class AnnotationListView(django.views.generic.TemplateView, LoginRequiredMixin):
             utils.annotate(tree, category, query)
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
+class AnnotationTreeView(django.views.generic.TemplateView, LoginRequiredMixin):
+    template_name = 'mortar/annotation_trees.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(AnnotationTreeView, self).get_context_data(*args, **kwargs)
+        context['trees'] = models.Tree.objects.all()
+        return context
 
 class DictionaryListView(django.views.generic.TemplateView, LoginRequiredMixin):
     template_name = 'mortar/dictionaries.html'
@@ -313,12 +334,12 @@ class DictionaryUpdateView(APIView, LoginRequiredMixin):
 
     def get(self, request, *args, **kwargs):
         utils.update_dictionaries()
-        try:
+        slug = self.kwargs.get('slug')
+        if slug:
             tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
             utils.associate_tree(tree)
             return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': tree.slug}))
-        except:
-            return HttpResponseRedirect(reverse('dictionaries'))
+        return HttpResponseRedirect(reverse('dictionaries'))
 
 
 class QueryCreateView(django.views.generic.TemplateView, LoginRequiredMixin):
@@ -405,6 +426,7 @@ node_insert_at = NodeInsertView.as_view()
 node_edit = NodeEditView.as_view()
 node_edit_at = NodeEditView.as_view()
 annotations = AnnotationListView.as_view()
+annotation_trees = AnnotationTreeView.as_view()
 dictionaries = DictionaryListView.as_view()
 update_dictionaries = DictionaryUpdateView.as_view()
 dictionary_detail = DictionaryDetailView.as_view()

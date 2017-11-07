@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+<h1>Queries
+</h1>
+<div class="table-responsive" data-toggle="tooltip" data-html="true">
+Select a MindMap to run queries and create annotations for:
+<table class="table table-striped">
+{% for tree in trees %}
+    <tr>
+    <td><a href="{% url 'annotations' tree.slug %}" class="btn btn-default">{{ tree.name }}</a></td>
+    <td>
+    </tr>
+{% empty %}
+No MindMaps available. Please <a href="{% url 'tree-list'%}">create one</a>.
+{% endfor %}
+</table>
+</div>
+</div>
+{% endblock %}
+

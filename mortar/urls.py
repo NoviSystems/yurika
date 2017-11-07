@@ -16,6 +16,7 @@ urlpatterns = [
  url('^dictionaries/(?P<pk>[\\d]+)/$', views.dictionary_detail, name='dictionary-detail'),
  url('^dictionaries/update/$', views.update_dictionaries, name='update-dicts'),
  url('^dictionaries/update/(?P<slug>[-\\w]+)/$', views.update_dictionaries, name='update-dictionaries'),
+ url('^annotations/$', views.annotation_trees, name='annotation-trees'),
  url('^annotations/(?P<slug>[-\\w]+)/$', views.annotations, name='annotations'),
  url('^query/(?P<slug>[-\\w]+)/$', views.query, name='query'),
  url('^$', views.home, name='home')]

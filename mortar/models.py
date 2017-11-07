@@ -77,6 +77,17 @@ class Node(MPTTModel):
     tree_link = models.ForeignKey('Tree', related_name='nodes')
     dictionary = models.ForeignKey('Dictionary', null=True, blank=True, related_name='nodes')
 
+    @property
+    def full_path_name(self):
+        ancestors = self.get_ancestors()
+        path = ''
+        for ancestor in ancestors:
+            if len(path) == 0:
+                path = ancestor.name
+            else:
+                path = path + '.' +  ancestor.name
+        return path
+
     class MPTTMeta:
         order_insertion_by = [
          'name']

@@ -7,6 +7,7 @@ from elasticsearch.client import IndicesClient
 from xml.etree import ElementTree as etree
 from pyparsing import nestedExpr
 from django.conf import settings
+from django.db import transaction
 import mortar.models as models
 
 def get_json_tree(queryset, max_level=None):
@@ -58,7 +59,7 @@ def read_mindmap(tree, mmstring):
     for child in root:
         name = child.attrib.get('TEXT')
         if len(name) > 0 and child.tag == 'node':
-            node, created = models.Node.objects.get_or_create(name=name, tree_link=tree, parent=None)
+            node, created =  models.Node.objects.get_or_create(name=name, tree_link=tree, parent=None)
             create_mm_children(child, node, tree)
         else:
             create_mm_children(child, None, tree)
@@ -73,6 +74,25 @@ def create_mm_children(xmlparent, nodeparent, tree):
             if len(child.getchildren()) > 0:
                 create_mm_children(child, node, tree)
 
+def copy_nodes(old_tree, new_tree):
+        old_nodes = old_tree.nodes.all()
+        old_roots = [n for n in old_nodes if n.is_root_node()]
+        for root in old_roots:
+            branch = root.get_descendants(include_self=True)
+            for node in branch:
+                parent = None
+                if node.parent:
+                    possibles = models.Node.objects.filter(tree_link=new_tree, name=node.parent.name)
+                    parent = [p for p in possibles if p.full_path_name==node.parent.full_path_name]
+                    parent = parent[0]
+                with transaction.atomic():
+                    new_node = models.Node.objects.create(
+                        name=node.name,
+                        parent=parent,
+                        tree_link=new_tree,
+                        regex=node.regex
+                    )
+                    new_node.save() 
 
 def create_query_part(qtype, qid, query, op=None):
     if not op:
@@ -106,9 +126,9 @@ def update_dictionaries():
             if f.endswith('.txt') and os.path.getsize(os.sep.join([root, f])) > 1:
                 filepath = os.sep.join([root, f])
                 with open(filepath, 'rb+') as dictfile:
-                    d, created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]))
+                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]))
                     for line in dictfile:
-                        word = line.decode('utf-8').strip('\n')
+                        word = line.decode('utf-8').rstrip('\n')
                         w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
 
 #TODO
@@ -116,8 +136,8 @@ def write_to_new_dict(new_dict):
     pass
 
 def associate_tree(tree):
-    categories = tree.nodes.all()
-    for node in nodess:
+    nodes = tree.nodes.all()
+    for node in nodes:
         aidict = models.Dictionary.objects.filter(name__iexact=node.name)
         if len(aidict) > 0:
             node.dictionary = aidict[0]
@@ -218,7 +238,7 @@ def content_to_sentences(content, tree, esdoc):
         body = {'_op_type': 'index',
          '_type': 'sentence',
          '_source': {
-           'content': sent,
+           'content': sent.rstrip('\n'),
            'place': place,
            'tokens': ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
          },
@@ -230,17 +250,21 @@ def content_to_sentences(content, tree, esdoc):
 
     return out
 
-def content_to_paragraphs(esdoc, tree):
+def content_to_paragraphs(esdoc, tree, django_id):
     paragraphs = esdoc['_source']['content'].split('\n')
     out = []
+    place = 0
     for p in paragraphs:
-        if len(p):
+        if len(p.strip()):
             body = {'_op_type': 'index',
              '_type': 'paragraph', 
              '_source': {
-               'content': p
+               'content': p.rstrip('\n'),
+               'tokens': '', #TODO
+               'place': place,
+
              },
-             '_parent': esdoc['_id'],
+             '_parent': django_id,
              '_index': tree.doc_dest_index.name
             }
             out.append(body)
@@ -261,7 +285,7 @@ def insert_pos_record(id, esdoc, content, tree):
      'tstamp': esdoc['_source']['tstamp'],
      'content': esdoc['_source']['content']}
     es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
-    paragraphs = content_to_paragraphs(esdoc, tree)
+    paragraphs = content_to_paragraphs(esdoc, tree, id)
     helpers.bulk(client=es, actions=paragraphs)
     sentences = content_to_sentences(content, tree, esdoc)
     for sentence in sentences:

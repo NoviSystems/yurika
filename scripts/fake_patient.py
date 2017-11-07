@@ -125,7 +125,7 @@ for patient in patients:
     pronoun = 'He' if patient['sex'] == 'M' else 'She'
     weight = random.randint(100, 300)
     doctor = random.choice(doctors)
-    num_notes = random.randint(1,10)
+    num_notes = random.randint(1,250)
     diagnosis = ''
     conds = []
     pres = []
@@ -138,12 +138,16 @@ for patient in patients:
             if not not_diag:
                 diagnosis = 'Patient diagnosed with ' + random.choice(rd1) + '.\n'
                 pres.append('candy corn')
+            print("B")
         else:
             conds.append(random.choice(symptoms))
             not_diag = random.randint(0,3)
             if not not_diag:
                 diagnosis = 'Patient diagnosed with ' + random.choice(rd2) + '.\n'
                 pres.append('candy corn')
+            print("A")
+    else:
+        print("N")
 
     for n in range(0,num_notes):
         conds.extend(random.sample(conditions, random.randint(0,5)))
@@ -151,5 +155,6 @@ for patient in patients:
         note = fill_note(patient['name'], str(age), patient['sex'], pronoun, str(weight), doctor, conds, pres, diagnosis)
         notes.append({'id': len(notes), 'patient': patient['id'], 'note': note})
 
+print(len(notes))
 with open('notes.json', 'a+') as f:
     f.write(json.dumps(notes))

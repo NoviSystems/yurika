@@ -43,12 +43,14 @@
     <tr>
     <td><a href="{% url 'tree-detail' tree.slug %}">{{ tree.name }}</a></td>
     <td>
-      <form action="" method="GET">
+      <form action="" method="POST">
+        {% csrf_token %}
         <button class="btn btn-success" name="{{ tree.pk }}-duplicate" value="True">Duplicate</button>
       </form> 
     </td>
     <td>
-      <form action="" method="GET">
+      <form action="" method="POST">
+        {% csrf_token %}
         <button class="btn btn-danger" name="{{ tree.pk }}-delete" value="True" onclick="return confirm('Are you sure?')">Delete</button>
       </form>
     </td>
