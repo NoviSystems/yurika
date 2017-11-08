@@ -159,13 +159,20 @@ class TreeDetailView(django.views.generic.TemplateView):
             instance.save()
 
 
-class TreeEditView(django.views.generic.FormView, LoginRequiredMixin):
-    form_class = forms.TreeEditForm
+class TreeEditView(django.views.generic.TemplateView, LoginRequiredMixin):
     template_name = 'mortar/tree_edit.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super(TreeEditView, self).get_context_data(**kwargs)
-        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        context['tree'] = tree
+        data = {
+            'name': tree.name,
+            'slug': tree.slug,
+            'doc_source': [tree.doc_source_index.id],
+            'doc_dest': [tree.doc_dest_index.id],
+        }
+        context['form'] = forms.TreeEditForm(initial=data)
         return context
 
     def form_valid(self, form, *args, **kwargs):
@@ -173,6 +180,8 @@ class TreeEditView(django.views.generic.FormView, LoginRequiredMixin):
         tree = context['tree']
         tree.name = form.cleaned_data['name']
         tree.slug = form.cleaned_data['slug']
+        tree.doc_source_index = form.cleaned_data['doc_source_index']
+        tree.doc_dest_index = form.cleaned_data['doc_dest_index']
         tree.save()
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': tree.slug}))
 

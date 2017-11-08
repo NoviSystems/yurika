@@ -85,15 +85,40 @@ class WordForm(BSModelForm):
         fields = ['name']
 
 class TreeEditForm(BSModelForm):
+    doc_source = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')
+    doc_dest = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')
+    new_source_index = forms.CharField(max_length=20, required=False)
+    new_dest_index = forms.CharField(max_length=20, required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+
+        self.fields['doc_source'].empty_label = 'New Index'
+        self.fields['doc_dest'].empty_label = 'New Index'
+
+    def clean(self):
+        data = super(TreeForm, self).clean()
+        slugs = models.Tree.objects.filter(slug=data['slug'])
+        if len(slugs) > 0:
+            raise forms.ValidationError('That slug is already taken.')
+
+        if not data['new_source_index'] and not data['doc_source'] or not data['new_dest_index'] and not data['doc_dest']:
+            raise forms.ValidationError('Must choose index or create new one')
+        else:
+            if not data['doc_source'] and data['new_source_index']:
+                new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_source_index'])
+                data['doc_source'] = new_ei
+            if not data['doc_dest'] and data['new_dest_index']:
+                new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_dest_index'])
+                data['doc_dest'] = new_ei
+        return data
+  
     class Meta:
         model = models.Tree
         fields = ['name', 'slug']
 
-    def clean(self):
-        cd = self.cleaned_data
-        slugs = models.Tree.objects.filter(slug=cd['slug'])
-        if len(slugs) > 0:
-            raise forms.ValidationError('That slug is already taken.')
 
 
 class MindMapImportForm(forms.Form):
