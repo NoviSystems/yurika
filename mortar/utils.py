@@ -382,4 +382,4 @@ def annotate(tree, category, query):
     search = helpers.scan(es, scroll=u'10m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_routing']))
-        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, anno_type=category)
+        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, category=category)
