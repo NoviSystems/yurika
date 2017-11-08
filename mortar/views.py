@@ -254,6 +254,7 @@ class NodeEditView(django.views.generic.FormView, LoginRequiredMixin):
         context['user'] = self.request.user
         context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         node = models.Node.objects.get(id=self.kwargs.get('id'))
+        context['edit'] = node
         context['name'] = node.name
         data = {'name': node.name,'regex': node.regex}
         context['form'] = forms.NodeForm(initial=data)
