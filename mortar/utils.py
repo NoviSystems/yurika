@@ -275,7 +275,7 @@ def get_indexed_docs(tree, filter_query):
     query = {'query': {'match_all': {}}}
     if len(filter_query['names']) or len(filter_query['regexs']):
         query = {'query': {'filtered': {'filter': make_tree_query(filter_query) }}}
-    queried = helpers.scan(es, query=query, index=tree.doc_source_index.name, doc_type='doc')
+    queried = helpers.scan(es, scroll=u'10m', query=query, index=tree.doc_source_index.name, doc_type='doc')
     return queried
 
 
@@ -379,7 +379,7 @@ def annotate(tree, category, query):
     else: 
         doc_type = 'doc'
     body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
-    search = helpers.scan(es, query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
+    search = helpers.scan(es, scroll=u'10m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_routing']))
-        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, place=int(hit['_source']['place']), anno_type=category)
+        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, anno_type=category)
