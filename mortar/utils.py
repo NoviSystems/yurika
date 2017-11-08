@@ -48,7 +48,7 @@ def get_anno_json(tree):
     out = []
     num = 1
     for anno in annos:
-        out.append([anno.id, anno.content, anno.document.url, anno.query.name, anno.score])
+        out.append([anno.id, anno.content, anno.document.url, anno.query.name])
         num += 1
 
     return out
