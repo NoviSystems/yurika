@@ -89,6 +89,7 @@ class TreeListView(django.views.generic.TemplateView):
             new_tree = models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=cd['doc_source'], doc_dest_index=cd['doc_dest'])
             if self.request.FILES.get('file'):
                 utils.read_mindmap(new_tree, request.FILES['file'].read())
+                utils.associate_tree(new_tree)
         for tree in context['trees']:
             if request.POST.get(str(tree.pk) + '-delete'):
                 tree.delete()
@@ -139,6 +140,7 @@ class TreeDetailView(django.views.generic.TemplateView):
             self.move_node(instance, position, target_instance)
         elif form.is_valid() and not request.POST.get('export'):
             utils.read_mindmap(context['tree'], request.FILES['file'].read())
+            utils.associate_tree(context['tree'])
         elif request.POST.get('export'):
             print("Exporting")
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
@@ -201,6 +203,9 @@ class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
             if request.POST.get(str(node.id) + '-add'):
                 if node.regex:
                     doc_filter['regexs'].append(node.regex)
+                elif node.dictionary:
+                    words = node.dictionary.words.all()
+                    doc_filter['names'].extend([w.name for w in words])
                 else:
                     doc_filter['names'].append(node.name)
         utils.process(tree, doc_filter)
@@ -236,6 +241,7 @@ class NodeInsertView(django.views.generic.FormView, LoginRequiredMixin):
         else:
             node.parent = None
         node.save()
+        utils.associate_tree(context['tree'])
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 
@@ -258,6 +264,7 @@ class NodeEditView(django.views.generic.FormView, LoginRequiredMixin):
         context['edit'].name = form.cleaned_data['name']
         context['edit'].regex = form.cleaned_data['regex']
         context['edit'].save()
+        utils.associate_tree(context['tree'])
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 

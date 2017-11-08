@@ -367,6 +367,10 @@ def process(tree, query):
 
 
 def annotate(tree, category, query):
+    es = settings.ES_CLIENT
+    i_client = IndicesClient(client=es)
+    if not i_client.exists(tree.doc_dest_index.name):
+        process(tree, {'names': [], 'regexs': []})
     doc_type = 'doc'
     if category == 'S':
         doc_type = 'sentence'
@@ -375,7 +379,6 @@ def annotate(tree, category, query):
     else: 
         doc_type = 'doc'
     body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
-    es = settings.ES_CLIENT
     search = helpers.scan(es, query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_routing']))
