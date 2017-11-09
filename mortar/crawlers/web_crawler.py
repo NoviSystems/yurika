@@ -36,6 +36,8 @@ class WebCrawler(CrawlSpider):
             time.sleep(10)
 
     def parse_item(self, response):
+        #reformat any html entities that make tags appear in text
+        text = response.text.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
         soup = BeautifulSoup(response.text, 'lxml')
 
         for script in soup(["script", "style"]):
