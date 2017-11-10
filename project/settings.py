@@ -53,3 +53,4 @@ PARTS_OF_SPEECH = (('CC', 'Coordinating Conjunction'),
 ES_URL = 'http://10.36.1.1:9200/'
 ES_CLIENT = Elasticsearch([ES_URL], connection_class=RequestsHttpConnection)
 DICTIONARIES_PATH = 'dictionaries/'
+CRAWLERS_PATH = '/home/mejohn/itng/mortar/mortar/crawlers/'

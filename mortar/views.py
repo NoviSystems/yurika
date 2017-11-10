@@ -2,6 +2,7 @@ import django.views.generic
 import mortar.models as models
 import mortar.forms as forms
 import mortar.utils as utils
+import mortar.tasks as tasks
 import subprocess
 import os
 import psutil
@@ -217,13 +218,13 @@ class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
                     doc_filter['names'].extend([w.name for w in words])
                 else:
                     doc_filter['names'].append(node.name)
-        utils.process(tree, doc_filter)
+        tasks.preprocess.delay(tree.pk, doc_filter)
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 class TreeProcessView(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        utils.process(tree, {'names':[], 'regexs':[]})
+        tasks.preprocess.delay(tree_pk, {'names':[], 'regexs':[]})
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
 
@@ -297,7 +298,7 @@ class AnnotationListView(django.views.generic.TemplateView, LoginRequiredMixin):
         if form.is_valid():
             category = form.cleaned_data['category']
             query = form.cleaned_data['query']
-            utils.annotate(tree, category, query)
+            tasks.run_query.delay(tree.pk, category, query.pk)
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
 class AnnotationTreeView(django.views.generic.TemplateView, LoginRequiredMixin):
@@ -350,7 +351,7 @@ class DictionaryDetailView(django.views.generic.TemplateView, LoginRequiredMixin
 class DictionaryUpdateView(APIView, LoginRequiredMixin):
 
     def get(self, request, *args, **kwargs):
-        utils.update_dictionaries()
+        tasks.sync_dictionaries.delay()
         slug = self.kwargs.get('slug')
         if slug:
             tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
