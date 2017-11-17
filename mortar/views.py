@@ -14,9 +14,12 @@ from django.db import transaction
 from django.db.models import Count
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
+from django.contrib import messages
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.mixins import LoginRequiredMixin
+from celery.task.control import revoke
+from celery.result import AsyncResult
 
 class CrawlerView(django.views.generic.TemplateView):
     template_name = 'mortar/crawlers.html'
@@ -49,29 +52,16 @@ class CrawlerView(django.views.generic.TemplateView):
         all_crawlers = models.Crawler.objects.all()
         for crawler in all_crawlers:
             if request.POST.get(str(crawler.pk) + '-toggle') == 'start':
-                if crawler.category == 'web':
-                    crawler_dir = os.path.realpath(os.path.dirname('mortar'))
-                    crawler_path = os.path.join(crawler_dir, 'mortar/crawlers/web_crawler.py')
-                    crawler_cmd = ['python', crawler_path, crawler.name, crawler.index.name, '--urls']
-                    for u in crawler.seed_list.all():
-                        crawler_cmd.append(u.urlseed.url)
-
-                    p = subprocess.Popen(crawler_cmd, cwd=settings.CRAWLERS_PATH)
-                    crawler.process_id = p.pid
-                    crawler.started_at = datetime.datetime.now()
-                    crawler.status = 'Running'
-                    crawler.save()
+                tasks.start_crawler.delay(crawler.pk)
             elif request.POST.get(str(crawler.pk) + '-toggle') == 'stop':
-                if psutil.pid_exists(crawler.process_id):
-                    proc = psutil.Process(pid=crawler.process_id)
-                    proc.terminate()
-                crawler.process_id = 0
+                if crawler.process_id:
+                    revoke(crawler.process_id, terminate=True)
+                crawler.process_id = None
                 crawler.finished_at = datetime.datetime.now()
                 crawler.status = 'Stopped'
                 crawler.save()
 
         return render(request, self.template_name, context=context)
-
 
 class TreeListView(django.views.generic.TemplateView):
     template_name = 'mortar/tree_list.html'
@@ -219,12 +209,14 @@ class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
                 else:
                     doc_filter['names'].append(node.name)
         tasks.preprocess.delay(tree.pk, doc_filter)
+        messages.info(request, 'Tree filtering and reindexing started in background')
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 class TreeProcessView(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         tasks.preprocess.delay(tree_pk, {'names':[], 'regexs':[]})
+        messages.info(request, 'Tree filtering and reindexing started in background')
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
 

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch.client import IndicesClient
 from scrapy.crawler import CrawlerProcess
-from scrapy.linkextractor import LinkExtractor
+from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import Rule, CrawlSpider
 
 class Document(scrapy.Item):
@@ -21,12 +21,12 @@ class WebCrawler(CrawlSpider):
     rules = (
         Rule(LinkExtractor(canonicalize=True, unique=True), follow=True, callback="parse_item"),
     )
-    client = Elasticsearch(['http://10.36.1.1:9200/'], connection_class=RequestsHttpConnection)
 
     def __init__(self, *args, **kwargs):
         self.name = kwargs.get('name')
         self.index_name = kwargs.get('index')
         self.start_urls = kwargs.get('start_urls')
+        self.client = Elasticsearch([kwargs.get('elastic_url')], connection_class=RequestsHttpConnection)
         self._compile_rules()
 
         index_mapping = kwargs.get('index_mapping')
@@ -54,12 +54,3 @@ class WebCrawler(CrawlSpider):
         doc_item = Document(url=doc['url'], tstamp=doc['tstamp'], content=doc['content'], title=doc['title'])
 
         return doc_item
-
-parser = argparse.ArgumentParser(description="Start a crawler")
-parser.add_argument('name')
-parser.add_argument('index')
-parser.add_argument('--urls', nargs='+')
-args = vars(parser.parse_args())
-process = CrawlerProcess({'USER_AGENT': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36'})
-process.crawl(WebCrawler, start_urls=args['urls'], name=args['name'], index=args['index'])
-process.start()

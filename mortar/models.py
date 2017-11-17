@@ -14,7 +14,7 @@ class Crawler(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=15, choices=(('Running', 'Running'), ('Finished', 'Finished'),
                                                       ('Stopped', 'Stopped')))
-    process_id = models.IntegerField(default=0)
+    process_id = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
         return 'Crawler: %s' % self.name
