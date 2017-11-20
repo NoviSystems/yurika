@@ -215,6 +215,11 @@ def tokenize_doc(esdoc):
     return (
      sentences, tokens)
 
+def tokenize_paragraph(paragraph):
+    sentences = nltk.tokenize.sent_tokenize(paragraph)
+    tokens = [nltk.tokenize.word_tokenize(s) for s in sentences]
+    pos_tokens = nltk.pos_tag_sents(tokens)
+    return list(zip(sentences, pos_tokens))
 
 def pos_tokens(tokens):
     return nltk.pos_tag_sents(tokens)
@@ -229,26 +234,29 @@ def list_tree_patterns(tree):
     return out
 
 
-def content_to_sentences(content, tree, esdoc):
+def content_to_sentences(content, paragraph, tree, esdoc, django_id):
     regexs = list_tree_patterns(tree)
-    out = []
+    es_out = []
+    tagged_paragraph = ''
     place = 0
     for tupl in content:
         sent, pos = tupl
+        tagged_sentence = ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
         body = {'_op_type': 'index',
          '_type': 'sentence',
          '_source': {
            'content': sent.rstrip('\n'),
+           'paragraph': paragraph,
            'place': place,
-           'tokens': ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
+           'tokens': tagged_sentence
          },
-         '_parent': esdoc['_id'],
+         '_parent': django_id,
          '_index': tree.doc_dest_index.name
         }
         place += 1
-        out.append(body)
-
-    return out
+        es_out.append(body)
+        tagged_paragraph += tagged_sentence + ' ' 
+    return tagged_paragraph, es_out
 
 def content_to_paragraphs(esdoc, tree, django_id):
     paragraphs = esdoc['_source']['content'].split('\n')
@@ -256,11 +264,15 @@ def content_to_paragraphs(esdoc, tree, django_id):
     place = 0
     for p in paragraphs:
         if len(p.strip()):
+            p = p.rstrip('\n')
+            sentence_content = tokenize_paragraph(p)
+            tags, sentences = content_to_sentences(sentence_content, place, tree, esdoc, django_id)
+            out.extend(sentences)
             body = {'_op_type': 'index',
              '_type': 'paragraph', 
              '_source': {
-               'content': p.rstrip('\n'),
-               'tokens': '', #TODO
+               'content': p,
+               'tokens': tags,
                'place': place,
 
              },
@@ -268,6 +280,7 @@ def content_to_paragraphs(esdoc, tree, django_id):
              '_index': tree.doc_dest_index.name
             }
             out.append(body)
+            place += 1
     return out
 
 def get_indexed_docs(tree, filter_query):
@@ -279,20 +292,14 @@ def get_indexed_docs(tree, filter_query):
     return queried
 
 
-def insert_pos_record(id, esdoc, content, tree):
+def insert_pos_record(id, esdoc, tree):
     es = settings.ES_CLIENT
     body = {'url': esdoc['_source']['url'],
      'tstamp': esdoc['_source']['tstamp'],
      'content': esdoc['_source']['content']}
     es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
-    paragraphs = content_to_paragraphs(esdoc, tree, id)
-    helpers.bulk(client=es, actions=paragraphs)
-    sentences = content_to_sentences(content, tree, esdoc)
-    for sentence in sentences:
-        sentence['_index'] = tree.doc_dest_index.name
-        sentence['_parent'] = id
-
-    helpers.bulk(client=es, actions=sentences)
+    es_actions = content_to_paragraphs(esdoc, tree, id)
+    helpers.bulk(client=es, actions=es_actions)
 
 def create_pos_index(tree):
     es = settings.ES_CLIENT
@@ -360,10 +367,7 @@ def process(tree, query):
     for esdoc in docs:
         doc = clean_doc(esdoc, tree)
         if doc is not None:
-            sentences, tokens = tokenize_doc(esdoc)
-            pos = pos_tokens(tokens)
-            content = list(zip(sentences, pos))
-            insert_pos_record(doc.id, esdoc, content, tree)
+            insert_pos_record(doc.id, esdoc, tree)
 
 
 def annotate(tree, category, query):
