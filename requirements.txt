@@ -16,6 +16,7 @@ requests
 Scrapy
 sqlparse
 Twisted
+environ
 
 # Production Packages
 psycopg2
