@@ -16,7 +16,8 @@ requests
 Scrapy
 sqlparse
 Twisted
-environ
+django-environ
+colorlog
 
 # Production Packages
 psycopg2
