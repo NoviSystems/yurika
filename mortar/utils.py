@@ -288,7 +288,7 @@ def get_indexed_docs(tree, filter_query):
     query = {'query': {'match_all': {}}}
     if len(filter_query['names']) or len(filter_query['regexs']):
         query = {'query': {'filtered': {'filter': make_tree_query(filter_query) }}}
-    queried = helpers.scan(es, scroll=u'10m', query=query, index=tree.doc_source_index.name, doc_type='doc')
+    queried = helpers.scan(es, scroll=u'30m', query=query, index=tree.doc_source_index.name, doc_type='doc')
     return queried
 
 
@@ -337,23 +337,23 @@ def create_pos_index(tree):
       'mappings': {
         'doc': {
           'properties': {
-            'content': {'type': 'string', 'analyzer': 'fulltext', 'term_vector': 'with_positions_offsets_payloads'},
-            'url': {'type': 'string', 'index': 'not_analyzed'},
+            'content': {'type': 'text', 'analyzer': 'fulltext', 'term_vector': 'with_positions_offsets_payloads'},
+            'url': {'type': 'text', 'index': 'not_analyzed'},
             'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},
           }
         },
         'sentence': {
           '_parent': { 'type': 'doc' },
           'properties': {
-            'content': {'type': 'string', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
-            'tokens': {'type': 'string', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+            'content': {'type': 'text', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'text', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
           }
         },
         'paragraph': {
           '_parent': { 'type': 'doc' },
           'properties': {
-            'content': {'type': 'string', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
-            'tokens': {'type': 'string', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+            'content': {'type': 'text', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'text', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
           }
         }
       }
@@ -383,7 +383,7 @@ def annotate(tree, category, query):
     else: 
         doc_type = 'doc'
     body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
-    search = helpers.scan(es, scroll=u'10m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
+    search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_routing']))
         anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, category=category)
