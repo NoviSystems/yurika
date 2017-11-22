@@ -287,7 +287,7 @@ def get_indexed_docs(tree, filter_query):
     es = settings.ES_CLIENT
     query = {'query': {'match_all': {}}}
     if len(filter_query['names']) or len(filter_query['regexs']):
-        query = {'query': {'filtered': {'filter': make_tree_query(filter_query) }}}
+        query = {'query': make_tree_query(filter_query) }
     queried = helpers.scan(es, scroll=u'30m', query=query, index=tree.doc_source_index.name, doc_type='doc')
     return queried
 
@@ -332,7 +332,7 @@ def annotate(tree, category, query):
         doc_type = 'paragraph'
     else: 
         doc_type = 'doc'
-    body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
+    body = {'query': json.loads(query.elastic_json)}
     search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
