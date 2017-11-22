@@ -29,7 +29,7 @@ def start_crawler(self, crawler_pk):
         crawler.save()
 
         process = CrawlerProcess({'USER_AGENT': ''})
-        process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index)
+        process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
         process.start()
 
         crawler.finished_at = datetime.datetime.now()
@@ -49,12 +49,10 @@ def sync_dictionaries(self):
 @shared_task(bind=True)
 def preprocess(self, tree_pk, query):
     tree = models.Tree.objects.get(pk=tree_pk)
-    tree.status = 'r'
     tree.save()
 
     utils.process(tree, query)
     
-    tree.status = 'f'
     tree.save()
 
 # Run Query
@@ -62,10 +60,8 @@ def preprocess(self, tree_pk, query):
 def run_query(self, tree_pk, category, query_pk):
     tree = models.Tree.objects.get(pk=tree_pk)
     query = models.Query.objects.get(pk=query_pk)
-    query.status = 'r'
     query.save()
 
     utils.annotate(tree, category, query)
 
-    query.status = 'f'
     query.save()

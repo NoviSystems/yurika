@@ -287,7 +287,7 @@ def get_indexed_docs(tree, filter_query):
     es = settings.ES_CLIENT
     query = {'query': {'match_all': {}}}
     if len(filter_query['names']) or len(filter_query['regexs']):
-        query = {'query': {'filtered': {'filter': make_tree_query(filter_query) }}}
+        query = {'query': make_tree_query(filter_query) }
     queried = helpers.scan(es, scroll=u'30m', query=query, index=tree.doc_source_index.name, doc_type='doc')
     return queried
 
@@ -306,7 +306,8 @@ def create_pos_index(tree):
     i_client = IndicesClient(client=es)
     name = tree.doc_dest_index.name
     if not i_client.exists(name):
-        pos_settings = {'settings': {'analysis': {'tokenizer': {},'filter': {},'analyzer': {'payloads': {'type': 'custom','tokenizer': 'whitespace','filter': ['lowercase',{'delimited_payload_filter': {'encoding': 'identity'}}]},'fulltext': {'type': 'custom','stopwords': '_english_','tokenizer': 'whitespace','filter': ['lowercase','type_as_payload']},}}},'mappings': {'doc': {'properties': {'content': {'type': 'text', 'analyzer': 'fulltext', 'term_vector': 'with_positions_offsets_payloads'},'url': {'type': 'text', 'index': 'not_analyzed'},'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},}},'sentence': {'_parent': {'type': 'doc'},'properties': {'content': {'type': 'text', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},'tokens': {'type': 'text', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},}},'paragraph': {'_parent': {'type': 'doc'},'properties': {'content': {'type': 'text', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},'tokens': {'type': 'text', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},}}}}
+        pos_settings = {'mappings': {'doc': {'properties': {'content': {'type': 'text'}, 'url': {'type': 'text', 'index': 'false'}, 'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'}}}, 'sentence': {'_parent': {'type': 'doc'}, 'properties': {'content': {'type': 'text'}, 'tokens': {'type': 'text'}}}, 'paragraph': {'_parent': {'type': 'doc'}, 'properties': {'content': {'type': 'text'}, 'tokens': {'type': 'text'}}}}}
+        print(json.dumps(pos_settings))
         i_client.create(index=name, body=json.dumps(pos_settings))
     
 
@@ -331,7 +332,7 @@ def annotate(tree, category, query):
         doc_type = 'paragraph'
     else: 
         doc_type = 'doc'
-    body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
+    body = {'query': json.loads(query.elastic_json)}
     search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
