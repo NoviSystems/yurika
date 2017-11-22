@@ -169,11 +169,11 @@ def make_tree_query(nodes):
 
 def create_query_from_part(part_type, part):
     if part_type == 'dictionary':
-        return make_dict_query(part.dictionary)
+        return json.dumps(make_dict_query(part.dictionary))
     elif part_type == 'regex':
-        return make_regex_query(part.regex)
+        return json.dumps(make_regex_query(part.regex))
     elif part_type == 'part_of_speech':
-        return make_pos_query(part.part_of_speech)
+        return json.dumps(make_pos_query(part.part_of_speech))
     else:
         return {}
 
@@ -333,5 +333,5 @@ def annotate(tree, category, query):
     body = {'query': {'filtered': {'filter': json.loads(query.elastic_json)}}}
     search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
-        doc = models.Document.objects.get(id=int(hit['_routing']))
+        doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
         anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, category=category)
