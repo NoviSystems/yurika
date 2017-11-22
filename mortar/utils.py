@@ -338,7 +338,7 @@ def create_pos_index(tree):
         'doc': {
           'properties': {
             'content': {'type': 'text', 'analyzer': 'fulltext', 'term_vector': 'with_positions_offsets_payloads'},
-            'url': {'type': 'text', 'index': 'not_analyzed'},
+            'url': {'type': 'text', 'index': 'false'},
             'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},
           }
         },
