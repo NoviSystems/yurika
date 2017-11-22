@@ -20,10 +20,10 @@ class Crawler(models.Model):
         return 'Crawler: %s' % self.name
 
     class Meta:
-        index_mapping = {'settings': {'mappings': {'doc': {'properties': {'title': {'type': 'string'},
-                                                          'content': {'type': 'string'},
+        index_mapping = {'settings': {'mappings': {'doc': {'properties': {'title': {'type': 'text'},
+                                                          'content': {'type': 'text'},
                                                           'tstamp': {'type': 'date','format': 'yyyy-MM-dd HH:mm'},
-                                                          'url': {'type': 'string'}}
+                                                          'url': {'type': 'text'}}
                                            }
                                    }
                       }
