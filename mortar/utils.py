@@ -306,6 +306,57 @@ def create_pos_index(tree):
     i_client = IndicesClient(client=es)
     name = tree.doc_dest_index.name
     if not i_client.exists(name):
+              pos_settings = {
+      'settings': {
+        'analysis': {
+          'tokenizer': {},
+          'filter': {},
+          'analyzer': {
+            'payloads': {
+              'type': 'custom',
+              'tokenizer': 'whitespace',
+              'filter': [
+                'lowercase',
+                {'delimited_payload_filter': {
+                  'encoding': 'identity'
+                }}
+              ]
+            },
+            'fulltext': {
+              'type': 'custom',
+              'stopwords': '_english_',
+              'tokenizer': 'whitespace',
+              'filter': [
+                'lowercase',
+                'type_as_payload'
+              ]
+            },
+          }
+        }
+      },
+      'mappings': {
+        'doc': {
+          'properties': {
+            'content': {'type': 'text', 'analyzer': 'fulltext', 'term_vector': 'with_positions_offsets_payloads'},
+            'url': {'type': 'text', 'index': 'not_analyzed'},
+            'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'},
+          }
+        },
+        'sentence': {
+          'properties': {
+            'content': {'type': 'text', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'text', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+          }
+        },
+        'paragraph': {
+          'properties': {
+            'content': {'type': 'text', 'analyzer': 'fulltext', "term_vector": "with_positions_offsets_payloads"},
+            'tokens': {'type': 'text', 'analyzer': 'payloads', "term_vector": "with_positions_offsets_payloads"},
+          }
+        },
+        
+      }
+    }  
        i_client.create(index=name)#, body=json.dumps(pos_settings))
     
 
