@@ -36,11 +36,9 @@ def start_crawler(self, crawler_pk):
         crawler.status = 'Finished'
         crawler.process_id = None
         crawler.save()
-        return crawler.process_id
 
     else:
         print("file crawler requested")
-        return 0
 
 # Sync Dictionaries
 @shared_task(bind=True)
@@ -51,11 +49,23 @@ def sync_dictionaries(self):
 @shared_task(bind=True)
 def preprocess(self, tree_pk, query):
     tree = models.Tree.objects.get(pk=tree_pk)
+    tree.status = 'r'
+    tree.save()
+
     utils.process(tree, query)
+    
+    tree.status = 'f'
+    tree.save()
 
 # Run Query
 @shared_task(bind=True)
 def run_query(self, tree_pk, category, query_pk):
-    tree = models.Tree.objects.get(pk=tree.pk)
-    query = models.Query.objects.get(pk=query.pk)
+    tree = models.Tree.objects.get(pk=tree_pk)
+    query = models.Query.objects.get(pk=query_pk)
+    query.status = 'r'
+    query.save()
+
     utils.annotate(tree, category, query)
+
+    query.status = 'f'
+    query.save()
