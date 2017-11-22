@@ -215,7 +215,7 @@ class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
 class TreeProcessView(APIView, LoginRequiredMixin):
     def get(self, request, *args, **kwargs):
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        tasks.preprocess.delay(tree_pk, {'names':[], 'regexs':[]})
+        tasks.preprocess.delay(tree.pk, {'names':[], 'regexs':[]})
         messages.info(request, 'Tree filtering and reindexing started in background')
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
