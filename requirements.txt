@@ -5,7 +5,7 @@ django-mptt
 django-mptt-admin
 django-sql-explorer
 djangorestframework
-elasticsearch
+elasticsearch<6.0.0
 lxml
 nltk
 numpy
