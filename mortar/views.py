@@ -348,7 +348,7 @@ class DictionaryUpdateView(APIView, LoginRequiredMixin):
         if slug:
             tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
             utils.associate_tree(tree)
-            return HttpResponseRedirect(reverse('annotation-list', kwargs={'slug': tree.slug}))
+            return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
         return HttpResponseRedirect(reverse('dictionaries'))
 
 
