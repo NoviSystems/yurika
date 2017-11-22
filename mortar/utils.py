@@ -306,7 +306,7 @@ def create_pos_index(tree):
     i_client = IndicesClient(client=es)
     name = tree.doc_dest_index.name
     if not i_client.exists(name):
-       i_client.create(index=name, body=json.dumps(pos_settings))
+       i_client.create(index=name)#, body=json.dumps(pos_settings))
     
 
 def process(tree, query):
