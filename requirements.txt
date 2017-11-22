@@ -18,6 +18,7 @@ sqlparse
 Twisted
 django-environ
 colorlog
+csvkit
 
 # Production Packages
 psycopg2
