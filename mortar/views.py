@@ -21,7 +21,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from celery.task.control import revoke
 from celery.result import AsyncResult
 
-class CrawlerView(django.views.generic.TemplateView):
+class CrawlerView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/crawlers.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -63,7 +63,7 @@ class CrawlerView(django.views.generic.TemplateView):
 
         return render(request, self.template_name, context=context)
 
-class TreeListView(django.views.generic.TemplateView):
+class TreeListView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/tree_list.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -98,7 +98,7 @@ class TreeListView(django.views.generic.TemplateView):
         return render(request, self.template_name, context=context)
 
 
-class TreeDetailView(django.views.generic.TemplateView):
+class TreeDetailView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/tree_detail.html'
     selected_node = None
 
@@ -150,34 +150,16 @@ class TreeDetailView(django.views.generic.TemplateView):
             instance.save()
 
 
-class TreeEditView(django.views.generic.TemplateView, LoginRequiredMixin):
+class TreeEditView(LoginRequiredMixin, django.views.generic.UpdateView):
     template_name = 'mortar/tree_edit.html'
+    form_class = forms.TreeEditForm
+    model = models.Tree
+    context_object_name = 'tree'
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(TreeEditView, self).get_context_data(**kwargs)
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        context['tree'] = tree
-        data = {
-            'name': tree.name,
-            'slug': tree.slug,
-            'doc_source': [tree.doc_source_index.id],
-            'doc_dest': [tree.doc_dest_index.id],
-        }
-        context['form'] = forms.TreeEditForm(initial=data)
-        return context
+    def get_success_url(self):
+        return reverse('tree-detail', kwargs={'slug': self.object.slug})
 
-    def form_valid(self, form, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        tree = context['tree']
-        tree.name = form.cleaned_data['name']
-        tree.slug = form.cleaned_data['slug']
-        tree.doc_source_index = form.cleaned_data['doc_source_index']
-        tree.doc_dest_index = form.cleaned_data['doc_dest_index']
-        tree.save()
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': tree.slug}))
-
-
-class TreeJsonApi(APIView, LoginRequiredMixin):
+class TreeJsonApi(LoginRequiredMixin, APIView):
 
     def get(self, request, format=None, **kwargs):
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
@@ -185,7 +167,7 @@ class TreeJsonApi(APIView, LoginRequiredMixin):
         return Response(utils.get_json_tree(qs))
 
 
-class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
+class TreeQueryView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/tree_query.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -212,7 +194,7 @@ class TreeQueryView(django.views.generic.TemplateView, LoginRequiredMixin):
         messages.info(request, 'Tree filtering and reindexing started in background')
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
-class TreeProcessView(APIView, LoginRequiredMixin):
+class TreeProcessView(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         tasks.preprocess.delay(tree.pk, {'names':[], 'regexs':[]})
@@ -220,7 +202,7 @@ class TreeProcessView(APIView, LoginRequiredMixin):
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
 
-class NodeInsertView(django.views.generic.FormView, LoginRequiredMixin):
+class NodeInsertView(LoginRequiredMixin, django.views.generic.FormView):
     form_class = forms.NodeForm
     template_name = 'mortar/node_edit.html'
 
@@ -247,7 +229,7 @@ class NodeInsertView(django.views.generic.FormView, LoginRequiredMixin):
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 
-class NodeEditView(django.views.generic.FormView, LoginRequiredMixin):
+class NodeEditView(LoginRequiredMixin, django.views.generic.FormView):
     form_class = forms.NodeForm
     template_name = 'mortar/node_edit.html'
 
@@ -271,7 +253,7 @@ class NodeEditView(django.views.generic.FormView, LoginRequiredMixin):
         return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
 
 
-class AnnotationListView(django.views.generic.TemplateView, LoginRequiredMixin):
+class AnnotationListView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/annotations.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -293,7 +275,7 @@ class AnnotationListView(django.views.generic.TemplateView, LoginRequiredMixin):
             tasks.run_query.delay(tree.pk, category, query.pk)
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
-class AnnotationTreeView(django.views.generic.TemplateView, LoginRequiredMixin):
+class AnnotationTreeView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/annotation_trees.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -301,7 +283,7 @@ class AnnotationTreeView(django.views.generic.TemplateView, LoginRequiredMixin):
         context['trees'] = models.Tree.objects.all()
         return context
 
-class DictionaryListView(django.views.generic.TemplateView, LoginRequiredMixin):
+class DictionaryListView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/dictionaries.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -322,7 +304,7 @@ class DictionaryListView(django.views.generic.TemplateView, LoginRequiredMixin):
             utils.write_to_new_dict(new_dict)
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
-class DictionaryDetailView(django.views.generic.TemplateView, LoginRequiredMixin):
+class DictionaryDetailView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/dictionary_detail.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -340,7 +322,7 @@ class DictionaryDetailView(django.views.generic.TemplateView, LoginRequiredMixin
             new_word = models.Word.objects.create(name=form.cleaned_data['name'], dictionary=context['dict'])
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
-class DictionaryUpdateView(APIView, LoginRequiredMixin):
+class DictionaryUpdateView(LoginRequiredMixin, APIView):
 
     def get(self, request, *args, **kwargs):
         tasks.sync_dictionaries.delay()
@@ -352,7 +334,7 @@ class DictionaryUpdateView(APIView, LoginRequiredMixin):
         return HttpResponseRedirect(reverse('dictionaries'))
 
 
-class QueryCreateView(django.views.generic.TemplateView, LoginRequiredMixin):
+class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/query.html'
 
     def get_context_data(self, *args, **kwargs):

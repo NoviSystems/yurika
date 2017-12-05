@@ -8,12 +8,15 @@
     <form action="" method="POST">
       {% csrf_token %}
       <tr>
+        <td>{{ form.errors }}</td><td></td>
+      </tr>
+      <tr>
         <td>{{ form.name.label }}: {{ form.name }}</td>
         <td>{{ form.slug.label }}: {{ form.slug }}</td>
       </tr>
       <tr>
-        <td>{{ form.doc_source.label }}: {{ form.doc_source }}</td>
-        <td>{{ form.doc_dest.label }}: {{ form.doc_dest }}</td>
+        <td>{{ form.doc_source_index.label }}: {{ form.doc_source_index }}</td>
+        <td>{{ form.doc_dest_index.label }}: {{ form.doc_dest_index }}</td>
       </tr>
       <tr>
           <td>
@@ -41,16 +44,16 @@
 <script>
 $(document).ready(function() {
   $('#id_doc_source').change(function() {
-    console.log($("#id_doc_source").val());
-    if($("#id_doc_source").val() == "") {
+    console.log($("#id_doc_source_index").val());
+    if($("#id_doc_source_index").val() == "") {
       $('#new_source').addClass('in');
     }
     else {
       $('#new_source').removeClass('in');
     }
   });
-  $('#id_doc_dest').change(function() {
-    if($("#id_doc_dest").val() == "") {
+  $('#id_doc_dest_index').change(function() {
+    if($("#id_doc_dest_index").val() == "") {
       $('#new_dest').addClass('in');
     }
     else {

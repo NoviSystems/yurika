@@ -85,8 +85,8 @@ class WordForm(BSModelForm):
         fields = ['name']
 
 class TreeEditForm(BSModelForm):
-    doc_source = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')
-    doc_dest = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')
+    doc_source_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')
+    doc_dest_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')
     new_source_index = forms.CharField(max_length=20, required=False)
     new_dest_index = forms.CharField(max_length=20, required=False)
 
@@ -95,29 +95,35 @@ class TreeEditForm(BSModelForm):
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
 
-        self.fields['doc_source'].empty_label = 'New Index'
-        self.fields['doc_dest'].empty_label = 'New Index'
+        self.fields['doc_source_index'].empty_label = 'New Index'
+        self.fields['doc_dest_index'].empty_label = 'New Index'
 
     def clean(self):
-        data = super(TreeForm, self).clean()
-        slugs = models.Tree.objects.filter(slug=data['slug'])
-        if len(slugs) > 0:
-            raise forms.ValidationError('That slug is already taken.')
+        data = super(TreeEditForm, self).clean()
+        if 'slug' in self.changed_data:
+            slugs = models.Tree.objects.filter(slug=data['slug'])
+            if len(slugs) > 0:
+                print('1')
+                raise forms.ValidationError('That slug is already taken.')
 
-        if not data['new_source_index'] and not data['doc_source'] or not data['new_dest_index'] and not data['doc_dest']:
+        if not data['new_source_index'] and not data['doc_source_index'] or not data['new_dest_index'] and not data['doc_dest_index']:
+            print('2')
             raise forms.ValidationError('Must choose index or create new one')
         else:
-            if not data['doc_source'] and data['new_source_index']:
+            if not data['doc_source_index'] and data['new_source_index']:
                 new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_source_index'])
-                data['doc_source'] = new_ei
-            if not data['doc_dest'] and data['new_dest_index']:
+                data['doc_source_index'] = new_ei
+                print('3')
+            if not data['doc_dest_index'] and data['new_dest_index']:
                 new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_dest_index'])
-                data['doc_dest'] = new_ei
+                data['doc_dest_index'] = new_ei
+                print('4')
+        print(data)
         return data
   
     class Meta:
         model = models.Tree
-        fields = ['name', 'slug']
+        fields = ['name', 'slug', 'doc_source_index', 'doc_dest_index']
 
 
 
