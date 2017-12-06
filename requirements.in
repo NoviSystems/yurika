@@ -1,0 +1,30 @@
+Django<2.0
+django-environ>=0.4.3
+colorlog
+
+#mortar
+nltk
+django-mptt
+django-mptt-admin
+elasticsearch
+requests
+djangorestframework
+numpy
+pyparsing
+psutil
+scrapy
+beautifulsoup4
+argparse
+celery
+#psycopg2
+#gunicorn
+
+#portrait
+django-sql-explorer
+
+# Optional Integrations
+#oauth2client
+#raven
+
+# To compile the requirements.txt
+pip-tools

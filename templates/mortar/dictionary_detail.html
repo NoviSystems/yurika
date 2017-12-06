@@ -3,18 +3,31 @@
 {% block content %}
 <div class="visible-desktop container body-wrapper">
 <h1>
-    <a href="{% url 'dictionary-list' %}">Dictionaries</a> : 
+    <a href="{% url 'dictionaries' %}">Dictionaries</a> : 
     {{ dict.name }}
 </h1>
-<h2>Words</h2>
-<div class="table-responsive" data-toggle="tooltip" data-html="true">
+<h2>Words
+  <a id="toggle_form" href="#word_form" class="btn btn-xs btn-primary" data-toggle="collapse">+</a>
+</h2>
+<div class="table-responsive row" data-toggle="tooltip" data-html="true">
+<div id="word_form" class="form-group row collapse">
+  <form id="new_word" action="" method="POST">
+    {% csrf_token %}
+    <div class="col-xs-2">
+      {{ form.name }}
+    </div>
+    <div class="col-xs-2">
+      <button class="btn btn-success" type="submit" name="new_dictionary" value="submit">Add</button>
+    </div>
+  </form>
+</div>
 <table class="table table-striped">
 {% for word in words %}
     <tr>
         <td>{{ word }}</td>
     </tr>
 {% empty %}
-    <tr><td>No dictionaries yet.</td></tr>
+    <tr><td>No words yet.</td></tr>
 {% endfor %}
 </table>
 </div>
@@ -23,12 +36,12 @@
 <table class="table table-striped">
     <tr>
         <th>Tree</th>
-        <th>Category</th>
+        <th>Node</th>
     </tr>
-{% for cat in categories %}
+{% for node in nodes %}
     <tr>
-        <td><a href="{% url 'tree-detail' cat.projecttree.project.slug cat.projecttree.slug %}">{{ cat.projecttree.name }}</a>
-        <td>{{ cat.full_path_name }}.{{ cat.name}}</td>
+        <td><a href="{% url 'tree-detail' node.tree_link.slug %}">{{ node.tree_link.name }}</a>
+        <td>{{ node.name}}</td>
     </tr>
 {% empty %}
     <tr><td>No relations yet.</td></tr>
@@ -36,4 +49,21 @@
 </table>
 </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  $('#toggle_form').click(function() {
+    if($('#word_form').hasClass('in')) {
+      $('#toggle_form').text('+');
+      $('#toggle_form').removeClass('btn-danger');
+      $('#toggle_form').addClass('btn-primary');
+    } else {
+      $('#toggle_form').html('&times;');
+      $('#toggle_form').removeClass('btn-primary');
+      $('#toggle_form').addClass('btn-danger');
+    }
+  });
+});
+</script>
 {% endblock %}

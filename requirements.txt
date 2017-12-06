@@ -1,24 +1,29 @@
-# skeleton
-Django<1.11
-colorlog
-
-# Uncomment in production
-#psycopg2
-#gunicorn 
-
-# mortar
-requests
-simplejson
+beautifulsoup4
+celery
+Django<2.0
 django-mptt
 django-mptt-admin
+django-sql-explorer
 djangorestframework
-django-filter
-elasticsearch
+elasticsearch<6.0.0
+lxml
 nltk
 numpy
+psutil
+pyparsing
+redis
+requests
+Scrapy
+sqlparse
+Twisted
+django-environ
+colorlog
+csvkit
 
-# portrait
-django-sql-explorer<1.1
+# Production Packages
+psycopg2
+gunicorn
+raven
 
-# Uncomment for oauth
+# OAuth Packages
 #oauth2client

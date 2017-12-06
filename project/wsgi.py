@@ -11,6 +11,10 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
+import environ
+
+environ.Env.read_env(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+)
 
 application = get_wsgi_application()

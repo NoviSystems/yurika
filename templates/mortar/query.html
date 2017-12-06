@@ -6,18 +6,21 @@
 <p>Here you can build complex queries based off three types: all dictionaries, regexs in the tree, and previously created queries.<br /><br />You can also create a simple query by leaving the operator and second form blank.</p>
 <form id="form" action="" method="POST" novalidate>
       {% csrf_token %}
-  <div class="form-group row">
+  <div id="row_1" class="form-group row">
     <div class="col-xs-4">
         <select id="form_select_1" class="form-control">
           <option value="">---------</option>
           <option value="dict">Dictionary</option>
           <option value="regex">Regular Expression</option>
-          <option value="subquery">Combined Query</option>
           <option value="pos">Part of Speech</option>
         </select>
     </div>
-    <div class="col-xs-4">
-      {{ dict_form.op }}
+    <div class="col-xs-2">
+       <select id="op" name="op" class="form-control">   
+           <option value="">---------</option>
+           <option value="+">AND</option>                     
+           <option value="|">OR</option>                      
+       </select>
     </div>
     <div class="col-xs-4">
         <select id="form_select_2" class="form-control">
@@ -29,7 +32,7 @@
         </select>
     </div>
   </div>
-  <div class="form-group row">
+  <div id="row_1_2" class="form-group row">
     <div class="col-xs-4">
         <div id="dict_form_1" class="collapse">{{ dict_form.dictionary }}</div>
         <div id="regex_form_1" class="collapse">{{ regex_form.regex }}</div>
@@ -37,7 +40,7 @@
         <div id="pos_form_1" class="collapse">{{ pos_form.part_of_speech }}</div>
     </div>
 
-    <div class="col-xs-4"></div>
+    <div class="col-xs-2"></div>
 
     <div class="col-xs-4">
         <div id="dict_form_2" class="collapse">{{ dict_form.dictionary }}</div>
@@ -46,15 +49,67 @@
         <div id="pos_form_2" class="collapse">{{ pos_form.part_of_speech }}</div>
     </div>
    </div>
-  <button class="btn btn-success" type="submit" name="query" value="submit">Create Query</button>
 </div>
+  <input type="button" value="add query" class="btn btn-primary" onclick="javascript: addQueryPart();" />
+  <button class="btn btn-success" type="submit" name="query" value="submit">Create Query</button>
 </form>
 
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
+var count = 2;
+function addQueryPart() {
+    var form = document.getElementById('form');
+    if (form) {
+       
+       var new_query_part = `
+          <div id="row_` + count + `" class="form-group row">	
+           <div class="col-xs-4"></div>
+           <div class="col-xs-2">                               
+            <select id="op" name="op" class="form-control">            
+             <option value="+">AND</option>                     
+             <option value="|">OR</option>                      
+            </select>                                           
+           </div>`;
+       var lastrow = count;
+       count++;
+       new_query_part += `<div class="col-xs-4">                         	
+            <select id="form_select_` + count + `" class="form-control">	
+             <option value="">---------</option>		
+             <option value="dict">Dictionary</option>		
+             <option value="regex">Regular Expression</option>	
+             <option value="subquery">Combined Query</option>	
+             <option value="pos">Part of Speech</option>	
+            </select>						
+           </div>
+           <div class="col-xs-1">
+             <input value="&times;" type="button" class="btn btn-danger" onclick="javascript: delQueryPart(` + lastrow + `);" />
+           </div>
+          </div>						
+          <div id="row_` + lastrow + `_2"class="form-group row">
+           <div class="col-xs-4"></div>
+           <div class="col-xs-2"></div>
+           <div class="col-xs-4">
+            <div id="dict_form_` + count + `" class="collapse">{{ dict_form.dictionary }}</div>
+            <div id="regex_form_` + count + `" class="collapse">{{ regex_form.regex }}</div>
+            <div id="subquery_form_` + count + `" class="collapse">{{ subquery_form.subquery }}</div>
+            <div id="pos_form_` + count + `" class="collapse">{{ pos_form.part_of_speech }}</div>
+           </div>
+          </div>
+          </div>
+	`;
+        form.insertAdjacentHTML("beforeend", new_query_part);
+    }
+}
+function delQueryPart(formnum) {
+    var row = document.getElementById("row_" + formnum);
+    var row2 = document.getElementById("row_" + formnum + "_2");
+    row.parentNode.removeChild(row);
+    row2.parentNode.removeChild(row2);
+    count--;
+}
 function check_form_selection(form_num, val) {
-    console.log("#dict_form" + form_num);
     if(val == 'dict') {
         $("#dict_form_" + form_num).removeClass('collapse');
         $("#regex_form_" + form_num).addClass('collapse');
@@ -93,11 +148,9 @@ function check_form_selection(form_num, val) {
 }
 
 $('document').ready(function() {
-    $("#form_select_1").change(function() {
-        check_form_selection("1", this.value);
-    });
-    $("#form_select_2").change(function() {
-        check_form_selection("2", this.value);
+    
+    $('body').on('change', 'select[id^="form_select_"]', function() {
+            check_form_selection(this.id.slice(12), this.value);
     });
 });
 </script>

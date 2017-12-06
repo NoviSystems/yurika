@@ -1,21 +1,24 @@
 from django.contrib import admin
+from mortar import models
 from django_mptt_admin.admin import FilterableDjangoMpttAdmin
-from .models import Project, ProjectTree, Category, AIDictionary, AIDictionaryObject, Document, Annotation, TermVector, Query, QueryPart, DictionaryPart, RegexPart, SubQueryPart, PartOfSpeechPart
 
-class CategoryAdmin(FilterableDjangoMpttAdmin):
-    list_filter = ('projecttree',)
+class NodeAdmin(FilterableDjangoMpttAdmin):
+    list_filter = ('tree_link', )
 
-admin.site.register(Project)
-admin.site.register(ProjectTree)
-admin.site.register(Category, CategoryAdmin)
-admin.site.register(AIDictionary)
-admin.site.register(AIDictionaryObject)
-admin.site.register(Document)
-admin.site.register(Annotation)
-admin.site.register(TermVector)
-admin.site.register(Query)
-admin.site.register(QueryPart)
-admin.site.register(DictionaryPart)
-admin.site.register(RegexPart)
-admin.site.register(SubQueryPart)
-admin.site.register(PartOfSpeechPart)
+
+admin.site.register(models.Node, NodeAdmin)
+admin.site.register(models.Tree)
+admin.site.register(models.Document)
+admin.site.register(models.Dictionary)
+admin.site.register(models.Word)
+admin.site.register(models.Annotation)
+admin.site.register(models.Query)
+admin.site.register(models.QueryPart)
+admin.site.register(models.SubQueryPart)
+admin.site.register(models.DictionaryPart)
+admin.site.register(models.RegexPart)
+admin.site.register(models.PartOfSpeechPart)
+admin.site.register(models.Crawler)
+admin.site.register(models.URLSeed)
+admin.site.register(models.FileSeed)
+admin.site.register(models.ElasticIndex)
