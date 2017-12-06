@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import RegexValidator
 from mptt.models import MPTTModel, TreeForeignKey
 import django.db.models.options as options
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
@@ -51,7 +52,8 @@ class FileSeed(Seed):
 
 
 class ElasticIndex(models.Model):
-    name = models.CharField(max_length=20)
+    alphanumeric = RegexValidator(r'^[0-9a-zA-Z]*$', 'Only alphanumeric characters are allowed')
+    name = models.CharField(max_length=20, unique=True,  validators=[alphanumeric])
 
     def __str__(self):
         return self.name
