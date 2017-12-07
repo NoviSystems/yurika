@@ -107,48 +107,11 @@ class TreeDetailView(LoginRequiredMixin, django.views.generic.TemplateView):
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         context['user'] = self.request.user
         context['tree'] = tree
-        context['tree_json_url'] = reverse('tree-json', kwargs={'slug': tree.slug})
-        context['insert_at_url'] = reverse('node-insert', kwargs={'slug': tree.slug})
-        context['edit_url'] = reverse('node-edit', kwargs={'slug': tree.slug})
-        context['dict_url'] = reverse('dictionaries')
-        context['app_label'] = 'yurika'
-        context['model_name'] = 'node'
-        context['tree_auto_open'] = 'true'
-        context['autoescape'] = 'true'
-        context['use_context_menu'] = 'false'
+        qs = models.Node.objects.filter(tree_link=tree)
+        context['tree_json'] = json.dumps(utils.get_json_tree(qs))
         context['elastic_url'] = settings.ES_URL + 'filter_' + tree.slug + '/_search?pretty=true'
         context['importform'] = forms.MindMapImportForm(self.request.POST, self.request.FILES)
         return context
-
-    def post(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        form = context['importform']
-        if request.POST.get('target_id'):
-            instance = models.Node.objects.get(pk=request.POST.get('selected_id'))
-            target_id = request.POST.get('target_id')
-            position = request.POST.get('position')
-            target_instance = models.Node.objects.get(pk=target_id)
-            self.move_node(instance, position, target_instance)
-        elif form.is_valid() and not request.POST.get('export'):
-            utils.read_mindmap(context['tree'], request.FILES['file'].read())
-            utils.associate_tree(context['tree'])
-        elif request.POST.get('export'):
-            print("Exporting")
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-    @transaction.atomic()
-    def move_node(self, instance, position, target_instance):
-        if position == 'before':
-            instance.move_to(target_instance, 'left')
-        elif position == 'after':
-            instance.move_to(target_instance, 'right')
-        else:
-            if position == 'inside':
-                instance.move_to(target_instance)
-            else:
-                raise Exception('Unknown position')
-            instance.save()
-
 
 class TreeEditView(LoginRequiredMixin, django.views.generic.UpdateView):
     template_name = 'mortar/tree_edit.html'
@@ -174,7 +137,8 @@ class TreeQueryView(LoginRequiredMixin, django.views.generic.TemplateView):
         context = super(TreeQueryView, self).get_context_data(**kwargs)
         tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
         context['tree'] = tree
-        context['tree_json_url'] = reverse('tree-json', kwargs={'slug': tree.slug})
+        qs = models.Node.objects.filter(tree_link=tree)
+        context['tree_json'] = json.dumps(utils.get_json_tree(qs))
         return context
 
     def post(self, request, *args, **kwargs):

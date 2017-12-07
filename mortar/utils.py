@@ -11,33 +11,28 @@ from django.db import transaction
 import mortar.models as models
 
 def get_json_tree(queryset, max_level=None):
-    pk_attname = 'id'
     tree = []
     node_dict = dict()
     min_level = None
-    for cat in queryset:
+    for node in queryset:
         if min_level is None:
-            min_level = cat.level
-        pk = getattr(cat, pk_attname)
+            min_level = node.level
+        pk = getattr(node, 'id')
         try:
-            dict_id = cat.dictionary.id
+            dict_id = node.dictionary.id
         except:
             dict_id = None
 
-        node_info = dict(label=cat.name, id=pk, regex=cat.regex, dictionary=dict_id)
-        if max_level is not None and not cat.is_leaf_node():
-            node_info['load_on_demand'] = True
-        if cat.level == min_level:
+        node_info = dict(label=node.name, id=pk, regex=node.regex, dictionary=dict_id)
+        if node.level == min_level:
             tree.append(node_info)
         else:
-            parent_id = cat.parent_id
+            parent_id = node.parent_id
             parent_info = node_dict.get(parent_id)
             if parent_info:
                 if 'children' not in parent_info:
                     parent_info['children'] = []
                 parent_info['children'].append(node_info)
-                if max_level is not None:
-                    parent_info['load_on_demand'] = False
         node_dict[pk] = node_info
 
     return tree
