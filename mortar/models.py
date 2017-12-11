@@ -64,6 +64,8 @@ class Tree(models.Model):
     slug = models.SlugField(unique=True)
     doc_source_index = models.ForeignKey('ElasticIndex', related_name='doc_sources')
     doc_dest_index = models.ForeignKey('ElasticIndex', related_name='doc_dests')
+    processed_at = models.DateTimeField()
+    process_id = models.CharField(max_length=50)
 
     def __str__(self):
         return 'Tree: %s' % self.name

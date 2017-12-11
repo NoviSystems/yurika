@@ -49,9 +49,9 @@ def sync_dictionaries(self):
 @shared_task(bind=True)
 def preprocess(self, tree_pk, query):
     tree = models.Tree.objects.get(pk=tree_pk)
-    tree.save()
 
     utils.process(tree, query)
+    tree.processed_at = datetime.datetime.now()
     
     tree.save()
 

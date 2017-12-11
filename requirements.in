@@ -19,8 +19,6 @@ celery
 #psycopg2
 #gunicorn
 
-#portrait
-django-sql-explorer
 
 # Optional Integrations
 #oauth2client

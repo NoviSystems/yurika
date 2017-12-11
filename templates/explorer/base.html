@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% block header %}
+    <link href="{% static 'css/codemirror.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/pivot.min.css' %}" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/explorer.css' %}" />
+
+    <script src="{% static 'js/jsquery.cookie-1.4.1.min.js' %}"></script>
+
+    <script src="{% static 'js/explorer.js' %}"></script>
+    <script type="text/javascript">
+        queryId = "{% firstof query.id 'new' %}";
+    </script>
+{% endblock %}
+
+{% block content %}
+  {% block sql_explorer_content_takeover %}
+    <div id="wrap" class="wrap">
+        {% block sql_explorer_navbar %}
+            <div class="navbar navbar-default navbar-static-top" role="navigation">
+              <div class="container">
+                <div class="navbar-header">
+                  <a class="navbar-brand" href="{% url "explorer_index" %}">SQL Explorer</a>
+                </div>
+                <div class="navbar-collapse collapse">
+                  <ul class="nav navbar-nav">
+                    {% block sql_explorer_navlinks %}{% endblock %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+        {% endblock %}
+        <div class="container">
+          <div class="starter-template">
+          {% block sql_explorer_content %}{% endblock %}
+          </div>
+        </div>
+    </div>
+  {% endblock %}
+    {% block sql_explorer_footer %}
+        <div class="container">
+            <div class="row">
+              <div class="col-md-12 text-center">
+                    <p class="text-muted">
+                        Powered by <a href="https://www.github.com/groveco/django-sql-explorer/">django-sql-explorer</a> from
+                        <a href="https://www.grove.co">Grove Collaborative</a>. Rendered at {% now "SHORT_DATETIME_FORMAT" %}
+                    </p>
+              </div>
+            </div>
+        </div>
+    {% endblock %}
+{% endblock %}
+{% block scripts %}
+    <script src="{% static 'js/underscore-min.js' %}"></script>
+    <script src="{% static 'js/bootstrap-min.js' %}"></script>
+    <script src="{% static 'js/list.min.js' %}"></script>
+    <script src="{% static 'js/codemirror.min.js' %}"></script>
+    <script src="{% static 'js/sql.min.js' %}"></script>
+    <script src="{% static 'js/comment.min.js' %}"></script>
+    <script src="{% static 'js/jquery.floatThead-slim.min.js' %}"></script>
+    <script src="{% static 'js/pivot.min.js' %}"></script>
+    {% block sql_explorer_scripts %}{% endblock %}
+{% endblock %}

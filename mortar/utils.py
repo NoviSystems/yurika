@@ -115,6 +115,12 @@ def create_query_part(qtype, qid, query, op=None):
 
 
 def update_dictionaries():
+    es = settings.ES_CLIENT
+    i_client = IndicesClient(client=es)
+    if not i_client.exists('dictionaries'):
+        i_client.create('dictionaries')
+
+    es_actions = []
     dict_path = settings.DICTIONARIES_PATH
     for root, dirs, files in os.walk(dict_path):
         for f in files:
@@ -125,6 +131,14 @@ def update_dictionaries():
                     for line in dictfile:
                         word = line.decode('utf-8').rstrip('\n')
                         w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
+                    es_actions.append({'_op_type': 'index', '_type': 'dictionary',
+                        '_source': {
+                            'name': d.name,
+                            'words': [w for w in d.words.all()]
+                        },
+                      '_index': tree.doc_dest_index.name
+                    })
+    helpers.bulk(client=es, actions=es_actions)
 
 #TODO
 def write_to_new_dict(new_dict):

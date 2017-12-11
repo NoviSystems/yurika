@@ -165,6 +165,13 @@ class TreeProcessView(LoginRequiredMixin, APIView):
         messages.info(request, 'Tree filtering and reindexing started in background')
         return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
 
+class TreeProcessCheckApi(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        #
+        check = {'last_processed': tree.processed_at}
+
+        return json.dumps(check)
 
 class NodeInsertView(LoginRequiredMixin, django.views.generic.FormView):
     form_class = forms.NodeForm
@@ -377,6 +384,7 @@ tree_json = TreeJsonApi.as_view()
 tree_edit = TreeEditView.as_view()
 tree_filter = TreeQueryView.as_view()
 tree_process = TreeProcessView.as_view()
+tree_process_check = TreeProcessCheckApi.as_view()
 node_insert = NodeInsertView.as_view()
 node_insert_at = NodeInsertView.as_view()
 node_edit = NodeEditView.as_view()

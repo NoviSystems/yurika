@@ -352,3 +352,10 @@ from django.core.urlresolvers import reverse_lazy
 LOGIN_URL = reverse_lazy("login")
 LOGOUT_URL = reverse_lazy("logout")
 LOGIN_REDIRECT_URL = reverse_lazy("home")
+
+EXPLORER_CONNECTIONS = {
+    #'Postgres': 'postgres',
+    #'MySQL': 'mysql',
+    'SQLite': 'default',
+}
+EXPLORER_DEFAULT_CONNECTION = 'default'
