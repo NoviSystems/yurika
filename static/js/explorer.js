@@ -110,7 +110,7 @@ ExplorerEditor.prototype.showRows = function() {
 };
 
 ExplorerEditor.prototype.showSchema = function(noAutofocus) {
-    $("#schema_frame").attr('src', '../schema/' + $('#id_connection').val());
+    $("#schema_frame").attr('src', '../schema/explorer');
     if (noAutofocus === true) {
         $("#schema_frame").addClass('no-autofocus');
     }

@@ -2,8 +2,8 @@
 
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-<h1>Queries
-</h1>
+<h3>Queries
+</h3>
 <div class="table-responsive" data-toggle="tooltip" data-html="true">
 Select a MindMap to run queries and create annotations for:
 <table class="table table-striped">
@@ -13,7 +13,7 @@ Select a MindMap to run queries and create annotations for:
     <td>
     </tr>
 {% empty %}
-No MindMaps available. Please <a href="{% url 'tree-list'%}">create one</a>.
+No MindMaps available. Please <a href="{% url 'trees' %}">create one</a>.
 {% endfor %}
 </table>
 </div>

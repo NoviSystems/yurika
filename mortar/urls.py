@@ -1,6 +1,9 @@
 from django.conf.urls import url
 from . import views
 urlpatterns = [
+ url('^configure/$', views.configure, name='configure'),
+ url('^analyze/$', views.analyze, name='analyze'),
+
  url('^crawlers/$', views.crawlers, name='crawlers'),
  url('^mindmaps/$', views.trees, name='trees'),
  url('^mindmaps/(?P<slug>[-\\w]+)/$', views.tree_detail, name='tree-detail'),

@@ -115,6 +115,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'project.utils.context_processors.google_analytics',
+                'project.utils.context_processors.analysis_status',
             ],
         },
     },
@@ -129,9 +130,13 @@ WSGI_APPLICATION = 'project.wsgi.application'
 DATABASES = {
     # fail if no DATABASE_URL - don't use a default value
     'default': env.db(),
+    'explorer': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'explorer.sqlite3'),
+    }
 }
 
-
+DATABASE_ROUTERS = ['mortar.routers.AnalysisRouter']
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
 
@@ -356,6 +361,6 @@ LOGIN_REDIRECT_URL = reverse_lazy("home")
 EXPLORER_CONNECTIONS = {
     #'Postgres': 'postgres',
     #'MySQL': 'mysql',
-    'SQLite': 'default',
+    'SQLite': 'explorer',
 }
-EXPLORER_DEFAULT_CONNECTION = 'default'
+EXPLORER_DEFAULT_CONNECTION = 'explorer'

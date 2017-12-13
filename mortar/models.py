@@ -5,6 +5,15 @@ from mptt.models import MPTTModel, TreeForeignKey
 import django.db.models.options as options
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
+class Analysis(models.Model):
+    crawler = models.ForeignKey('Crawler', related_name="analyses") 
+    tree_link = models.ForeignKey('Tree', related_name="analyses")
+    dictionaries = models.ManyToManyField('Dictionary', related_name="analyses")
+    queries = models.ManyToManyField('Query', related_name="analyses")
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    status = models.IntegerField(default=0, choices=((0, 'Not Configured'), (1, 'Configured'), (2, 'Crawling'), (3, 'Preprocessing'), (4, 'Querying'), (5, 'Finished'), (6, 'Stopped')))
+
 class Crawler(models.Model):
     name = models.CharField(max_length=50)
     category = models.CharField(max_length=3, choices=(('txt', 'File System Crawler'),
@@ -13,8 +22,8 @@ class Crawler(models.Model):
     seed_list = models.ManyToManyField('Seed', blank=True, related_name='crawlers')
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=15, choices=(('Running', 'Running'), ('Finished', 'Finished'),
-                                                      ('Stopped', 'Stopped')))
+    status = models.IntegerField(default=2, choices=((0, 'Running'), (1, 'Finished'),
+                                                      (2, 'Stopped')))
     process_id = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
@@ -32,7 +41,6 @@ class Crawler(models.Model):
 
 
 class Seed(models.Model):
-
     class Meta:
         verbose_name = 'Seed'
 
@@ -46,8 +54,8 @@ class URLSeed(Seed):
 
 class FileSeed(Seed):
     path = models.FilePathField()
-
     def __str__(self):
+
         return 'Path: %s' % self.path
 
 
@@ -64,8 +72,9 @@ class Tree(models.Model):
     slug = models.SlugField(unique=True)
     doc_source_index = models.ForeignKey('ElasticIndex', related_name='doc_sources')
     doc_dest_index = models.ForeignKey('ElasticIndex', related_name='doc_dests')
-    processed_at = models.DateTimeField()
-    process_id = models.CharField(max_length=50)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    process_id = models.CharField(max_length=50, null=True, blank=True)
 
     def __str__(self):
         return 'Tree: %s' % self.name
@@ -133,16 +142,17 @@ class Document(models.Model):
 
 class Annotation(models.Model):
     content = models.TextField()
-    tree = models.ForeignKey('Tree', related_name='annotations')
-    document = models.ForeignKey('Document', related_name='annotations')
+    analysis_id = models.IntegerField()
+    document_id = models.IntegerField()
     category = models.CharField(max_length=1, choices=(('S', 'Sentence'), ('P', 'Paragraph'),
                                                        ('D', 'Document')))
-    query = models.ForeignKey('Query', related_name='annotations')
+    query_id = models.IntegerField()
 
     def __str__(self):
         return str(self.id)
 
     class Meta:
+        db_table = "annotations"
         index_mapping = {}
 
 
@@ -150,6 +160,9 @@ class Query(models.Model):
     name = models.CharField(max_length=50, blank=True)
     string = models.TextField(blank=True)
     elastic_json = models.TextField(blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    process_id = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
         return self.name

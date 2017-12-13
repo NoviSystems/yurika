@@ -50,6 +50,7 @@ PARTS_OF_SPEECH = (('CC', 'Coordinating Conjunction'),
                    ('WP$', 'Possessive wh-pronoun'),
                    ('WRB', 'Wh-adverb')) 
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'static_root')
 ES_URL = 'http://10.36.1.1:9200/'
 ES_CLIENT = Elasticsearch([ES_URL], connection_class=RequestsHttpConnection)
 DICTIONARIES_PATH = 'dictionaries/'

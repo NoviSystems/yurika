@@ -2,7 +2,7 @@
 {% load staticfiles %}
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-<h1>{{ tree.name }}</h1>
+<h3>{{ tree.name }}</h3>
 <p>Here you can build complex queries based off three types: all dictionaries, regexs in the tree, and previously created queries.<br /><br />You can also create a simple query by leaving the operator and second form blank.</p>
 <form id="form" action="" method="POST" novalidate>
       {% csrf_token %}

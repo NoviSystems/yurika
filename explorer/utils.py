@@ -135,8 +135,8 @@ class InvalidExplorerConnectionException(Exception):
 
 
 def get_valid_connection(alias=None):
-    from app_settings import EXPLORER_DEFAULT_CONNECTION
-    from connections import connections
+    from explorer.app_settings import EXPLORER_DEFAULT_CONNECTION
+    from explorer.connections import connections
 
     if not alias:
         return connections[EXPLORER_DEFAULT_CONNECTION]

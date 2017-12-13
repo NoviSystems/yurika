@@ -21,6 +21,29 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from celery.task.control import revoke
 from celery.result import AsyncResult
 
+class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
+    template_name = 'mortar/configure.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        run,created = models.Run.objects.get_or_create(id=0)
+        context['run'] = run
+        return context
+
+class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
+    template_name = 'mortar/analyze.html'
+
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+
+        return context
+
+
+
+
+
+### Remnants of a past era
+
 class CrawlerView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/crawlers.html'
 
@@ -376,6 +399,9 @@ class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
 class Home(django.views.generic.TemplateView):
     template_name = 'home.html'
 
+
+configure = ConfigureView.as_view()
+analyze = AnalyzeView.as_view()
 
 crawlers = CrawlerView.as_view()
 trees = TreeListView.as_view()
