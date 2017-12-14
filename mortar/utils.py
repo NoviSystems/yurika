@@ -128,7 +128,7 @@ def update_dictionaries():
                 filepath = os.sep.join([root, f])
                 with open(filepath, 'rb+') as dictfile:
                     d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]))
-                    for line in dictfile:
+                    '''for line in dictfile:
                         word = line.decode('utf-8').rstrip('\n')
                         w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
                     es_actions.append({'_op_type': 'index', '_type': 'dictionary',
@@ -138,7 +138,7 @@ def update_dictionaries():
                         },
                       '_index': tree.doc_dest_index.name
                     })
-    helpers.bulk(client=es, actions=es_actions)
+    helpers.bulk(client=es, actions=es_actions)'''
 
 #TODO
 def write_to_new_dict(new_dict):
@@ -329,7 +329,7 @@ def process(tree, query):
             insert_pos_record(doc.id, esdoc, tree)
 
 
-def annotate(tree, category, query):
+def annotate(analysis, tree, category, query):
     es = settings.ES_CLIENT
     i_client = IndicesClient(client=es)
     if not i_client.exists(tree.doc_dest_index.name):
@@ -345,4 +345,4 @@ def annotate(tree, category, query):
     search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
-        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, category=category)
+        anno = models.Annotation.objects.create(content=hit['_source']['content'], analysis_id=analysis.id, query_id=query.id, document=doc.id, category=category)

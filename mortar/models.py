@@ -6,10 +6,9 @@ import django.db.models.options as options
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
 class Analysis(models.Model):
-    crawler = models.ForeignKey('Crawler', related_name="analyses") 
-    tree_link = models.ForeignKey('Tree', related_name="analyses")
-    dictionaries = models.ManyToManyField('Dictionary', related_name="analyses")
-    queries = models.ManyToManyField('Query', related_name="analyses")
+    crawler = models.ForeignKey('Crawler', related_name="analyses", null=True, blank=True) 
+    mindmap = models.ForeignKey('Tree', related_name="analyses", null=True, blank=True)
+    query = models.ForeignKey('Query', related_name="analyses", null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     status = models.IntegerField(default=0, choices=((0, 'Not Configured'), (1, 'Configured'), (2, 'Crawling'), (3, 'Preprocessing'), (4, 'Querying'), (5, 'Finished'), (6, 'Stopped')))

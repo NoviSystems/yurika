@@ -26,21 +26,181 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
-        run,created = models.Run.objects.get_or_create(id=0)
-        context['run'] = run
+        analysis,created = models.Analysis.objects.get_or_create(id=0)
+        context['analysis'] = analysis
+        context['crawler'] = analysis.crawler
+        context['mindmap'] = analysis.mindmap
+        context['query'] = analysis.query
+        context['dictionaries'] = models.Dictionary.objects.all()
+        context['crawler_form'] = forms.CrawlerForm(instance=context['crawler'], prefix='crawler') if context['crawler']  else forms.CrawlerForm(prefix='crawler')
+        context['dict_form'] = forms.DictionaryForm(prefix='dictionary')
+        context['mm_form'] = forms.MindMapForm(instance=context['mindmap'], prefix='mindmap') if context['mindmap'] else forms.MindMapForm(prefix='mindmap')
+        context['query_form'] = forms.QueryForm(instance=context['query'], prefix='query') if context['query'] else forms.QueryForm(prefix='query')
+        context['step'] = self.get_step(analysis)
         return context
+
+    def get_step(self, analysis):
+        step = 5
+        if not analysis.query:
+            step = 4
+        if not analysis.mindmap:
+            step = 3
+        if not models.Dictionary.objects.all().count():
+            step = 2
+        if not analysis.crawler:
+            step = 1
+        return step
+
+    def post(self, request, *args, **kwargs):
+        context = self.get_context_data(*args, **kwargs)
+
+        crawler_form = forms.CrawlerForm(request.POST, prefix='crawler')
+        if crawler_form.is_valid():
+            cd = crawler_form.cleaned_data
+            crawler = context['crawler'] if context['crawler'] else models.Crawler.objects.create(name=cd['name'], category=cd['category'], index=cd['index'], status=2)
+            seeds = request.POST.get('seed_list').split('\n')
+            new_seeds = []
+            if cd['category'] == 'txt':
+                for seed in seeds:
+                    fseed, created = models.FileSeed.objects.get_or_create(path=seed.strip())
+                    new_seeds.append(fseed)
+
+            elif cd['category'] == 'web':
+                for seed in seeds:
+                    useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
+                    new_seeds.append(useed)
+
+            crawler.seed_list.set(new_seeds)
+            crawler.save()
+            context['crawler'] = crawler
+            context['analysis'].crawler = crawler
+            context['analysis'].save()
+            context['step'] = 2
+
+
+        dict_form = forms.DictionaryForm(request.POST, prefix='dictionary')
+        if dict_form.is_valid():
+            new_dict = models.Dictionary.objects.create(name=dict_form.cleaned_data['name'], filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(dict_form.cleaned_data['name']) + ".txt"]))
+            words = dict_form.cleaned_data['words'].split('\n')
+            for word in words:
+                if len(word):
+                    new_word = models.Word.objects.create(name=word, dictionary=new_dict)
+            utils.write_to_new_dict(new_dict) 
+            context['step'] = 3
+
+        mm_form = forms.MindMapForm(request.POST, request.FILES, prefix='mindmap')
+        if mm_form.is_valid():
+            cd = mm_form.cleaned_data
+            mindmap = context['mindmap'] if context['mindmap'] else models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=context['analysis'].crawler.index, doc_dest_index=cd['doc_dest_index'])
+            if self.request.FILES.get('file'):
+                utils.read_mindmap(new_tree, request.FILES['file'].read())
+                utils.associate_tree(mindmap)
+
+            mindmap.save()
+            context['mindmap'] = mindmap
+            context['analysis'].mindmap = mindmap
+            context['analysis'].save()
+            context['step'] = 4
+
+        query_form = forms.QuerySelectForm(request.POST, prefix='query')
+        if query_form.is_valid():
+            pass
+
+        return render(request, self.template_name, context=context)
 
 class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/analyze.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
-
+        analysis,created = models.Analysis.objects.get_or_create(id=0)
+        context['analysis'] = analysis
         return context
 
+class CrawlerStatus(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+            crawler = analysis.crawler
+            index = crawler.index.name
+            es = settings.ES_CLIENT
+            count = es.count(index=index)
+            return Response(json.dumps({'status': crawler.status, 'count': count}))
+        except:
+            return Response(json.dumps({}))
 
+class PreprocessStatus(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+            mindmap = analysis.mindmap
+            source = mindmap.doc_source_index.name
+            dest = mindmap.doc_dest_index.name
+            es = settings.ES_CLIENT
+            s_count = es.count(index=source)
+            d_count = es.count(index=dest)
+            return Response(json.dumps({'status': 0 if mindmap.process_id else 1, 'count': d_count, 'source': s_count}))
+        except:
+            return Response(json.dumps({}))
 
+class QueryStatus(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        try: 
+            analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+            query = analysis.query
+            count = models.Annotation.objects.get(query=query).count()
+            return Response(json.dumps({'status': 0 if query.process_id else 1, 'count': count }))
+        except:
+            return Response(json.dumps({}))
 
+class StartAnalysis(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        if analysis.status:
+            tasks.start_crawler.delay(analyis.pk, analysis.crawler.pk)
+            tasks.preprocess.delay(analysis.pk, analysis.mindmap.pk, {'names':[], 'regexs':[]})
+            tasks.run_query.delay(analysis.pk, analysis.mindmap.pk, analysis.query.category, analysis.query.pk)
+            return HttpResponseRedirect(reverse('analyze'))
+        else:
+            return HttpResponseRedirect(reverse('configure'))
+
+class StopAnalysis(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        if analysis.status == 2:
+            if analysis.crawler.process_id:
+                revoke(analysis.crawler.process_id, terminate=True)
+                analysis.crawler.process_id = None
+                analysis.crawler.finished_at = datetime.datetime.now()
+                analysis.crawler.status = 2
+                analysis.crawler.save()
+        if analysis.status == 3:
+            if analysis.mindmap.process_id:
+                revoke(analysis.mindmap.process_id, terminate=True)
+                analysis.mindmap.process_id = None
+                analysis.mindmap.finished_at = datetime.datetime.now()
+                analysis.mindmap.save()
+        if analysis.status == 4:
+            if analysis.query.process_id:
+                revoke(analysis.query.process_id, terminate=True)
+                analysis.query.process_id=None
+                analysis.query.finished_at = datetime.datetime.now()
+                analysis.query.save()
+                
+        analysis.status = 6
+        analysis.finished_at = datetime.datetime.now()
+        analysis.save()
+        return HttpResponseRedirect(reverse('analyze'))
+
+class DestroyAnalysis(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        annotations = models.Annotation.objects.filter(analysis_id=analysis.id)
+        for anno in annotations:
+            anno.delete()
+        analysis.delete()
+        return HttpResponseRedirect(reverse('configure'))
+        
 
 ### Remnants of a past era
 
@@ -325,7 +485,7 @@ class DictionaryUpdateView(LoginRequiredMixin, APIView):
             tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
             utils.associate_tree(tree)
             return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
-        return HttpResponseRedirect(reverse('dictionaries'))
+        return HttpResponseRedirect(reverse('configure'))
 
 
 class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
@@ -402,6 +562,12 @@ class Home(django.views.generic.TemplateView):
 
 configure = ConfigureView.as_view()
 analyze = AnalyzeView.as_view()
+start_analysis = StartAnalysis.as_view()
+stop_analysis = StopAnalysis.as_view()
+destroy_analysis = DestroyAnalysis.as_view()
+crawler_status = CrawlerStatus.as_view()
+preprocess_status = PreprocessStatus.as_view()
+query_status = QueryStatus.as_view()
 
 crawlers = CrawlerView.as_view()
 trees = TreeListView.as_view()

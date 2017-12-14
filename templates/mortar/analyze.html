@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+  <h3>Analyze</h3>
+  {% if analysis.status %}
+    {% if analysis.status == 1 or analysis.status > 4 %}
+      <form action="{% url 'start-analysis' analysis.pk %}" method="POST">
+        {% csrf_token %}
+        <input class="btn btn-success" type="submit" name="start" value="Start" />
+      </form>
+    {% else %}
+      <form action="{% url 'stop-analysis' analysis.pk %}" method="POST">
+        {% csrf_token %}
+        <input class="btn btn-primary" type="submit" name="stop" value="Stop" />
+      </form>
+    {% endif %}
+  {% endif %}
+  <form action="{% url 'destroy-analysis' analysis.pk %}" method="POST">
+    {% csrf_token %}
+    <input class="btn btn-danger" type="submit" name="destroy" onclick="return confirm('Are you sure?');" value="Destroy" />
+  </form>
+  <h4>Status</h4>
+  <div id="status">
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    var status = {{ analysis.status }};
+    var stat_string = "";
+    switch(status) {
+        case 1:
+            stat_string = "Analysis Configured, waiting for start";
+        case 2:
+            $.getJSON('{% url 'crawler-status' analysis.pk %}', function(data) {
+                stat_string = "Crawled " + data['count'] + " documents";
+            });
+        case 3:
+            $.getJSON('{% url 'preprocess-status' analysis.pk %}', function(data) {
+                stat_string = "Preprocessed " + data['count'] + " documents out of " + data['source'];
+            });
+        case 4:
+            $.getJSON('{% url 'query-status' analysis.pk %}', function(data) {
+                stat_string = "Created " + data['count'] + " annotations from query";
+            });
+        case 5:
+            stat_string = "Analysis finished, please proceed to Explore";
+        case 6:
+            stat_string = "Analysis stopped";
+        default:
+            stat_string = "Analysis configuration not complete";
+    }
+    $("#status").text(stat_string);
+});
+</script>
+{% endblock %}

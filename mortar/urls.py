@@ -3,6 +3,12 @@ from . import views
 urlpatterns = [
  url('^configure/$', views.configure, name='configure'),
  url('^analyze/$', views.analyze, name='analyze'),
+ url('^analyze/start/(?P<pk>[\\d]+)/$', views.start_analysis, name="start-analysis"),
+ url('^analyze/stop/(?P<pk>[\\d]+)/$', views.stop_analysis, name="stop-analysis"),
+ url('^analyze/destroy/(?P<pk>[\\d]+)/$', views.destroy_analysis, name="destroy-analysis"),
+ url('^status/crawler/(?P<pk>[\\d]+)/$', views.crawler_status, name="crawler-status"),
+ url('^status/preprocess/(?P<pk>[\\d]+)/$', views.preprocess_status, name="preprocess-status"),
+ url('^status/query/(?P<pk>[\\d]+)/$', views.query_status, name="query-status"),
 
  url('^crawlers/$', views.crawlers, name='crawlers'),
  url('^mindmaps/$', views.trees, name='trees'),

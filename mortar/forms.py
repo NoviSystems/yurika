@@ -11,9 +11,30 @@ class BSModelForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
 
+class QueryForm(forms.Form):
+    category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
+    
+class MindMapForm(BSModelForm):
+    file = forms.FileField(label="Import", required=False)
+    doc_dest_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Query Index')
+    new_dest_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
+
+    def clean(self):
+        data = super(MindMapForm, self).clean()
+        if not data['new_dest_index'] and not data['doc_dest_index']:
+            raise forms.ValidationError('Must choose index or create new one')
+        else:
+            if not data['doc_dest_index'] and data['new_dest_index']:
+                new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_dest_index'])
+                data['doc_dest_index'] = new_ei
+        return data
+
+    class Meta:
+        model = models.Tree
+        fields = ['name', 'doc_dest_index'] 
 
 class CrawlerForm(BSModelForm):
-    index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False)
+    index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False, label="Document Index")
     new_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
 
     def __init__(self, *args, **kwargs):
@@ -32,6 +53,7 @@ class CrawlerForm(BSModelForm):
             if not created:
                 raise forms.ValidationError('Index name already exists. Please choose another')
             data['index'] = new_ei
+        print(data)
         return data
 
     class Meta:
@@ -103,21 +125,17 @@ class TreeEditForm(BSModelForm):
         if 'slug' in self.changed_data:
             slugs = models.Tree.objects.filter(slug=data['slug'])
             if len(slugs) > 0:
-                print('1')
                 raise forms.ValidationError('That slug is already taken.')
 
         if not data['new_source_index'] and not data['doc_source_index'] or not data['new_dest_index'] and not data['doc_dest_index']:
-            print('2')
             raise forms.ValidationError('Must choose index or create new one')
         else:
             if not data['doc_source_index'] and data['new_source_index']:
                 new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_source_index'])
                 data['doc_source_index'] = new_ei
-                print('3')
             if not data['doc_dest_index'] and data['new_dest_index']:
                 new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_dest_index'])
                 data['doc_dest_index'] = new_ei
-                print('4')
         print(data)
         return data
   

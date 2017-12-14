@@ -11,7 +11,8 @@ import mortar.crawlers as crawler_classes
 
 # Start Crawler
 @shared_task(bind=True)
-def start_crawler(self, crawler_pk):
+def start_crawler(self, analysis_pk, crawler_pk):
+    analysis = models.Analysis.objects.get(pk=analysis_pk)
     crawler = models.Crawler.objects.get(pk=crawler_pk)
     elastic_url = settings.ES_URL
 
@@ -23,17 +24,22 @@ def start_crawler(self, crawler_pk):
         index = crawler.index.name
         seeds = [seed.urlseed.url for seed in crawler.seed_list.all()]
 
+
         crawler.process_id = self.request.id
-        crawler.status = 'Running'
+        crawler.status = 0
         crawler.started_at = datetime.datetime.now()
         crawler.save()
+
+        analysis.started_at = datetime.datetime.now()
+        analysis.status = 2
+        analysis.save()
 
         process = CrawlerProcess({'USER_AGENT': ''})
         process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
         process.start()
 
         crawler.finished_at = datetime.datetime.now()
-        crawler.status = 'Finished'
+        crawler.status = 1
         crawler.process_id = None
         crawler.save()
 
@@ -47,21 +53,41 @@ def sync_dictionaries(self):
 
 # Reindex and Tokenize Documents
 @shared_task(bind=True)
-def preprocess(self, tree_pk, query):
+def preprocess(self, analysis_pk, tree_pk, query):
     tree = models.Tree.objects.get(pk=tree_pk)
+    tree.started_at = datetime.datetime.now()
+    tree.process_id = self.request.id
+    tree.save()
+
+    analysis = models.Analysis.objects.get(pk=analysis_pk)
+    analysis.status = 3
+    analysis.save()
 
     utils.process(tree, query)
-    tree.processed_at = datetime.datetime.now()
     
+    tree.finished_at = datetime.datetime.now()
+    tree.process_id = None
     tree.save()
 
 # Run Query
 @shared_task(bind=True)
-def run_query(self, tree_pk, category, query_pk):
+def run_query(self, analysis_pk, tree_pk, category, query_pk):
+    analysis = models.Analysis.objects.get(pk=analysis_pk)
     tree = models.Tree.objects.get(pk=tree_pk)
     query = models.Query.objects.get(pk=query_pk)
+    query.started_at = datetime.datetime.now()
+    query.process_id = self.request.id
     query.save()
 
-    utils.annotate(tree, category, query)
+    analysis.status = 4
+    analysis.save()
 
+    utils.annotate(analysis, tree, category, query)
+
+    query.finished_at = datetime.datetime.now()
+    query.process_id = None
     query.save()
+
+    analysis.status = 5
+    analysis.finished_at = datetime.datetime.now()
+    analysis.save()
