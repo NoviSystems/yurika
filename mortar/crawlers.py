@@ -32,7 +32,7 @@ class WebCrawler(CrawlSpider):
         index_mapping = kwargs.get('index_mapping')
         i_client = IndicesClient(self.client)
         if not i_client.exists(self.index_name):
-            i_client.create(index=self.index_name, body=index_mapping)
+            i_client.create(index=self.index_name)
             time.sleep(10)
 
     def parse_item(self, response):

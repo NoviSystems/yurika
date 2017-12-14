@@ -111,10 +111,15 @@
   <form action="" method="POST">
   {% csrf_token %}
     <div class="col-xs-2">
+      <a href="{% url 'query' analysis.pk %}" class="btn btn-primary">Create Query</a>
+    </div>
+    <div class="col-xs-2">
     <b>{{ query_form.category.label }}</b>
     {{ query_form.category }}
     </div>
     <div class="col-xs-3">
+    <b>{{ query_form.query.label }}</b>
+    {{ query_form.query }}
     </div>
     <div class="col-xs-1">
     <button class="btn btn-success" type="submit" id="query_form" value="submit">Save</button>
@@ -145,7 +150,7 @@ $(document).ready(function() {
       $('#crawler_index_form').addClass('in');
     }
   });
-  $('#id_mindmap-doc_dest_index'.change(function() {
+  $('#id_mindmap-doc_dest_index').change(function() {
   });
 });
 </script>

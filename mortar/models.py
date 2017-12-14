@@ -161,7 +161,9 @@ class Query(models.Model):
     elastic_json = models.TextField(blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
-    process_id = models.CharField(max_length=50, blank=True)
+    process_id = models.CharField(max_length=50, null=True, blank=True)
+    category = models.CharField(max_length=1, choices=(('S', 'Sentence'), ('P', 'Paragraph'),
+                                            ('D', 'Document')), null=True, blank=True)
 
     def __str__(self):
         return self.name

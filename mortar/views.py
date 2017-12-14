@@ -35,7 +35,7 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['crawler_form'] = forms.CrawlerForm(instance=context['crawler'], prefix='crawler') if context['crawler']  else forms.CrawlerForm(prefix='crawler')
         context['dict_form'] = forms.DictionaryForm(prefix='dictionary')
         context['mm_form'] = forms.MindMapForm(instance=context['mindmap'], prefix='mindmap') if context['mindmap'] else forms.MindMapForm(prefix='mindmap')
-        context['query_form'] = forms.QueryForm(instance=context['query'], prefix='query') if context['query'] else forms.QueryForm(prefix='query')
+        context['query_form'] = forms.QuerySelectForm(instance=context['query'], prefix='query') if context['query'] else forms.QuerySelectForm(prefix='query')
         context['step'] = self.get_step(analysis)
         return context
 
@@ -104,7 +104,15 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
 
         query_form = forms.QuerySelectForm(request.POST, prefix='query')
         if query_form.is_valid():
-            pass
+            cd = query_form.cleaned_data
+            query = cd['query']
+            query.category = cd['category']
+            query.save()
+            context['analysis'].query = query
+            context['analysis'].status = 1
+            context['analysis'].save()
+            context['query'] = query
+            context['step'] = 5
 
         return render(request, self.template_name, context=context)
 
@@ -124,7 +132,7 @@ class CrawlerStatus(LoginRequiredMixin, APIView):
             crawler = analysis.crawler
             index = crawler.index.name
             es = settings.ES_CLIENT
-            count = es.count(index=index)
+            count = es.count(index=index).get('count')
             return Response(json.dumps({'status': crawler.status, 'count': count}))
         except:
             return Response(json.dumps({}))
@@ -137,8 +145,8 @@ class PreprocessStatus(LoginRequiredMixin, APIView):
             source = mindmap.doc_source_index.name
             dest = mindmap.doc_dest_index.name
             es = settings.ES_CLIENT
-            s_count = es.count(index=source)
-            d_count = es.count(index=dest)
+            s_count = es.count(index=source).get('count')
+            d_count = es.count(index=dest).get('count')
             return Response(json.dumps({'status': 0 if mindmap.process_id else 1, 'count': d_count, 'source': s_count}))
         except:
             return Response(json.dumps({}))
@@ -157,9 +165,7 @@ class StartAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
         if analysis.status:
-            tasks.start_crawler.delay(analyis.pk, analysis.crawler.pk)
-            tasks.preprocess.delay(analysis.pk, analysis.mindmap.pk, {'names':[], 'regexs':[]})
-            tasks.run_query.delay(analysis.pk, analysis.mindmap.pk, analysis.query.category, analysis.query.pk)
+            tasks.analyze.delay(analysis.pk)
             return HttpResponseRedirect(reverse('analyze'))
         else:
             return HttpResponseRedirect(reverse('configure'))
@@ -195,6 +201,12 @@ class StopAnalysis(LoginRequiredMixin, APIView):
 class DestroyAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        if analysis.mindmap:
+            analysis.mindmap.delete()
+        if analysis.crawler:
+            analysis.crawler.delete()
+        if analysis.query:
+            analysis.query.delete()
         annotations = models.Annotation.objects.filter(analysis_id=analysis.id)
         for anno in annotations:
             anno.delete()
@@ -493,7 +505,8 @@ class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(QueryCreateView, self).get_context_data(**kwargs)
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
+        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        tree = analysis.mindmap
         context['tree'] = tree
         context['dict_form'] = forms.DictionaryPartForm()
         context['regex_form'] = forms.RegexPartForm()
@@ -545,13 +558,13 @@ class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
                 query.elastic_json = utils.create_query_from_string(string)
                 query.save()
 
-            return HttpResponseRedirect(reverse('annotations', kwargs={'slug': context['tree'].slug}))
+            return HttpResponseRedirect(reverse('configure'))
         return render(request, self.template_name, context=self.get_context_data(**kwargs))
 
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
         context['dict_form'].fields['dictionary'].queryset = models.Dictionary.objects.all()
-        context['regex_form'].fields['regex'].queryset = models.Node.objects.filter(tree_link=models.Tree.objects.get(slug=self.kwargs.get('slug')), regex__isnull=False)
+        context['regex_form'].fields['regex'].queryset = models.Node.objects.filter(tree_link=context['tree'], regex__isnull=False)
         context['subquery_form'].fields['subquery'].queryset = models.Query.objects.annotate(num_parts=Count('parts')).filter(num_parts__gt=1)
         return self.render_to_response(context)
 
