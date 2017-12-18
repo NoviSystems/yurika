@@ -35,7 +35,7 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['crawler_form'] = forms.CrawlerForm(instance=context['crawler'], prefix='crawler') if context['crawler']  else forms.CrawlerForm(prefix='crawler')
         context['dict_form'] = forms.DictionaryForm(prefix='dictionary')
         context['mm_form'] = forms.MindMapForm(instance=context['mindmap'], prefix='mindmap') if context['mindmap'] else forms.MindMapForm(prefix='mindmap')
-        context['query_form'] = forms.QuerySelectForm(instance=context['query'], prefix='query') if context['query'] else forms.QuerySelectForm(prefix='query')
+        context['query_form'] = forms.QuerySelectForm(prefix='query') if context['query'] else forms.QuerySelectForm(prefix='query')
         context['step'] = self.get_step(analysis)
         return context
 
