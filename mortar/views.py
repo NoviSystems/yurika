@@ -78,6 +78,7 @@ class CrawlerStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         try:
             analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+
             crawler = analysis.crawler
             index = crawler.index.name
             es = settings.ES_CLIENT

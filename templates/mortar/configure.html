@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block content %}
 <div class="visible-desktop container body-wrapper">
   <div class="row">
@@ -121,54 +120,67 @@ function subtract_query_part() {
 }
 
 function update_query_part(form_num, val) {
-  console.log(form_num);
   var part_div = document.getElementById('query_part_' + form_num);
   if(val == 0) {
-    console.log('regex');
     part_div.innerHTML = `{{ form.regex }}`;
   }
   else if(val == 1) {
-    console.log('dict');
     part_div.innerHTML = `{{ form.dictionary }}`;
   }
   else {
-    console.log('pos');
     part_div.innerHTML = `{{ form.part_of_speech }}`;
   }
 }
 
 function make_tree(tree) {
-    tree_html = `<ul class="list-group">`;
-    console.log(tree);
+    console.log('hit');
+    tree_html = `<div class="list-group list-group-root">`;
     for (var i = 0; i < tree.length; i++) {
         tree_html += unroll(tree[i]);
     }
-    tree_html += "</ul>";
+    tree_html += "</div>";
     return tree_html;
 }
 
 function unroll(node) {
-    console.log(node);
-    var list = `<li class="list-group-item">`;
-    list += node.label + " ";
+    var list = `<a `;
     if (node.hasOwnProperty('children') && node['children'].length) {
-        list += `<ul class="list-group">`;
+        list += `href="#` + node.id + `" class="list-group-item" data-toggle="collapse"><i class="glyphicon glyphicon-chevron-right"></i>`;
+        list += " " + node.label;
+        if(node.regex) {
+            list += " : " + node.regex;
+        }
+        list += " " + `<i class="glyphicon glyphicon-pencil"></i>` + " " + `<i class="glyphicon glyphicon-trash"></i>`
+        list += `<div id="` + node.id + `" class="list-group collapse">`;
         for (var child in node['children']) {
             list += unroll(node['children'][child]);
         }
-        list += "</ul>";
+        list += "</div>";
     }
-    list += "</li>";
+    else {
+        list += `href="#" class="list-group-item">` + node.label 
+    }
+    list += "</a>";
     return list;
 }
 
 $(document).ready(function() {
+  //query change form
   $('body').on('change', 'select[id^="id_part_type"]', function() {
-    console.log($(this).parent().prop('id'));
     update_query_part($(this).parent().prop('id').slice(6), this.value);
   });
+
+  //display tree
   var tree = JSON.parse("{{ tree_json | escapejs }}");
   $('#tree').append(make_tree(tree));
+
+  //collapsible tree
+  $('.list-group-item').on('click', function() {
+    $('.glyphicon', this)
+      .toggleClass('glyphicon-chevron-up')
+      .toggleClass('glyphicon-chevron-right');
+    console.log('toggled');
+  });
 });
 </script>
 {% endblock %}
