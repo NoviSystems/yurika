@@ -1,8 +1,25 @@
 from django import forms
+from django.conf import settings
 from django.db.models import Q
 from django.utils.text import slugify
 import mortar.models as models
 import re
+
+class ConfigureForm(forms.Form):
+    seed_list = forms.CharField(widget=forms.Textarea, required=False)
+    file = forms.FileField(label="Import MindMap", required=False)
+    part_type = forms.ChoiceField(choices=((0, 'Regular Expression'), (1, 'Dictionary'), (2, 'Part of Speech')))
+    regex = forms.ModelChoiceField(queryset=models.Node.objects.filter(tree_link__slug='default').distinct(), required=False)
+    part_of_speech = forms.ChoiceField(choices=settings.PARTS_OF_SPEECH)
+    dictionary = forms.ModelChoiceField(queryset=models.Dictionary.objects.all(), required=False)
+    op = forms.ChoiceField(choices=((0, 'OR'), (1, 'AND')), label="Operation")
+
+    category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
 
 class BSModelForm(forms.ModelForm):
 
@@ -14,25 +31,6 @@ class BSModelForm(forms.ModelForm):
 class QueryForm(forms.Form):
     category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
     
-class MindMapForm(BSModelForm):
-    file = forms.FileField(label="Import", required=False)
-    doc_dest_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Query Index')
-    new_dest_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
-
-    def clean(self):
-        data = super(MindMapForm, self).clean()
-        if not data['new_dest_index'] and not data['doc_dest_index']:
-            raise forms.ValidationError('Must choose index or create new one')
-        else:
-            if not data['doc_dest_index'] and data['new_dest_index']:
-                new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_dest_index'])
-                data['doc_dest_index'] = new_ei
-        return data
-
-    class Meta:
-        model = models.Tree
-        fields = ['name', 'doc_dest_index'] 
-
 class CrawlerForm(BSModelForm):
     index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False, label="Document Index")
     new_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
@@ -53,7 +51,6 @@ class CrawlerForm(BSModelForm):
             if not created:
                 raise forms.ValidationError('Index name already exists. Please choose another')
             data['index'] = new_ei
-        print(data)
         return data
 
     class Meta:

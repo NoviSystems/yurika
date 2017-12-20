@@ -27,93 +27,42 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
         analysis,created = models.Analysis.objects.get_or_create(id=0)
+        source,created = models.ElasticIndex.objects.get_or_create(name="source")
+        dest,created = models.ElasticIndex.objects.get_or_create(name="dest")
+        crawler,created = models.Crawler.objects.get_or_create(name="default", category="web", index=source, status=2)
+        mindmap,created = models.Tree.objects.get_or_create(name="default", slug="default", doc_source_index=source, doc_dest_index=dest)
+        query,created = models.Query.objects.get_or_create(name="default")
+        analysis.crawler = crawler
+        analysis.mindmap = mindmap
+        analysis.query = query
         context['analysis'] = analysis
-        context['crawler'] = analysis.crawler
-        context['mindmap'] = analysis.mindmap
-        context['query'] = analysis.query
+        context['crawler'] = crawler
+        context['mindmap'] = mindmap
+        context['tree_json'] = json.dumps(utils.get_json_tree(mindmap.nodes.all()))
+        context['query'] = query
+        context['seed_list'] = [seed.urlseed.url for seed in crawler.seed_list.all()]
         context['dictionaries'] = models.Dictionary.objects.all()
-        context['crawler_form'] = forms.CrawlerForm(instance=context['crawler'], prefix='crawler') if context['crawler']  else forms.CrawlerForm(prefix='crawler')
-        context['dict_form'] = forms.DictionaryForm(prefix='dictionary')
-        context['mm_form'] = forms.MindMapForm(instance=context['mindmap'], prefix='mindmap') if context['mindmap'] else forms.MindMapForm(prefix='mindmap')
-        context['query_form'] = forms.QuerySelectForm(prefix='query') if context['query'] else forms.QuerySelectForm(prefix='query')
-        context['step'] = self.get_step(analysis)
+        context['form'] = forms.ConfigureForm()
         return context
-
-    def get_step(self, analysis):
-        step = 5
-        if not analysis.query:
-            step = 4
-        if not analysis.mindmap:
-            step = 3
-        if not models.Dictionary.objects.all().count():
-            step = 2
-        if not analysis.crawler:
-            step = 1
-        return step
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-
-        crawler_form = forms.CrawlerForm(request.POST, prefix='crawler')
-        if crawler_form.is_valid():
-            cd = crawler_form.cleaned_data
-            crawler = context['crawler'] if context['crawler'] else models.Crawler.objects.create(name=cd['name'], category=cd['category'], index=cd['index'], status=2)
+        print(request.POST)
+        form = forms.ConfigureForm(request.POST, request.FILES)
+        if request.POST.get('crawler') == 'submit':
             seeds = request.POST.get('seed_list').split('\n')
             new_seeds = []
-            if cd['category'] == 'txt':
-                for seed in seeds:
-                    fseed, created = models.FileSeed.objects.get_or_create(path=seed.strip())
-                    new_seeds.append(fseed)
-
-            elif cd['category'] == 'web':
-                for seed in seeds:
-                    useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
-                    new_seeds.append(useed)
-
-            crawler.seed_list.set(new_seeds)
-            crawler.save()
-            context['crawler'] = crawler
-            context['analysis'].crawler = crawler
-            context['analysis'].save()
-            context['step'] = 2
-
-
-        dict_form = forms.DictionaryForm(request.POST, prefix='dictionary')
-        if dict_form.is_valid():
-            new_dict = models.Dictionary.objects.create(name=dict_form.cleaned_data['name'], filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(dict_form.cleaned_data['name']) + ".txt"]))
-            words = dict_form.cleaned_data['words'].split('\n')
-            for word in words:
-                if len(word):
-                    new_word = models.Word.objects.create(name=word, dictionary=new_dict)
-            utils.write_to_new_dict(new_dict) 
-            context['step'] = 3
-
-        mm_form = forms.MindMapForm(request.POST, request.FILES, prefix='mindmap')
-        if mm_form.is_valid():
-            cd = mm_form.cleaned_data
-            mindmap = context['mindmap'] if context['mindmap'] else models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=context['analysis'].crawler.index, doc_dest_index=cd['doc_dest_index'])
+            for seed in seeds:
+                useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
+                new_seeds.append(useed)
+            context['crawler'].seed_list.set(new_seeds)
+            context['seed_list'] = [seed.urlseed.url for seed in context['crawler'].seed_list.all()]
+        if request.POST.get('mindmap') == 'submit':
             if self.request.FILES.get('file'):
-                utils.read_mindmap(new_tree, request.FILES['file'].read())
-                utils.associate_tree(mindmap)
-
-            mindmap.save()
-            context['mindmap'] = mindmap
-            context['analysis'].mindmap = mindmap
-            context['analysis'].save()
-            context['step'] = 4
-
-        query_form = forms.QuerySelectForm(request.POST, prefix='query')
-        if query_form.is_valid():
-            cd = query_form.cleaned_data
-            query = cd['query']
-            query.category = cd['category']
-            query.save()
-            context['analysis'].query = query
-            context['analysis'].status = 1
-            context['analysis'].save()
-            context['query'] = query
-            context['step'] = 5
-
+                utils.read_mindmap(context['mindmap'], request.FILES['file'].read())
+                utils.associate_tree(context['mindmap'])
+        if request.POST.get('query') == 'submit':
+            pass
         return render(request, self.template_name, context=context)
 
 class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
@@ -572,6 +521,8 @@ class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
 class Home(django.views.generic.TemplateView):
     template_name = 'home.html'
 
+    def get(self, request, *args, **kwargs):
+        return HttpResponseRedirect(reverse('configure'))
 
 configure = ConfigureView.as_view()
 analyze = AnalyzeView.as_view()

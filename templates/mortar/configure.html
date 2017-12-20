@@ -2,156 +2,173 @@
 
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-<h1>Step: {{ step }}</h1>
-<div class="row">
-{{ crawler }}
-<h3>1. Crawler</h3>
-<div id="crawler" class="collapse in">
-<form id="crawler_form" action="" method="POST" novalidate>
-  {% csrf_token %}
-  <div class="form-group row">
-    {{ crawler_form.errors }}
-    <div class="col-xs-2">
-      <label class="control-label" for="name">
-        {{ crawler_form.name.label }} 
-      </label>
-      {{ crawler_form.name }}
-    </div>
-    <div class="col-xs-2" id="crawler_category">
-      <label class="control-label" for="category">
-        {{ crawler_form.category.label }}  
-      </label>
-      {{ crawler_form.category }}
-    </div>
-    <div class="col-xs-2">
-      <label class="control-label" for="index">
-        {{ crawler_form.index.label }}  
-      </label>
-      {{ crawler_form.index }}
-      <div id="crawler_index_form" class="collapse in">
-        <br />New Index Name{{ crawler_form.new_index }}
+  <div class="row">
+    <h3>1. Crawler</h3>
+    <div id="crawler" class="collapse in">
+      <p>URLs: Insert a list of URLs (one per line) to start crawler with. Crawler will follow all links on these pages.</p>
+      {% if seed_list %}
+      <div class="col-xs-6">
+        <ul>
+        {% for seed in seed_list %}
+          <li><a href="{{ seed }}">{{ seed }}</a></li>
+        {% endfor %}
+        </ul>
       </div>
-    </div>
-    <div class="col-xs-4">
-      <div id="form_seed_list">
-        <label class="control-label" for="seed_list">
-          Seed List
-        </label> (one per line)
-        <textarea class="form-control" name="seed_list" id="seed_list"></textarea>
+      {% endif %}
+      <div class="col-xs-6">
+        <form action="" method="POST">
+          {% csrf_token %}
+          {{ form.seed_list }}
+          <button class="btn btn-success" type="submit" name="crawler" value="submit">Save</button>
+        </form>
       </div>
-    </div>
-    <div class="col-xs-2">
-      <label class="control-label" for="new_crawler"></label>
-      <button class="btn btn-success" type="submit" name="crawler_form" value="submit">Save</button>
     </div>
   </div>
-</form>
-</div>
-</div>
-<div class="row">
-<h3>2. Dictionaries</h3>
-<div id="dictionaries" class="collapse in">
-  <form id="dictionary" action="" method="POST">
-    {% csrf_token %}
-    <div class="col-xs-2">
-      <b>{{ dict_form.name.label }}</b>
-      {{ dict_form.name }}
-    </div>
-    <div class="col-xs-3">
-      <b>{{ dict_form.words.label }}</b> (one per line)
-      {{ dict_form.words }}
-    </div>
-    <div class="col-xs-2">
-      <button class="btn btn-success" type="submit" name="dict_form" value="submit">Save</button>
-    </div>
-  </form>
-    <div class="col-xs-5">
-      <a href="{% url 'update-dicts' %}" class="btn btn-primary">Load Defaults</a>
-      <ul>
-      {% for d in dictionaries %}
-        {{ d.name }}
-      {% endfor %}
-      </ul>
-    </div>
-</div>
-</div>
-<div class="row">
-{{ mindmap }}
-<h3>3. MindMap</h3>
-<div id="mindmap" class="collapse in">
-  <form id="mindmap" action="" method="POST" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ mm_form.errors }}
-   <div class="form-group row">
-    <div class="col-xs-2">
-      <b>{{ mm_form.name.label }}</b>
-      {{ mm_form.name }}
-    </div>
-    <div class="col-xs-2">
-      <b>{{ mm_form.doc_dest_index.label }}</b>
-      {{ mm_form.doc_dest_index }}
-      <div id="new_dest" class="collapse in">
-        <br />New Index Name{{ mm_form.new_dest_index }}
+  <div class="row">
+    <h3>2. MindMap</h3>
+    <div id="mindmap" class="collapse in">
+      <p>MindMap: Import a MindMap (.mm) file to create rules from Regular Expressions</p>
+      {% if mindmap.nodes.all %}
+      <div id="tree" class="col-xs-6">
+      </div>
+      {% endif %}
+      <div class="col-xs-6">
+        <form action="" method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ form.file }}
+          <button class="btn btn-success" type="submit" name="mindmap" value="submit">Save</button>
+        </form>
       </div>
     </div>
-    <div class="col-xs-4">
-      {{ mm_form.file.label }}
-      {{ mm_form.file }}
+  </div>
+  <div class="row">
+    <h3>3. Dictionaries</h3>
+    <div id="dictionaries" class="collapse in">
+      <p>Dictionary Management</p>
     </div>
-    <div class="col-xs-2">
-      <button class="btn btn-success" type="submit" id="mm_form" value="submit">Save</button>
+  </div>
+  <div class="row">
+    <h3>4. Query</h3>
+    <div id="queries" class="collapse in">
+      <p>Needs intuitive way of explaining/showing how this form works</p>
+      <div class="col-xs-12">
+      <form id="query_form" action="" method="POST">
+      {% csrf_token %}
+        <div id="query_parts" class="row">
+          <div id="query_1" class="col-xs-3"> 
+            {{ form.part_type }} 
+            <div id="query_part_1">
+              {{ form.regex }}
+            </div>
+          </div>
+        </div>
+        <span class="row"></span>
+        <div class="row">
+          <div class="col-xs-3"></div>
+          <div class="col-xs-3"></div>
+          <div class="col-xs-3"></div>
+          <div id="query_buttons" class="col-xs-3">
+            <input type="button" id="add_query" value="+" class="btn btn-primary" onclick="javascript: add_query_part();" />
+          </div>
+        </div>
+        <span class="row"></span>
+        <div class="row">
+          <div class="col-xs-3"></div>
+          <div class="col-xs-3"></div>
+          <div class="col-xs-3">
+            {{ form.category }}
+          </div>
+          <div class="col-xs-3">
+            <button class="btn btn-success" type="submit" name="query" value="submit">Save</button>
+          </div>
+        </div>
+      </form>
+      </div>
     </div>
-   </div>
-  </form>
-</div>
-</div>
-<div class="row">
-<h3>4. Query</h3>
-<div id="queries" class="collapse in">
-  <form action="" method="POST">
-  {% csrf_token %}
-    <div class="col-xs-2">
-      <a href="{% url 'query' analysis.pk %}" class="btn btn-primary">Create Query</a>
-    </div>
-    <div class="col-xs-2">
-    <b>{{ query_form.category.label }}</b>
-    {{ query_form.category }}
-    </div>
-    <div class="col-xs-3">
-    <b>{{ query_form.query.label }}</b>
-    {{ query_form.query }}
-    </div>
-    <div class="col-xs-1">
-    <button class="btn btn-success" type="submit" id="query_form" value="submit">Save</button>
-    </div>
-  </form>
-</div>
-</div>
-<div class="row">
-<h3>5. Analyze</h3>
-<div id="analyze" class="collapse in">
-  <form action="{% url 'start-analysis' analysis.pk %}" method="POST">
-    {% csrf_token %}
-    <input class="btn btn-success" type="submit" name="start" value="Start" />
-  </form>
-</div>
-</div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
+var count = 1;
+function add_query_part() {
+  var parts = document.getElementById('query_parts');
+  if(parts) {
+    count++;
+    var part_div = `<div id="query_` + count + `" class="col-xs-3">{{ form.op }}{{ form.part_type }}<div id="query_part_` + count + `">{{ form.regex }}</div>`;
+    parts.insertAdjacentHTML("beforeend", part_div);
+  }
+  if(count > 1) {
+    var sub_button = document.getElementById('subtract_query');
+    if(!sub_button) {
+      var buttons = document.getElementById('query_buttons');
+      var sub_button = `<input type="button" id="subtract_query" value="-" class="btn btn-danger" onclick="javascript: subtract_query_part();" />`
+      buttons.insertAdjacentHTML("beforeend", sub_button);
+    }
+  }
+}
+
+function subtract_query_part() {
+  var query = document.getElementById('query_' + count);
+  if(query && count > 1) {
+    query.parentNode.removeChild(query);
+    count--;
+  }
+  if(count == 1) {
+     var sub_button = document.getElementById('subtract_query');
+     sub_button.parentNode.removeChild(sub_button);
+  }
+}
+
+function update_query_part(form_num, val) {
+  console.log(form_num);
+  var part_div = document.getElementById('query_part_' + form_num);
+  if(val == 0) {
+    console.log('regex');
+    part_div.innerHTML = `{{ form.regex }}`;
+  }
+  else if(val == 1) {
+    console.log('dict');
+    part_div.innerHTML = `{{ form.dictionary }}`;
+  }
+  else {
+    console.log('pos');
+    part_div.innerHTML = `{{ form.part_of_speech }}`;
+  }
+}
+
+function make_tree(tree) {
+    tree_html = `<ul class="list-group">`;
+    console.log(tree);
+    for (var i = 0; i < tree.length; i++) {
+        tree_html += unroll(tree[i]);
+    }
+    tree_html += "</ul>";
+    return tree_html;
+}
+
+function unroll(node) {
+    console.log(node);
+    var list = `<li class="list-group-item">`;
+    list += node.label + " ";
+    if (node.hasOwnProperty('children') && node['children'].length) {
+        list += `<ul class="list-group">`;
+        for (var child in node['children']) {
+            list += unroll(node['children'][child]);
+        }
+        list += "</ul>";
+    }
+    list += "</li>";
+    return list;
+}
+
 $(document).ready(function() {
-  $('#id_crawler-index').change(function() {
-    if($("#id_crawler-index").val() != null) {
-      console.log($("#id_crawler-index").val());
-      $('#crawler_index_form').removeClass('in');
-    }
-    else {
-      $('#crawler_index_form').addClass('in');
-    }
+  $('body').on('change', 'select[id^="id_part_type"]', function() {
+    console.log($(this).parent().prop('id'));
+    update_query_part($(this).parent().prop('id').slice(6), this.value);
   });
-  $('#id_mindmap-doc_dest_index').change(function() {
-  });
+  var tree = JSON.parse("{{ tree_json | escapejs }}");
+  $('#tree').append(make_tree(tree));
 });
 </script>
 {% endblock %}

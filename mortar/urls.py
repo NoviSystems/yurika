@@ -9,8 +9,9 @@ urlpatterns = [
  url('^status/crawler/(?P<pk>[\\d]+)/$', views.crawler_status, name="crawler-status"),
  url('^status/preprocess/(?P<pk>[\\d]+)/$', views.preprocess_status, name="preprocess-status"),
  url('^status/query/(?P<pk>[\\d]+)/$', views.query_status, name="query-status"),
-
- url('^crawlers/$', views.crawlers, name='crawlers'),
+ url('^$', views.home, name='home')
+]
+''' url('^crawlers/$', views.crawlers, name='crawlers'),
  url('^mindmaps/$', views.trees, name='trees'),
  url('^mindmaps/(?P<slug>[-\\w]+)/$', views.tree_detail, name='tree-detail'),
  url('^mindmaps/(?P<slug>[-\\w]+)/edit/$', views.tree_edit, name='tree-edit'),
@@ -29,4 +30,4 @@ urlpatterns = [
  url('^annotations/$', views.annotation_trees, name='annotation-trees'),
  url('^annotations/(?P<slug>[-\\w]+)/$', views.annotations, name='annotations'),
  url('^query/(?P<pk>[\\d]+)/$', views.query, name='query'),
- url('^$', views.home, name='home')]
+]'''
