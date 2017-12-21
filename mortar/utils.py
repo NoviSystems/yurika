@@ -37,6 +37,15 @@ def get_json_tree(queryset, max_level=None):
 
     return tree
 
+def get_dict_json():
+    dicts = models.Dictionary.objects.all()
+    out = []
+    for d in dicts:
+        j = {'id': d.id,
+             'name': d.name, 
+             'words': [w.name for w in d.words.all()]}
+        out.append(j)
+    return out
 
 def get_anno_json(tree):
     annos = models.Annotation.objects.filter(tree=tree)
@@ -115,10 +124,10 @@ def create_query_part(qtype, qid, query, op=None):
 
 
 def update_dictionaries():
-    es = settings.ES_CLIENT
+    '''es = settings.ES_CLIENT
     i_client = IndicesClient(client=es)
     if not i_client.exists('dictionaries'):
-        i_client.create('dictionaries')
+        i_client.create('dictionaries')'''
 
     es_actions = []
     dict_path = settings.DICTIONARIES_PATH
@@ -128,10 +137,10 @@ def update_dictionaries():
                 filepath = os.sep.join([root, f])
                 with open(filepath, 'rb+') as dictfile:
                     d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]))
-                    '''for line in dictfile:
+                    for line in dictfile:
                         word = line.decode('utf-8').rstrip('\n')
                         w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
-                    es_actions.append({'_op_type': 'index', '_type': 'dictionary',
+                    '''es_actions.append({'_op_type': 'index', '_type': 'dictionary',
                         '_source': {
                             'name': d.name,
                             'words': [w for w in d.words.all()]

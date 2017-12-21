@@ -40,7 +40,8 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['mindmap'] = mindmap
         context['tree_json'] = json.dumps(utils.get_json_tree(mindmap.nodes.all()))
         context['query'] = query
-        context['seed_list'] = [seed.urlseed.url for seed in crawler.seed_list.all()]
+        context['seed_list'] = [(seed.urlseed.url,seed.pk) for seed in crawler.seed_list.all()]
+        context['dict_path'] = os.path.join(settings.BASE_DIR, settings.DICTIONARIES_PATH)
         context['dictionaries'] = models.Dictionary.objects.all()
         context['form'] = forms.ConfigureForm()
         return context
@@ -51,12 +52,11 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         form = forms.ConfigureForm(request.POST, request.FILES)
         if request.POST.get('crawler') == 'submit':
             seeds = request.POST.get('seed_list').split('\n')
-            new_seeds = []
             for seed in seeds:
-                useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
-                new_seeds.append(useed)
-            context['crawler'].seed_list.set(new_seeds)
-            context['seed_list'] = [seed.urlseed.url for seed in context['crawler'].seed_list.all()]
+                if len(seed):
+                    useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
+                    context['crawler'].seed_list.add(useed)
+            context['seed_list'] = [(seed.urlseed.url,seed.pk) for seed in context['crawler'].seed_list.all()]
         if request.POST.get('mindmap') == 'submit':
             if self.request.FILES.get('file'):
                 utils.read_mindmap(context['mindmap'], request.FILES['file'].read())
@@ -163,290 +163,57 @@ class DestroyAnalysis(LoginRequiredMixin, APIView):
         analysis.delete()
         return HttpResponseRedirect(reverse('configure'))
         
-
-### Remnants of a past era
-
-class CrawlerView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/crawlers.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(CrawlerView, self).get_context_data(*args, **kwargs)
-        context['crawlers'] = models.Crawler.objects.all()
-        context['new_crawler_form'] = forms.CrawlerForm()
-        return context
-
+class EditNodeApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
-        context = self.get_context_data(*args, **kwargs)
-        form = forms.CrawlerForm(request.POST)
-        if form.is_valid():
-            cd = form.cleaned_data
-            new_crawler = models.Crawler.objects.create(name=cd['name'], category=cd['category'], index=cd['index'], status='Stopped')
-            seeds = request.POST.get('seed_list').split('\n')
-            new_seeds = []
-            if cd['category'] == 'txt':
-                for seed in seeds:
-                    fseed, created = models.FileSeed.objects.get_or_create(path=seed.strip())
-                    new_seeds.append(fseed)
-
-            elif cd['category'] == 'web':
-                for seed in seeds:
-                    useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
-                    new_seeds.append(useed)
-
-            new_crawler.seed_list.set(new_seeds)
-        all_crawlers = models.Crawler.objects.all()
-        for crawler in all_crawlers:
-            if request.POST.get(str(crawler.pk) + '-toggle') == 'start':
-                tasks.start_crawler.delay(crawler.pk)
-            elif request.POST.get(str(crawler.pk) + '-toggle') == 'stop':
-                if crawler.process_id:
-                    revoke(crawler.process_id, terminate=True)
-                crawler.process_id = None
-                crawler.finished_at = datetime.datetime.now()
-                crawler.status = 'Stopped'
-                crawler.save()
-
-        return render(request, self.template_name, context=context)
-
-class TreeListView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/tree_list.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(TreeListView, self).get_context_data(**kwargs)
-        context['trees'] = models.Tree.objects.all()
-        context['form'] = forms.TreeForm()
-        return context
-
-    def post(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        form = forms.TreeForm(request.POST, self.request.FILES)
-        if form.is_valid():
-            cd = form.cleaned_data
-            new_tree = models.Tree.objects.create(name=cd['name'], slug=slugify(cd['name']), doc_source_index=cd['doc_source'], doc_dest_index=cd['doc_dest'])
-            if self.request.FILES.get('file'):
-                utils.read_mindmap(new_tree, request.FILES['file'].read())
-                utils.associate_tree(new_tree)
-        for tree in context['trees']:
-            if request.POST.get(str(tree.pk) + '-delete'):
-                tree.delete()
-                context['trees'] = models.Tree.objects.all()
-            elif request.POST.get(str(tree.pk) + '-duplicate'):
-                new_tree = models.Tree.objects.create(
-                    name=tree.name + " (copy)",
-                    slug=slugify(uuid.uuid1()),
-                    doc_dest_index=tree.doc_dest_index,
-                    doc_source_index=tree.doc_source_index
-                )
-                utils.copy_nodes(tree, new_tree)
-                context['trees'] = models.Tree.objects.all()
-
-        return render(request, self.template_name, context=context)
-
-
-class TreeDetailView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/tree_detail.html'
-    selected_node = None
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(TreeDetailView, self).get_context_data(**kwargs)
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        context['user'] = self.request.user
-        context['tree'] = tree
-        qs = models.Node.objects.filter(tree_link=tree)
-        context['tree_json'] = json.dumps(utils.get_json_tree(qs))
-        context['elastic_url'] = settings.ES_URL + 'filter_' + tree.slug + '/_search?pretty=true'
-        context['importform'] = forms.MindMapImportForm(self.request.POST, self.request.FILES)
-        return context
-
-class TreeEditView(LoginRequiredMixin, django.views.generic.UpdateView):
-    template_name = 'mortar/tree_edit.html'
-    form_class = forms.TreeEditForm
-    model = models.Tree
-    context_object_name = 'tree'
-
-    def get_success_url(self):
-        return reverse('tree-detail', kwargs={'slug': self.object.slug})
-
-class TreeJsonApi(LoginRequiredMixin, APIView):
-
-    def get(self, request, format=None, **kwargs):
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        qs = models.Node.objects.filter(tree_link=tree)
-        return Response(utils.get_json_tree(qs))
-
-
-class TreeQueryView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/tree_query.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(TreeQueryView, self).get_context_data(**kwargs)
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        context['tree'] = tree
-        qs = models.Node.objects.filter(tree_link=tree)
-        context['tree_json'] = json.dumps(utils.get_json_tree(qs))
-        return context
-
-    def post(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        tree = context['tree']
-        doc_filter = {'names': [], 'regexs': []}
-        for node in models.Node.objects.filter(tree_link=tree):
-            if request.POST.get(str(node.id) + '-add'):
-                if node.regex:
-                    doc_filter['regexs'].append(node.regex)
-                elif node.dictionary:
-                    words = node.dictionary.words.all()
-                    doc_filter['names'].extend([w.name for w in words])
-                else:
-                    doc_filter['names'].append(node.name)
-        tasks.preprocess.delay(tree.pk, doc_filter)
-        messages.info(request, 'Tree filtering and reindexing started in background')
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
-
-class TreeProcessView(LoginRequiredMixin, APIView):
-    def get(self, request, *args, **kwargs):
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        tasks.preprocess.delay(tree.pk, {'names':[], 'regexs':[]})
-        messages.info(request, 'Tree filtering and reindexing started in background')
-        return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
-
-class TreeProcessCheckApi(LoginRequiredMixin, APIView):
-    def get(self, request, *args, **kwargs):
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        #
-        check = {'last_processed': tree.processed_at}
-
-        return json.dumps(check)
-
-class NodeInsertView(LoginRequiredMixin, django.views.generic.FormView):
-    form_class = forms.NodeForm
-    template_name = 'mortar/node_edit.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(NodeInsertView, self).get_context_data(**kwargs)
-        context['user'] = self.request.user
-        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        if self.kwargs.get('id'):
-            context['insert_at'] = models.Node.objects.get(id=self.kwargs.get('id'))
-            context['name'] = context['insert_at'].name + ' >'
-        else:
-            context['insert_at'] = None
-        return context
-
-    def form_valid(self, form, format=None, **kwargs):
-        context = self.get_context_data(**kwargs)
-        node = models.Node(name=form.cleaned_data['name'], regex=form.cleaned_data['regex'], tree_link=context['tree'])
-        if context['insert_at']:
-            node.insert_at(context['insert_at'], position='first-child', save=False)
-        else:
-            node.parent = None
+        node = models.Node.objects.get(pk=self.kwargs.get('pk'))
+        node.name = request.POST.get('name')
+        node.regex = request.POST.get('regex')
         node.save()
-        utils.associate_tree(context['tree'])
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
+        return HttpResponseRedirect(reverse('configure'))
 
-
-class NodeEditView(LoginRequiredMixin, django.views.generic.FormView):
-    form_class = forms.NodeForm
-    template_name = 'mortar/node_edit.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(NodeEditView, self).get_context_data(**kwargs)
-        context['user'] = self.request.user
-        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        node = models.Node.objects.get(id=self.kwargs.get('id'))
-        context['edit'] = node
-        context['name'] = node.name
-        data = {'name': node.name,'regex': node.regex}
-        context['form'] = forms.NodeForm(initial=data)
-        return context
-
-    def form_valid(self, form, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        context['edit'].name = form.cleaned_data['name']
-        context['edit'].regex = form.cleaned_data['regex']
-        context['edit'].save()
-        utils.associate_tree(context['tree'])
-        return HttpResponseRedirect(reverse('tree-detail', kwargs={'slug': context['tree'].slug}))
-
-
-class AnnotationListView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/annotations.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(AnnotationListView, self).get_context_data(**kwargs)
-        context['tree'] = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        context['form'] = forms.QuerySelectForm()
-        context['anno_list'] = models.Annotation.objects.filter(tree=context['tree'])
-        context['result_count'] = len(context['anno_list'])
-        context['query_results'] = utils.get_anno_json(context['tree'])
-        return context
-
-    def post(self, request, *args, **kwargs):
-        context = super(AnnotationListView, self).get_context_data(**kwargs)
-        form = forms.QuerySelectForm(request.POST)
-        tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-        if form.is_valid():
-            category = form.cleaned_data['category']
-            query = form.cleaned_data['query']
-            tasks.run_query.delay(tree.pk, category, query.pk)
-        return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
-
-class AnnotationTreeView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/annotation_trees.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(AnnotationTreeView, self).get_context_data(*args, **kwargs)
-        context['trees'] = models.Tree.objects.all()
-        return context
-
-class DictionaryListView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/dictionaries.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(DictionaryListView, self).get_context_data(*args, **kwargs)
-        context['dict_list'] = models.Dictionary.objects.all()
-        context['form'] = forms.DictionaryForm()
-        return context
-
-    def post(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        form = forms.DictionaryForm(request.POST)
-        if form.is_valid():
-            new_dict = models.Dictionary.objects.create(name=form.cleaned_data['name'], filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(form.cleaned_data['name']) + ".txt"]))
-            words = form.cleaned_data['words'].split('\n')
-            for word in words:
-                if len(word):
-                    new_word = models.Word.objects.create(name=word, dictionary=new_dict)
-            utils.write_to_new_dict(new_dict)
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-class DictionaryDetailView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/dictionary_detail.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(DictionaryDetailView, self).get_context_data(**kwargs)
-        context['dict'] = models.Dictionary.objects.get(id=self.kwargs.get('pk'))
-        context['words'] = context['dict'].words.all()
-        context['nodes'] = context['dict'].nodes.all()
-        context['form'] = forms.WordForm()
-        return context
-
-    def post(self, request, *args, **kwargs):
-        context = self.get_context_data(**kwargs)
-        form = forms.WordForm(request.POST)
-        if form.is_valid():
-            new_word = models.Word.objects.create(name=form.cleaned_data['name'], dictionary=context['dict'])
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-class DictionaryUpdateView(LoginRequiredMixin, APIView):
-
+class DeleteNodeApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
-        tasks.sync_dictionaries.delay()
-        slug = self.kwargs.get('slug')
-        if slug:
-            tree = models.Tree.objects.get(slug=self.kwargs.get('slug'))
-            utils.associate_tree(tree)
-            return HttpResponseRedirect(reverse('annotations', kwargs={'slug': tree.slug}))
+        node = models.Node.objects.get(pk=self.kwargs.get('pk'))
+        node.delete()
+        return HttpResponseRedirect(reverse('configure'))
+
+class EditSeedApi(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        seed = models.URLSeed.objects.get(pk=self.kwargs.get('pk'))
+        print(request.POST)
+        seed.url = request.POST.get('url')
+        seed.save()
+        return HttpResponseRedirect(reverse('configure'))
+
+class DeleteSeedApi(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        seed = models.URLSeed.objects.get(pk=self.kwargs.get('pk'))
+        seed.delete()
+        return HttpResponseRedirect(reverse('configure'))
+
+class EditDictionaryApi(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
+
+        words = request.POST.get('words').split('\n')
+        dic_words = dic.words.all()
+        new_words = []
+        for word in words:
+            w,created = models.Word.objects.get_or_create(name=word, dictionary=dic)
+            new_words.append(w)
+        
+        for word in dic_words:
+            if word not in new_words:
+                word.delete()
+        return HttpResponseRedirect(reverse('configure'))
+
+class DeleteDictionaryApi(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
+        words = dic.words.all()
+        for word in words:
+            word.delete()
+        dic.delete()
         return HttpResponseRedirect(reverse('configure'))
 
 
@@ -518,6 +285,11 @@ class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['subquery_form'].fields['subquery'].queryset = models.Query.objects.annotate(num_parts=Count('parts')).filter(num_parts__gt=1)
         return self.render_to_response(context)
 
+class DictionaryUpdateView(LoginRequiredMixin, APIView):
+
+    def get(self, request, *args, **kwargs):
+        tasks.sync_dictionaries.delay()
+        return HttpResponseRedirect(reverse('configure'))
 
 class Home(django.views.generic.TemplateView):
     template_name = 'home.html'
@@ -533,23 +305,11 @@ destroy_analysis = DestroyAnalysis.as_view()
 crawler_status = CrawlerStatus.as_view()
 preprocess_status = PreprocessStatus.as_view()
 query_status = QueryStatus.as_view()
-
-crawlers = CrawlerView.as_view()
-trees = TreeListView.as_view()
-tree_detail = TreeDetailView.as_view()
-tree_json = TreeJsonApi.as_view()
-tree_edit = TreeEditView.as_view()
-tree_filter = TreeQueryView.as_view()
-tree_process = TreeProcessView.as_view()
-tree_process_check = TreeProcessCheckApi.as_view()
-node_insert = NodeInsertView.as_view()
-node_insert_at = NodeInsertView.as_view()
-node_edit = NodeEditView.as_view()
-node_edit_at = NodeEditView.as_view()
-annotations = AnnotationListView.as_view()
-annotation_trees = AnnotationTreeView.as_view()
-dictionaries = DictionaryListView.as_view()
+edit_seed = EditSeedApi.as_view()
+delete_seed = DeleteSeedApi.as_view()
+edit_node = EditNodeApi.as_view()
+delete_node = DeleteNodeApi.as_view()
+edit_dict = EditDictionaryApi.as_view()
+delete_dict = DeleteDictionaryApi.as_view()
 update_dictionaries = DictionaryUpdateView.as_view()
-dictionary_detail = DictionaryDetailView.as_view()
-query = QueryCreateView.as_view()
 home = Home.as_view()

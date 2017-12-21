@@ -54,4 +54,3 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static_root')
 ES_URL = 'http://127.0.0.1:9200/'
 ES_CLIENT = Elasticsearch([ES_URL], connection_class=RequestsHttpConnection)
 DICTIONARIES_PATH = 'dictionaries/'
-CRAWLERS_PATH = '/home/mejohn/itng/mortar/mortar/crawlers/'
