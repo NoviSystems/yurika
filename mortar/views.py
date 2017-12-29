@@ -38,9 +38,11 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['analysis'] = analysis
         context['crawler'] = crawler
         context['mindmap'] = mindmap
-        context['tree_json'] = json.dumps(utils.get_json_tree(mindmap.nodes.all()))
+        tree_json,flat_tree = utils.get_json_tree(mindmap.nodes.all())
+        context['tree_json'] = json.dumps(tree_json)
+        context['tree_list'] = json.dumps(flat_tree)
         context['query'] = query
-        context['seed_list'] = [(seed.urlseed.url,seed.pk) for seed in crawler.seed_list.all()]
+        context['seed_list'] = [[seed.urlseed.url,seed.pk] for seed in crawler.seed_list.all()]
         context['dict_path'] = os.path.join(settings.BASE_DIR, settings.DICTIONARIES_PATH)
         context['dictionaries'] = models.Dictionary.objects.all()
         context['form'] = forms.ConfigureForm()

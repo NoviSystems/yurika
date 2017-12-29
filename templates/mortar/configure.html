@@ -16,9 +16,9 @@
         <ul class="list-group">
         {% for seed,pk in seed_list %}
           <li class="list-group-item">
-            <a href="{{ seed }}">{{ seed }}</a>
+            <a href="{{ seed }}">{{ seed }}</a> &emsp;
             <a href="#seed-{{pk}}" id="seed-{{pk}}" class="glyphicon glyphicon-pencil"></a>
-            <a href="{% url 'delete-seed' pk %}" class="glyphicon glyphicon-trash"></a>
+            <a href="{% url 'delete-seed-pk' pk %}" class="glyphicon glyphicon-trash"></a>
           </li>
         {% endfor %}
         </ul>
@@ -31,7 +31,7 @@
             {{ form.seed_list }}
           </div>
           <div class="col-xs-2">
-            <button class="btn" type="submit" name="crawler" value="submit"><i class="glyphicon glyphicon-plus"></i></button>
+            <button class="btn btn-primary" type="submit" name="crawler" value="submit"><i class="glyphicon glyphicon-plus"></i></button>
           </div>
         </form>
       </div>
@@ -58,7 +58,7 @@
             {{ form.file }}
           </div>
           <div class="col-xs-2">
-            <button class="btn" type="submit" name="mindmap" value="submit"><i class="glyphicon glyphicon-arrow-up"></i></button>
+            <button class="btn btn-primary" type="submit" name="mindmap" value="submit"><i class="glyphicon glyphicon-arrow-up"></i></button>
           </div>
         </form>
       </div>
@@ -78,7 +78,7 @@
         <div class="list-group list-group-root">
           {% for dict in dictionaries %}
             <div class="list-group-item">
-              {{ dict.name }}
+              {{ dict.name }} &emsp;
               <i class="glyphicon glyphicon-pencil"></i>
               <a href="{% url 'delete-dict' dict.pk %}" class="glyphicon glyphicon-trash"></a>
             </div>
@@ -195,12 +195,12 @@ function make_tree(tree) {
 function unroll(node) {
     var list = ``;
     if (node.hasOwnProperty('children') && node['children'].length) {
-        list += `<div class="list-group-item root"><a href="#n-` + node.id + `" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>`;
+        list += `<div class="list-group-item"><a href="#n-` + node.id + `" data-toggle="collapse" class="root"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>`;
         list += " " + node.label;
         if(node.regex) {
             list += " : " + node.regex;
         }
-        list += "</a> " + `<i class="glyphicon glyphicon-pencil"></i>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a>`
+        list += "</a> " + `&emsp;<a href="#node-` + node.id + `" id="node-` + node.id + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a>`
         list += `</div><div id="n-` + node.id + `" class="list-group collapse">`;
         for (var child in node['children']) {
             list += unroll(node['children'][child]);
@@ -208,23 +208,87 @@ function unroll(node) {
         list += "</div>";
     }
     else {
-        list += `<p class="list-group-item">` + node.label;
+        list += `<div class="list-group-item"><a href="#n-` + node.id + `" data-toggle="collapse">` + node.label;
         if(node.regex) {
             list += " : " + node.regex;
         }
-        list += " " + `<i class="glyphicon glyphicon-pencil"></i>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a></p>`
+        list += `</a>&emsp;<a href="#node-` + node.id + `" id="node-` + node.id + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a></div>`
     }
     return list;
 }
 
-function edit_seed_form(pk, item) {
-    var url = $(item).children(":first").text();
-    var form = `<form action="{% url 'edit-seed' %}` + pk + `/" method="POST">{% csrf_token %}`;
-    form += `<div class="row"><div class="col-xs-9"><input type="text" id="url" name="url" value="` + url + `" class="form-control" /></div>`;
-    form += `<div class="col-xs-3"><button class="btn btn-sm btn-link" type="submit" name="seed" value="submit"><i class="glyphicon glyphicon-ok"></i></button>`;
-    form += `<a href="#seed-` + pk + `" class="btn btn-sm" onclick="javascript: cancel_edit_seed();"><i class="glyphicon glyphicon-remove"></i></a>`;
-    form += `</div></div></form>`;
-    $(item).html(form);
+function edit_seed_form(pk, item, edit) {
+    if (edit) {
+        var url = $(item).children(":first").text();
+        var form = `<form action="{% url 'edit-seed' %}` + pk + `/" method="POST">{% csrf_token %}`;
+        form += `<div class="row"><div class="col-xs-9"><input type="text" id="url" name="url" value="` + url + `" class="form-control" /></div>`;
+        form += `<div class="col-xs-3"><button class="btn btn-sm btn-link" type="submit" name="seed" value="submit"><i class="glyphicon glyphicon-ok"></i></button>`;
+        form += `<a href="#seed-` + pk + `" class="btn btn-sm" id="seed-` + pk + `"><i class="glyphicon glyphicon-remove"></i></a>`;
+        form += `</div></div></form>`;
+        $(item).html(form);
+    } else {
+        var seeds = eval("{{ seed_list|safe }}");
+        var url = "";
+        for (var i=0; i<seeds.length; i++) {
+            if (seeds[i][1] == pk) {
+                url = seeds[i][0];
+                break;
+            }
+        }
+        var li = `<a href="` + url + `">` + url + `</a>&emsp;
+            <a href="#seed-` + pk + `" id="seed-` + pk + `" class="glyphicon glyphicon-pencil"></a>
+            <a href="{% url 'delete-seed' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`;
+        $(item).html(li);
+    }
+}
+
+function edit_node_form(pk, item, edit) {
+    if (edit) {
+        var text = $(item).children(":first").text().split(' : ');
+        var name = text[0];
+        var regex = text[1];
+        if (!regex) {
+            regex = '';
+        }
+        var form = `<form action="{% url 'edit-node' %}` + pk + `/" method="POST">{% csrf_token %}`;
+        form += `<div class="row"><div class="col-xs-9">`;
+        form += `<div class="col-xs-6">Name: <input type="text" id="node-name" name="name" value="` + name + `" class="form-control" /></div>`;
+        form += `<div class="col-xs-6">Regex: <input type="text" id="node-regex" name="regex" value="` + regex + `" class="form-control" /></div></div>`;
+        form += `<div class="col-xs-3"><button class="btn btn-sm btn-link" type="submit" name="mindmap" value="submit"><i class="glyphicon glyphicon-ok"></i></button>`;
+        form += `<a href="#node-` + pk + `" class="btn btn-sm" id="node-` + pk + `"><i class="glyphicon glyphicon-remove"></i></a>`;
+        form += `</div></form>`;
+        $(item).html(form);
+    } else {
+        var nodes = eval("{{ tree_list | escapejs }}");
+        var name = ""; var regex = ""; var children = false;
+        for (var i=0; i<nodes.length; i++) {
+            if (nodes[i].id == pk) {
+                name = nodes[i].label;
+                regex = nodes[i].regex;
+                children = nodes[i].hasOwnProperty('children') && nodes[i]['children'].length;
+                break;
+            }
+        }
+        var div = `<a href="#n-` + pk + `" data-toggle="collapse" `;
+        if(children) {
+            div += `class="root"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>`;
+        }
+        else { div += `>`; }
+        div += " " + name;
+        if(regex) {
+            div += " : " + regex;
+        }
+        div += "</a> " + `&emsp;<a href="#node-` + pk + `" id="node-` + pk + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`; 
+        $(item).parent().parent().html(div);
+    }
+}
+
+function edit_dict_form(pk, item, edit) {
+    if(edit) {
+
+    } else {
+
+    }
 }
 
 $(document).ready(function() {
@@ -245,7 +309,14 @@ $(document).ready(function() {
   });
 
   $('body').on('click', 'a[id^="seed-"]', function() {
-    edit_seed_form($(this).prop('id').slice(5), $(this).parent());
+    edit_seed_form($(this).prop('id').slice(5), $(this).closest('li'), $(this).hasClass("glyphicon-pencil"));
+  });
+
+  $('body').on('click', 'a[id^="node-"]', function() {
+    edit_node_form($(this).prop('id').slice(5), $(this).closest('div'), $(this).hasClass("glyphicon-pencil"));
+  });
+  $('body').on('click', 'a[id^="dict-"]', function() {
+    edit_dict_form($(this).prop('id').slice(5), $(this).closest('div'), $(this).hasClass("glyphicon-pencil"));
   });
 });
 </script>

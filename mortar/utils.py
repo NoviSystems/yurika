@@ -12,6 +12,7 @@ import mortar.models as models
 
 def get_json_tree(queryset, max_level=None):
     tree = []
+    flat_tree = []
     node_dict = dict()
     min_level = None
     for node in queryset:
@@ -24,6 +25,7 @@ def get_json_tree(queryset, max_level=None):
             dict_id = None
 
         node_info = dict(label=node.name, id=pk, regex=node.regex, dictionary=dict_id)
+        flat_tree.append(node_info)
         if node.level == min_level:
             tree.append(node_info)
         else:
@@ -34,8 +36,7 @@ def get_json_tree(queryset, max_level=None):
                     parent_info['children'] = []
                 parent_info['children'].append(node_info)
         node_dict[pk] = node_info
-
-    return tree
+    return tree,flat_tree
 
 def get_dict_json():
     dicts = models.Dictionary.objects.all()
