@@ -18,7 +18,9 @@ urlpatterns = [
  url('^seeds/edit/$', views.edit_seed, name="edit-seed"),
  url('^seeds/delete/(?P<pk>[\\d]+)/$', views.delete_seed, name="delete-seed-pk"),
  url('^seeds/delete/$', views.delete_seed, name="delete-seed"),
- url('^dicts/edit/(?P<pk>[\\d]+)/$', views.edit_node, name="edit-dict"),
- url('^dicts/delete/(?P<pk>[\\d]+)/$', views.delete_dict, name="delete-dict"),
+ url('^dicts/edit/(?P<pk>[\\d]+)/$', views.edit_dict, name="edit-dict-pk"),
+ url('^dicts/edit/$', views.edit_dict, name="edit-dict"),
+ url('^dicts/delete/(?P<pk>[\\d]+)/$', views.delete_dict, name="delete-dict-pk"),
+ url('^dicts/delete/$', views.delete_dict, name="delete-dict"),
  url('^$', views.home, name='home')
 ]

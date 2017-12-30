@@ -48,6 +48,13 @@ def get_dict_json():
         out.append(j)
     return out
 
+def get_dict_list():
+    dicts = models.Dictionary.objects.all()
+    out = {}
+    for d in dicts:
+        out[d.id] = "&#13;&#10;".join([w.name for w in d.words.all()])
+    return json.dumps(out)
+
 def get_anno_json(tree):
     annos = models.Annotation.objects.filter(tree=tree)
     out = []

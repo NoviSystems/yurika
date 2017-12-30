@@ -45,6 +45,7 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['seed_list'] = [[seed.urlseed.url,seed.pk] for seed in crawler.seed_list.all()]
         context['dict_path'] = os.path.join(settings.BASE_DIR, settings.DICTIONARIES_PATH)
         context['dictionaries'] = models.Dictionary.objects.all()
+        context['dict_list'] = utils.get_dict_list()
         context['form'] = forms.ConfigureForm()
         return context
 
@@ -198,24 +199,28 @@ class EditDictionaryApi(LoginRequiredMixin, APIView):
         dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
 
         words = request.POST.get('words').split('\n')
+        print(request.POST.get('words'))
         dic_words = dic.words.all()
         new_words = []
-        for word in words:
-            w,created = models.Word.objects.get_or_create(name=word, dictionary=dic)
-            new_words.append(w)
+        with transaction.atomic():
+            for word in words:
+                clean = word.replace("&#13;",'').replace('&#10;', '').strip()
+                w,created = models.Word.objects.get_or_create(name=clean, dictionary=dic)
+                new_words.append(w)
         
-        for word in dic_words:
-            if word not in new_words:
-                word.delete()
+            for word in dic_words:
+                if word not in new_words:
+                   word.delete()
         return HttpResponseRedirect(reverse('configure'))
 
 class DeleteDictionaryApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
         words = dic.words.all()
-        for word in words:
-            word.delete()
-        dic.delete()
+        with transaction.atomic():
+            for word in words:
+                word.delete()
+            dic.delete()
         return HttpResponseRedirect(reverse('configure'))
 
 
