@@ -10,7 +10,7 @@
       {% endif %}
     </h3>
     <div id="crawler" class="collapse in">
-      <p>URLs: Insert a list of URLs (one per line) to start crawler with. Crawler will follow all links on these pages.</p>
+      <p>URLs: Insert a list of URLs to start crawler with. Crawler will follow all links on these pages.</p>
       {% if seed_list %}
       <div class="col-xs-6">
         <ul class="list-group">
@@ -86,7 +86,16 @@
         </div>
       </div>
       <div class="col-xs-6">
-
+        <form action="" method="POST">
+          {% csrf_token %}
+          <div class="col-xs-10">
+              {{ form.dict_name }}
+              {{ form.words }}
+          </div>
+          <div class="col-xs-2">
+            <button class="btn btn-primary" type="submit" name="dictionary" value="submit"><i class="glyphicon glyphicon-plus"></i></button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

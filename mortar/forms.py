@@ -6,7 +6,7 @@ import mortar.models as models
 import re
 
 class ConfigureForm(forms.Form):
-    seed_list = forms.CharField(widget=forms.Textarea, required=False)
+    seed_list = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'URLs (one per line)'}), required=False)
     file = forms.FileField(label="Import MindMap", required=False)
     part_type = forms.ChoiceField(choices=((0, 'Regular Expression'), (1, 'Dictionary'), (2, 'Part of Speech')))
     regex = forms.ModelChoiceField(queryset=models.Node.objects.filter(tree_link__slug='default').distinct(), required=False)
@@ -15,6 +15,8 @@ class ConfigureForm(forms.Form):
     op = forms.ChoiceField(choices=((0, 'OR'), (1, 'AND')), label="Operation")
 
     category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
+    dict_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'placeholder': 'Dictionary Name'}), label="Name", required=False)
+    words = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Words or Phrases (one per line)'}), label="Words", required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
