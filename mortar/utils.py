@@ -108,7 +108,7 @@ def copy_nodes(old_tree, new_tree):
 
 def create_query_part(qtype, qid, query, op=None):
     if not op:
-        op = '+'
+        op = 1
     if qtype == 'dictionary':
         dictionary = models.Dictionary.objects.get(id=qid)
         part = models.DictionaryPart.objects.create(query=query, dictionary=dictionary, op=op, name=dictionary.name)

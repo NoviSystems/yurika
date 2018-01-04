@@ -93,7 +93,7 @@
               {{ form.words }}
           </div>
           <div class="col-xs-2">
-            <button class="btn btn-primary" type="submit" name="dictionary" value="submit"><i class="glyphicon glyphicon-plus"></i></button>
+            <button class="btn btn-primary" type="submit" name="new_dict" value="submit"><i class="glyphicon glyphicon-plus"></i></button>
           </div>
         </form>
       </div>
@@ -108,7 +108,7 @@
       {% endif %}
     </h3>
     <div id="queries" class="collapse">
-      <p>Needs intuitive way of explaining/showing how this form works</p>
+      <p>{{ query.string }}</p><p>Needs intuitive way of explaining/showing how this form works</p>
       <div class="col-xs-12">
       <form id="query_form" action="" method="POST">
       {% csrf_token %}

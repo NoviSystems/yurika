@@ -64,8 +64,61 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
             if self.request.FILES.get('file'):
                 utils.read_mindmap(context['mindmap'], request.FILES['file'].read())
                 utils.associate_tree(context['mindmap'])
+        if request.POST.get('new_dict') == 'submit':
+            name = request.POST.get('dict_name')
+            words = request.POST.get('words').split('\n')
+            new_dict = models.Dictionary.objects.create(name=name, filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]))
+            with transaction.atomic():
+                for word in words:
+                    clean = word.replace("&#13;",'').replace('&#10;', '').strip()
+                    w,created = models.Word.objects.get_or_create(name=clean, dictionary=new_dict)
         if request.POST.get('query') == 'submit':
-            pass
+            type_list = ['regex', 'dictionary', 'part_of_speech']
+            query = context['query']
+            query.parts.all().delete()
+            query.category = request.POST.get('category')
+            types = request.POST.getlist('part_type')
+            oplist = request.POST.getlist('op')
+            parts = []
+            if len(types) == 1:
+                part_list = request.POST.getlist(type_list[int(types[0])])
+                querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
+                string = type_list[int(types[0])] + ': ' + querypart.name
+                query.name = string[:50]
+                query.string = string
+                query.elastic_json = utils.create_query_from_part(types[0], querypart)
+                query.save()
+            else:
+                dicts = request.POST.getlist('dictionary')
+                regs = request.POST.getlist('regex')
+                pos = request.POST.getlist('part_of_speech')
+                string = ''
+                for count in range(0,len(types)):
+                    if count > 0:
+                        op = oplist[count-1]
+                        string = '(' + string
+                    else:
+                        op = oplist[count]
+                    part_type = int(types[count])
+                    part_list = regs
+                    if part_type == 1:
+                        part_list = dicts
+                    if part_type == 2:
+                        part_list = pos
+                    part_id = part_list.pop(0)
+                    querypart = utils.create_query_part(type_list[part_type], part_id, query, op=op)
+                    opname = 'AND' if op else 'OR'
+                    if count == 0:
+                        string += type_list[part_type] + '.' + part_id + ' ' + opname + ' '
+                    elif count == 1:
+                        string += type_list[part_type] + '.' + part_id + ') '
+                    else:
+                        string += opname + ' ' + type_list[part_type] + '.' + part_id + ')'
+                string += ')'
+                query.name = string[:50]
+                query.string = string
+                query.elastic_json = utils.create_query_from_string(string)
+                query.save()
         return render(request, self.template_name, context=context)
 
 class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
@@ -161,8 +214,7 @@ class DestroyAnalysis(LoginRequiredMixin, APIView):
         if analysis.query:
             analysis.query.delete()
         annotations = models.Annotation.objects.filter(analysis_id=analysis.id)
-        for anno in annotations:
-            anno.delete()
+        annotations.delete()
         analysis.delete()
         return HttpResponseRedirect(reverse('configure'))
         
@@ -217,10 +269,8 @@ class DeleteDictionaryApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
         words = dic.words.all()
-        with transaction.atomic():
-            for word in words:
-                word.delete()
-            dic.delete()
+        words.delete()
+        dic.delete()
         return HttpResponseRedirect(reverse('configure'))
 
 

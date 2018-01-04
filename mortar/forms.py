@@ -14,7 +14,7 @@ class ConfigureForm(forms.Form):
     dictionary = forms.ModelChoiceField(queryset=models.Dictionary.objects.all(), required=False)
     op = forms.ChoiceField(choices=((0, 'OR'), (1, 'AND')), label="Operation")
 
-    category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
+    category = forms.ChoiceField(choices=((0, 'Sentence'), (1, 'Paragraph'), (2, 'Document')), label='Type')
     dict_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'placeholder': 'Dictionary Name'}), label="Name", required=False)
     words = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Words or Phrases (one per line)'}), label="Words", required=False)
 

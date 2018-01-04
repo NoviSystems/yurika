@@ -143,8 +143,8 @@ class Annotation(models.Model):
     content = models.TextField()
     analysis_id = models.IntegerField()
     document_id = models.IntegerField()
-    category = models.CharField(max_length=1, choices=(('S', 'Sentence'), ('P', 'Paragraph'),
-                                                       ('D', 'Document')))
+    category = models.IntegerField(choices=((0, 'Sentence'), (1, 'Paragraph'),
+                    (2, 'Document')))
     query_id = models.IntegerField()
 
     def __str__(self):
@@ -162,8 +162,7 @@ class Query(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     process_id = models.CharField(max_length=50, null=True, blank=True)
-    category = models.CharField(max_length=1, choices=(('S', 'Sentence'), ('P', 'Paragraph'),
-                                            ('D', 'Document')), null=True, blank=True)
+    category = models.IntegerField(choices=((0, 'Sentence'), (1, 'Paragraph'),(2, 'Document')), null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -174,7 +173,7 @@ class Query(models.Model):
 
 class QueryPart(models.Model):
     query = models.ForeignKey('Query', related_name='parts')
-    op = models.CharField(max_length=1, choices=(('+', 'AND'), ('|', 'OR')))
+    op = models.IntegerField(choices=((1, 'AND'), (0, 'OR')))
     name = models.CharField(max_length=50)
 
     def __str__(self):

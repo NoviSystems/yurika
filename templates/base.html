@@ -36,11 +36,15 @@
             <a href="{% url 'configure' %}"> 1. Configure</a>
         </li>
         <li>
-            <a href="{% url 'analyze' %}">2. Analyze</a>
+            <a href="{% url 'analyze' %}">2. Execute</a>
         </li>
         {% if ANALYZED %}
         <li>
             <a href="{% url 'explorer_index' %}">3. Explore</a>
+        </li>
+        {% else %}
+        <li>
+           3. Explorer
         </li>
         {% endif %}
         </ul>
