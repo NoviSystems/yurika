@@ -1,91 +1,84 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-  <div class="row">
-    <h3><a href="#crawler" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-up"></i>1. Crawler</a>
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#crawler" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-up"></i>1. Crawler</a>
       {% if seed_list %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
-        <i class="glyphicon glyphicon-remove"></i>
+        <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
-    </h3>
-    <div id="crawler" class="collapse in">
+    </h3></div>
+    <div id="crawler" class="panel-body collapse in">
       <p>URLs: Insert a list of URLs to start crawler with. Crawler will follow all links on these pages.</p>
-      {% if seed_list %}
-      <div class="col-xs-6">
-        <ul class="list-group">
-        {% for seed,pk in seed_list %}
-          <li class="list-group-item">
-            <a href="{{ seed }}">{{ seed }}</a> &emsp;
-            <a href="#seed-{{pk}}" id="seed-{{pk}}" class="glyphicon glyphicon-pencil"></a>
-            <a href="{% url 'delete-seed-pk' pk %}" class="glyphicon glyphicon-trash"></a>
-          </li>
-        {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
-      <div class="col-xs-6">
+      <div class="row">
         <form action="" method="POST">
           {% csrf_token %}
           <div class="col-xs-10">
             {{ form.seed_list }}
           </div>
           <div class="col-xs-2">
-            <button class="btn btn-primary" type="submit" name="crawler" value="submit"><i class="glyphicon glyphicon-plus"></i></button>
+            <button class="btn btn-primary" type="submit" name="crawler" value="submit">Add</button>
           </div>
         </form>
       </div>
+      {% if seed_list %}
+      <div class="row">
+        <div class="col-xs-10">
+          <ul class="list-group">
+          {% for seed,pk in seed_list %}
+            <li class="list-group-item">
+              <a href="{{ seed }}">{{ seed }}</a> &emsp;
+              <a href="#seed-{{pk}}" id="seed-{{pk}}" class="glyphicon glyphicon-pencil"></a>
+              <a href="{% url 'delete-seed-pk' pk %}" class="glyphicon glyphicon-trash"></a>
+            </li>
+          {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
-  <div class="row">
-    <h3><a href="#mindmap" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>2. MindMap</a>
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#mindmap" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>2. MindMap</a>
       {% if mindmap.nodes.all %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
-        <i class="glyphicon glyphicon-remove"></i>
+        <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
-    </h3>
-    <div id="mindmap" class="collapse">
+    </h3></div>
+    <div id="mindmap" class="panel-body collapse">
       <p>MindMap: Import a MindMap (.mm) file to create rules from Regular Expressions</p>
-      {% if mindmap.nodes.all %}
-      <div id="tree" class="col-xs-6">
-      </div>
-      {% endif %}
-      <div class="col-xs-6">
+      <div class="row">
         <form action="" method="POST" enctype="multipart/form-data">
           {% csrf_token %}
           <div class="col-xs-10">
             {{ form.file }}
           </div>
           <div class="col-xs-2">
-            <button class="btn btn-primary" type="submit" name="mindmap" value="submit"><i class="glyphicon glyphicon-arrow-up"></i></button>
+            <button class="btn btn-primary" type="submit" name="mindmap" value="submit">Upload</button>
           </div>
         </form>
       </div>
+      <div class="row">
+        {% if mindmap.nodes.all %}
+        <div id="tree" class="col-xs-10">
+        </div>
+        {% endif %}
+      </div>
     </div>
   </div>
-  <div class="row">
-    <h3><a href="#dictionaries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>3. Dictionaries</a>
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#dictionaries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>3. Dictionaries</a>
       {% if dictionaries %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
-        <i class="glyphicon glyphicon-remove"></i>
+        <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
-    </h3>
-    <div id="dictionaries" class="collapse">
+    </h3></div>
+    <div id="dictionaries" class="panel-body collapse">
       <p><a href="{% url 'update-dicts' %}">Load System Dictionaries</a> : reads in all dictionaries from {{ dict_path }} (may take a while)</p>
-      <div id="dicts" class="col-xs-6">
-        <div class="list-group list-group-root">
-          {% for dict in dictionaries %}
-            <div class="list-group-item">
-              {{ dict.name }} &emsp;
-              <a href="#dict-{{dict.pk}}" id="dict-{{dict.pk}}" class="glyphicon glyphicon-pencil"></a>
-              <a href="{% url 'delete-dict-pk' dict.pk %}" class="glyphicon glyphicon-trash"></a>
-            </div>
-          {% endfor %}
-        </div>
-      </div>
-      <div class="col-xs-6">
+      <div class="row">
         <form action="" method="POST">
           {% csrf_token %}
           <div class="col-xs-10">
@@ -97,17 +90,28 @@
           </div>
         </form>
       </div>
+      <div id="dicts" class="row">
+        <div class="list-group list-group-root">
+          {% for dict in dictionaries %}
+            <div class="list-group-item">
+              {{ dict.name }} &emsp;
+              <a href="#dict-{{dict.pk}}" id="dict-{{dict.pk}}" class="glyphicon glyphicon-pencil"></a>
+              <a href="{% url 'delete-dict-pk' dict.pk %}" class="glyphicon glyphicon-trash"></a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </div>
-  <div class="row">
-    <h3><a href="#queries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>4. Query</a>
+  <div class="panel panel-default">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#queries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>4. Query</a>
       {% if query.parts.all %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
-        <i class="glyphicon glyphicon-remove"></i>
+        <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
-    </h3>
-    <div id="queries" class="collapse">
+    </h3></div>
+    <div id="queries" class="panel-body collapse">
       <p>{{ query.string }}</p><p>Needs intuitive way of explaining/showing how this form works</p>
       <div class="col-xs-12">
       <form id="query_form" action="" method="POST">
