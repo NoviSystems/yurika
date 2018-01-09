@@ -100,10 +100,6 @@ class DictionaryForm(BSModelForm):
         model = models.Dictionary
         fields = ['name']
 
-class WordForm(BSModelForm):
-    class Meta:
-        model = models.Word
-        fields = ['name']
 
 class TreeEditForm(BSModelForm):
     doc_source_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')

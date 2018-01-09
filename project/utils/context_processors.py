@@ -11,9 +11,8 @@ def google_analytics(request):
 def analysis_status(request):
     if request.user.is_authenticated():
         try:
-            analysis = Analysis.objects.get_or_create(id=0)
-            if analysis.status == 5:
-                return {'ANALYZED': True}
+            analysis,created = Analysis.objects.get_or_create(id=0)
+            return {'ANALYSIS_STATUS': analysis.status}
         except:
-            return {'ANALYZED': False}
-    return {'ANALYZED': False}
+            return {'ANALYSIS_STATUS': 0}
+    return {'ANALYSIS_STATUS': 0}

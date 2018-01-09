@@ -11,7 +11,7 @@ class Analysis(models.Model):
     query = models.ForeignKey('Query', related_name="analyses", null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
-    status = models.IntegerField(default=0, choices=((0, 'Not Configured'), (1, 'Configured'), (2, 'Crawling'), (3, 'Preprocessing'), (4, 'Querying'), (5, 'Finished'), (6, 'Stopped')))
+    status = models.IntegerField(default=0, choices=((0, 'Not Configured'), (1, 'Crawler Configured'), (2, 'MindMap Configured'), (3, 'Dictionaries Configured'), (4, 'Query Configured'), (5, 'Crawling'), (6, 'Preprocessing'), (7, 'Querying'), (8, 'Finished'), (9, 'Stopped')))
 
 class Crawler(models.Model):
     name = models.CharField(max_length=50)
@@ -113,20 +113,13 @@ class Dictionary(models.Model):
     filepath = models.FilePathField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    words = models.TextField()
 
     def __str__(self):
         return self.name
 
     class Meta:
         verbose_name_plural = 'Dictionaries'
-
-
-class Word(models.Model):
-    name = models.CharField(max_length=255)
-    dictionary = models.ForeignKey('Dictionary', related_name='words')
-
-    def __str__(self):
-        return self.name
 
 
 class Document(models.Model):

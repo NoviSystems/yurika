@@ -27,7 +27,7 @@ def analyze(self, analysis_pk):
         crawler.save()
 
         analysis.started_at = datetime.datetime.now()
-        analysis.status = 2
+        analysis.status = 5
         analysis.save()
 
         process = CrawlerProcess({'USER_AGENT': ''})
@@ -44,7 +44,7 @@ def analyze(self, analysis_pk):
     tree.process_id = self.request.id
     tree.save()
 
-    analysis.status = 3
+    analysis.status = 6
     analysis.save()
 
     utils.process(tree, {'names': [], 'regexs': []})
@@ -58,7 +58,7 @@ def analyze(self, analysis_pk):
     query.process_id = self.request.id
     query.save()
 
-    analysis.status = 4
+    analysis.status = 7
     analysis.save()
 
     utils.annotate(analysis, tree, query.category, query)
@@ -67,7 +67,7 @@ def analyze(self, analysis_pk):
     query.process_id = None
     query.save()
 
-    analysis.status = 5
+    analysis.status = 8
     analysis.finished_at = datetime.datetime.now()
     analysis.save()
 
@@ -94,7 +94,7 @@ def start_crawler(self, analysis_pk, crawler_pk):
         crawler.save()
 
         analysis.started_at = datetime.datetime.now()
-        analysis.status = 2
+        analysis.status = 5
         analysis.save()
 
         process = CrawlerProcess({'USER_AGENT': ''})
@@ -123,7 +123,7 @@ def preprocess(self, analysis_pk, tree_pk, query):
     tree.save()
 
     analysis = models.Analysis.objects.get(pk=analysis_pk)
-    analysis.status = 3
+    analysis.status = 6
     analysis.save()
 
     utils.process(tree, query)
@@ -142,7 +142,7 @@ def run_query(self, analysis_pk, tree_pk, category, query_pk):
     query.process_id = self.request.id
     query.save()
 
-    analysis.status = 4
+    analysis.status = 7
     analysis.save()
 
     utils.annotate(analysis, tree, category, query)
@@ -151,6 +151,6 @@ def run_query(self, analysis_pk, tree_pk, category, query_pk):
     query.process_id = None
     query.save()
 
-    analysis.status = 5
+    analysis.status = 8
     analysis.finished_at = datetime.datetime.now()
     analysis.save()

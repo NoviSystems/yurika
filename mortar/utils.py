@@ -44,7 +44,7 @@ def get_dict_json():
     for d in dicts:
         j = {'id': d.id,
              'name': d.name, 
-             'words': [w.name for w in d.words.all()]}
+             'words': [w.strip() for w in d.words.split('\n')]}
         out.append(j)
     return out
 
@@ -52,7 +52,7 @@ def get_dict_list():
     dicts = models.Dictionary.objects.all()
     out = {}
     for d in dicts:
-        out[d.id] = "&#13;&#10;".join([w.name for w in d.words.all()])
+        out[d.id] = d.words
     return json.dumps(out)
 
 def get_anno_json(tree):
@@ -65,6 +65,16 @@ def get_anno_json(tree):
 
     return out
 
+def test_status(analysis):
+    if not analysis.crawler.seed_list.all():
+        return 0
+    elif not analysis.mindmap.nodes.all():
+        return 1
+    elif not models.Dictionary.objects.all():
+        return 2
+    elif not analysis.query.parts.all():
+        return 3
+    return 4
 
 def read_mindmap(tree, mmstring):
     root = etree.fromstring(mmstring)
@@ -136,7 +146,7 @@ def update_dictionaries():
     i_client = IndicesClient(client=es)
     if not i_client.exists('dictionaries'):
         i_client.create('dictionaries')'''
-
+    chunk_size = 2048
     es_actions = []
     dict_path = settings.DICTIONARIES_PATH
     for root, dirs, files in os.walk(dict_path):
@@ -144,10 +154,13 @@ def update_dictionaries():
             if f.endswith('.txt') and os.path.getsize(os.sep.join([root, f])) > 1:
                 filepath = os.sep.join([root, f])
                 with open(filepath, 'rb+') as dictfile:
-                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]))
-                    for line in dictfile:
-                        word = line.decode('utf-8').rstrip('\n')
-                        w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
+                    words = ''
+                    buff = dictfile.read(2048).decode('utf-8')
+                    while buff:
+                        words += buff
+                        buff = dictfile.read(2048).decode('utf-8')
+                    d_words = words
+                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]), words=d_words)
                     '''es_actions.append({'_op_type': 'index', '_type': 'dictionary',
                         '_source': {
                             'name': d.name,
@@ -172,8 +185,8 @@ def associate_tree(tree):
 
 def make_dict_query(dictionary):
     out = []
-    for word in dictionary.words.all():
-        out.append({'match': {'content': word.name}})
+    for word in dictionary.words.split('\n'):
+        out.append({'match': {'content': word.strip()}})
 
     return {'bool': {'should': out}}
 

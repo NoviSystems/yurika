@@ -1,16 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-  <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#crawler" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-up"></i>1. Crawler</a>
+  {% if ANALYSIS_STATUS > 3 %}
+    <div class="row">
+      <div class="col-xs-12 text-right">
+        <a href="{% url 'analyze' %}" class="btn btn-xs btn-success">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
+      </div> 
+    </div>
+    <div class="row">&emsp;</div>
+  {% endif %}
+  <div class="panel {% if crawl_conf %}panel-success{% else %} panel-info {% endif %}">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#crawler" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if crawl_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 1. Crawler</a>
       {% if seed_list %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="crawler" class="panel-body collapse">
-      <form action="" method="POST">
+    <div id="crawler" class="panel-body collapse {% if not crawl_conf %}in{% endif %}">
+      <form action="{% url 'add-seeds' crawler.pk %}" method="POST">
         <div class="row">
           <div class="col-xs-12"><p>Add some URLs to crawl!</p></div>
           {% csrf_token %}
@@ -22,7 +30,7 @@
         <div class="row">
           <div class="col-xs-4"></div>
           <div class="col-xs-2 text-right">
-            <button class="btn btn-primary" type="submit" name="crawler" value="submit">Add</button>
+            <button class="btn btn-sm btn-primary" type="submit" name="crawler" value="submit">Add</button>
           </div>
         </div>
       </form>
@@ -45,21 +53,24 @@
       <div class="row">
         <div class="col-xs-4"></div>
         <div class="col-xs-2 text-right">
-          <button class="btn btn-success" type="submit" name="save-crawler" value="save">Save Crawler</button>
+          <form action="" method="POST">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-success" type="submit" name="save" value="crawler">Save Crawler</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
-  <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#mindmap" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>2. MindMap</a>
-      {% if mindmap.nodes.all %} 
+  <div class="panel {% if mm_conf %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#mindmap" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if mm_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 2. MindMap</a>
+      {% if mm_conf %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="mindmap" class="panel-body collapse">
-      <form action="" method="POST" enctype="multipart/form-data">
+    <div id="mindmap" class="panel-body collapse {% if not mm_conf %}in{% endif %}">
+      <form action="{% url 'upload-mindmap' mindmap.pk %}" method="POST" enctype="multipart/form-data">
         <div class="row">
           <div class="col-xs-12"><p>Import a MindMap (.mm) file to create rules from Regular Expressions</p></div>
           {% csrf_token %}
@@ -71,7 +82,7 @@
         <div class="row">
           <div class="col-xs-4"></div>
           <div class="col-xs-2 text-right">
-            <button class="btn btn-primary" type="submit" name="mindmap" value="submit">Upload</button>
+            <button class="btn btn-sm btn-primary" type="submit" name="mindmap" value="submit">Upload</button>
           </div>
         </div>
       </form>
@@ -87,21 +98,24 @@
       <div class="row">
         <div class="col-xs-4"></div>
         <div class="col-xs-2 text-right">
-          <button class="btn btn-success" type="submit" name="save-mindmap" value="save">Save MindMap</button>
+          <form action="" method="POST">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-success" type="submit" name="save" value="mindmap">Save MindMap</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
-  <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#dictionaries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>3. Dictionaries</a>
-      {% if dictionaries %} 
+  <div class="panel {% if dict_conf %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#dictionaries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if dict_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 3. Dictionaries</a>
+      {% if dict_conf %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="dictionaries" class="panel-body collapse">
-      <form action="" method="POST">
+    <div id="dictionaries" class="panel-body collapse {% if not dict_conf %}in{% endif %}">
+      <form action="{% url 'add-dict' %}" method="POST">
         <div class="row">
           <div class="col-xs-12"><p><a href="{% url 'update-dicts' %}">Load System Dictionaries</a> : reads in all dictionaries from {{ dict_path }} (may take a while)</p></div>
           {% csrf_token %}
@@ -114,7 +128,7 @@
         <div class="row">
           <div class="col-xs-4"></div>
           <div class="col-xs-2 text-right">
-            <button class="btn btn-primary" type="submit" name="new_dict" value="submit">Add</button>
+            <button class="btn btn-sm btn-primary" type="submit" name="new_dict" value="submit">Add</button>
           </div>
         </div>
       </form>
@@ -135,26 +149,29 @@
       <div class="row">
         <div class="col-xs-4"></div>
         <div class="col-xs-2 text-right">
-          <button class="btn btn-success" type="submit" name="save-dicts" value="save">Save Dictionaries</button>
+          <form action="" method="POST">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-success" type="submit" name="save" value="dicts">Save Dictionaries</button>
+          </form>
         </div>
       </div>
     </div>
   </div>
-  <div class="panel panel-default">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#queries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon glyphicon-chevron-right"></i>4. Query</a>
-      {% if query.parts.all %} 
+  <div class="panel {% if query_conf %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading"><h3 class="panel-title"><a href="#queries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if query_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 4. Query</a>
+      {% if query_conf %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="queries" class="panel-body collapse in">
+    <div id="queries" class="panel-body collapse {% if not query_conf %}in{% endif %}">
       <div class="row">
         <div class="col-xs-12">
           <p>{{ query.string }}</p><p>Needs intuitive way of explaining/showing how this form works</p>
         </div>
       </div>
-      <form id="query_form" action="" method="POST">
+      <form id="query_form" action="{% url 'edit-query' query.pk %}" method="POST">
       {% csrf_token %}
         <div id="query_parts">
           <div id="query_1" class="row"> 
@@ -164,28 +181,50 @@
                 {{ form.regex }}
               </div>
             </div>
-            <div class="row">&emsp;</div>
-            <div id="query_buttons" class="col-xs-2 text-right">
-              <input type="button" id="add_query" value="+" class="btn btn-primary" onclick="javascript: add_query_part();" />
+          </div>
+        </div>
+        <div class="row">&emsp;</div>
+        <div class="row">
+          <div class="col-xs-4"></div>
+          <div id="query_buttons" class="col-xs-2 text-right" role="group">
+            <input type="button" id="add_query" value="+" class="btn btn-sm btn-primary" onclick="javascript: add_query_part();" />
+          </div>
+        </div>
+        <div class="row">&emsp;</div>
+          <div class="row">
+            <div class="col-xs-4">
+              {{ form.category }}
             </div>
           </div>
-        </div>
-        <span class="row"></span>
-        <div class="row">
-          <div class="col-xs-4">
-            {{ form.category }}
-          </div>
-        </div>
         <div class="row">
           <div class="col-xs-4"></div>
           <div class="col-xs-2 text-right">
-            <button class="btn btn-success" type="submit" name="query" value="submit">Save Query</button>
+            <form action="" method="POST">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-success" type="submit" name="save" value="crawler">Save Query</button>
+            </form>
           </div>
         </div>
       </form>
       </div>
     </div>
+  <div class="row">&emsp;</div>
+  <div class="row">
+    <div class="col-xs-12 text-right">
+    {% if ANALYSIS_STATUS == 0 %}
+      <a href="#crawler" class="btn btn-xs btn-default">Configure Crawler</a>
+    {% elif ANALYSIS_STATUS == 1 %}
+      <a href="#mindmap" class="btn btn-xs btn-default">Configure MindMap</a>
+    {% elif ANALYSIS_STATUS == 2 %}
+      <a href="#dictionaries" class="btn btn-xs btn-default">Configure Dictionaries</a>
+    {% elif ANALYSIS_STATUS == 3 %}
+      <a href="#query" class="btn btn-xs btn-default">Configure Query</a>
+    {% else %}
+      <a href="{% url 'analyze' %}" class="btn btn-xs btn-success">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
+    {% endif %}
+    </div>
   </div>
+  <span class="row"></span>
 </div>
 {% endblock %}
 {% block scripts %}
@@ -202,7 +241,7 @@ function add_query_part() {
     var sub_button = document.getElementById('subtract_query');
     if(!sub_button) {
       var buttons = document.getElementById('query_buttons');
-      var sub_button = `<input type="button" id="subtract_query" value="-" class="btn btn-danger" onclick="javascript: subtract_query_part();" />`
+      var sub_button = `<input type="button" id="subtract_query" value="-" class="btn btn-sm btn-danger" onclick="javascript: subtract_query_part();" />`
       buttons.insertAdjacentHTML("beforeend", sub_button);
     }
   }
@@ -346,7 +385,7 @@ function edit_dict_form(pk, item, edit) {
         $(item).html(form);
     } else {
         var name = $(item).parent().parent().parent().find('p').text().trim();
-        var div = `` + name + `&emsp;<a href="#dict-` + pk +`" id="dict-` + pk + `" class="glyphicon glyphicon-pencil"></a><a href="{% url 'delete-dict'` + pk +`" class="glyphicon glyphicon-trash"></a>`;
+        var div = `` + name + `&emsp;<a href="#dict-` + pk +`" id="dict-` + pk + `" class="glyphicon glyphicon-pencil"></a><a href="{% url 'delete-dict' %}` + pk +`" class="glyphicon glyphicon-trash"></a>`;
         $(item).parent().parent().parent().html(div);
     }
 }
@@ -354,7 +393,7 @@ function edit_dict_form(pk, item, edit) {
 $(document).ready(function() {
   //query change form
   $('body').on('change', 'select[id^="id_part_type"]', function() {
-    update_query_part($(this).parent().prop('id').slice(6), this.value);
+    update_query_part($(this).parent().parent().prop('id').slice(6), this.value);
   });
 
   //display tree

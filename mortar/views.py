@@ -35,6 +35,8 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         analysis.crawler = crawler
         analysis.mindmap = mindmap
         analysis.query = query
+        analysis.status = utils.test_status(analysis)
+        analysis.save()
         context['analysis'] = analysis
         context['crawler'] = crawler
         context['mindmap'] = mindmap
@@ -47,82 +49,30 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['dictionaries'] = models.Dictionary.objects.all()
         context['dict_list'] = utils.get_dict_list()
         context['form'] = forms.ConfigureForm()
+        context['crawl_conf'] = True if crawler.seed_list.all() else False
+        context['mm_conf'] = True if mindmap.nodes.all() else False
+        context['dict_conf'] = True if context['dictionaries'] else False
+        context['query_conf'] = True if query.parts.all() else False
         return context
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-        print(request.POST)
         form = forms.ConfigureForm(request.POST, request.FILES)
-        if request.POST.get('crawler') == 'submit':
-            seeds = request.POST.get('seed_list').split('\n')
-            for seed in seeds:
-                if len(seed):
-                    useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
-                    context['crawler'].seed_list.add(useed)
-            context['seed_list'] = [(seed.urlseed.url,seed.pk) for seed in context['crawler'].seed_list.all()]
-        if request.POST.get('mindmap') == 'submit':
-            if self.request.FILES.get('file'):
-                utils.read_mindmap(context['mindmap'], request.FILES['file'].read())
-                utils.associate_tree(context['mindmap'])
-        if request.POST.get('new_dict') == 'submit':
-            name = request.POST.get('dict_name')
-            words = request.POST.get('words').split('\n')
-            new_dict = models.Dictionary.objects.create(name=name, filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]))
-            with transaction.atomic():
-                for word in words:
-                    clean = word.replace("&#13;",'').replace('&#10;', '').strip()
-                    w,created = models.Word.objects.get_or_create(name=clean, dictionary=new_dict)
-        if request.POST.get('query') == 'submit':
-            type_list = ['regex', 'dictionary', 'part_of_speech']
-            query = context['query']
-            query.parts.all().delete()
-            query.category = request.POST.get('category')
-            types = request.POST.getlist('part_type')
-            oplist = request.POST.getlist('op')
-            parts = []
-            if len(types) == 1:
-                part_list = request.POST.getlist(type_list[int(types[0])])
-                querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
-                string = type_list[int(types[0])] + ': ' + querypart.name
-                query.name = string[:50]
-                query.string = string
-                query.elastic_json = utils.create_query_from_part(types[0], querypart)
-                query.save()
-            else:
-                dicts = request.POST.getlist('dictionary')
-                regs = request.POST.getlist('regex')
-                pos = request.POST.getlist('part_of_speech')
-                string = ''
-                for count in range(0,len(types)):
-                    if count > 0:
-                        op = oplist[count-1]
-                        string = '(' + string
-                    else:
-                        op = oplist[count]
-                    part_type = int(types[count])
-                    part_list = regs
-                    if part_type == 1:
-                        part_list = dicts
-                    if part_type == 2:
-                        part_list = pos
-                    part_id = part_list.pop(0)
-                    querypart = utils.create_query_part(type_list[part_type], part_id, query, op=op)
-                    opname = 'AND' if op else 'OR'
-                    if count == 0:
-                        string += type_list[part_type] + '.' + part_id + ' ' + opname + ' '
-                    elif count == 1:
-                        string += type_list[part_type] + '.' + part_id + ') '
-                    else:
-                        string += opname + ' ' + type_list[part_type] + '.' + part_id + ')'
-                string += ')'
-                query.name = string[:50]
-                query.string = string
-                query.elastic_json = utils.create_query_from_string(string)
-                query.save()
+        val = request.POST.get('save')
+        if val == 'crawler' and context['crawler'].seed_list.all():
+            context['analysis'].status = 1
+            context['crawl_conf'] = True
+        elif val == 'mindmap':
+            context['analysis'].status = 2
+            context['mm_conf'] = True
+        elif val == 'dicts':
+            context['analysis'].status = 3
+            context['dict_conf'] = True
+        context['analysis'].save()
         return render(request, self.template_name, context=context)
 
 class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/analyze.html'
+    template_name = 'mortar/execute.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -218,6 +168,14 @@ class DestroyAnalysis(LoginRequiredMixin, APIView):
         analysis.delete()
         return HttpResponseRedirect(reverse('configure'))
         
+class UploadMindMapApi(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        mindmap = models.Tree.objects.get(pk=self.kwargs.get('pk'))
+        if request.FILES.get('file'):
+            utils.read_mindmap(mindmap, request.FILES['file'].read())
+            utils.associate_tree(mindmap)
+        return HttpResponseRedirect(reverse('configure'))
+
 class EditNodeApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         node = models.Node.objects.get(pk=self.kwargs.get('pk'))
@@ -232,10 +190,19 @@ class DeleteNodeApi(LoginRequiredMixin, APIView):
         node.delete()
         return HttpResponseRedirect(reverse('configure'))
 
+class AddSeedsApi(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        crawler = models.Crawler.objects.get(pk=self.kwargs.get('pk'))
+        seeds = request.POST.get('seed_list').split('\n')
+        for seed in seeds:
+            if len(seed):
+                useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
+                crawler.seed_list.add(useed)
+        return HttpResponseRedirect(reverse('configure'))
+
 class EditSeedApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         seed = models.URLSeed.objects.get(pk=self.kwargs.get('pk'))
-        print(request.POST)
         seed.url = request.POST.get('url')
         seed.save()
         return HttpResponseRedirect(reverse('configure'))
@@ -246,104 +213,85 @@ class DeleteSeedApi(LoginRequiredMixin, APIView):
         seed.delete()
         return HttpResponseRedirect(reverse('configure'))
 
+class AddDictionaryApi(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        name = request.POST.get('dict_name')
+        words = request.POST.get('words').split('\n')
+        clean = [word.replace("&#13;",'').replace('&#10;', '').strip() for word in words]
+        d_words = clean.join('\n')
+        new_dict = models.Dictionary.objects.create(name=name, filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]), words=d_words)
+        d.save()
+        return HttpResponseRedirect(reverse('configure'))
+
 class EditDictionaryApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
 
         words = request.POST.get('words').split('\n')
-        print(request.POST.get('words'))
-        dic_words = dic.words.all()
-        new_words = []
-        with transaction.atomic():
-            for word in words:
-                clean = word.replace("&#13;",'').replace('&#10;', '').strip()
-                w,created = models.Word.objects.get_or_create(name=clean, dictionary=dic)
-                new_words.append(w)
-        
-            for word in dic_words:
-                if word not in new_words:
-                   word.delete()
+        clean = [word.replace("&#13;",'').replace('&#10;', '').strip() for word in words]
+        d.words = clean.join('\n')
+        d.save()
         return HttpResponseRedirect(reverse('configure'))
 
 class DeleteDictionaryApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
-        words = dic.words.all()
-        words.delete()
         dic.delete()
         return HttpResponseRedirect(reverse('configure'))
 
-
-class QueryCreateView(LoginRequiredMixin, django.views.generic.TemplateView):
-    template_name = 'mortar/query.html'
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(QueryCreateView, self).get_context_data(**kwargs)
-        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        tree = analysis.mindmap
-        context['tree'] = tree
-        context['dict_form'] = forms.DictionaryPartForm()
-        context['regex_form'] = forms.RegexPartForm()
-        context['subquery_form'] = forms.SubQueryPartForm()
-        context['pos_form'] = forms.PartOfSpeechPartForm()
-        return context
-
+class UpdateQueryApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
-        context = self.get_context_data(*args, **kwargs)
-        print(request.POST)
+        type_list = ['regex', 'dictionary', 'part_of_speech']
+        query = models.Query.objects.get(pk=self.kwargs.get('pk'))
+        query.parts.all().delete()
+        query.category = request.POST.get('category')
+        types = request.POST.getlist('part_type')
         oplist = request.POST.getlist('op')
-        count = len(oplist)
-        print(count)
-        if count and request.POST.get('form_type_1'):
-            query = models.Query.objects.create()
-            parts = []
-            if count == 1 and not len(oplist[0]):
-                part_type = request.POST.get('form_type_1')
-                part_list = request.POST.getlist(part_type)
-                part_id = part_list[0]
-                querypart = utils.create_query_part(part_type, part_id, query, op=None)
-                string = part_type + ': ' + querypart.name
-                query.name = string[:50]
-                query.string = string
-                query.elastic_json = utils.create_query_from_part(part_type, querypart)
-                query.save()
-            else:
-                string = ''
-                for part in range(0,count+1):
-                    part_type = request.POST.get('form_type_' + str(part+1))
-                    if part > 0:
-                        op = oplist[part-1]
-                        string = '(' + string
-                    else:
-                        op = oplist[part]
-                    part_list = request.POST.getlist(part_type)
-                    part_id = part_list[part]
-                    querypart = utils.create_query_part(part_type, part_id, query, op=op)
-                    if part == 0:
-                        string += part_type + '.' + part_id + ' ' + op + ' '
-                    elif part == 1:
-                        string += part_type + '.' + part_id + ') '
-                    else:
-                        string += op + ' ' + part_type + '.' + part_id + ') '
-
-                string += ')'
-                query.name = string[:50]
-                query.string = string
-                query.elastic_json = utils.create_query_from_string(string)
-                query.save()
-
-            return HttpResponseRedirect(reverse('configure'))
-        return render(request, self.template_name, context=self.get_context_data(**kwargs))
-
-    def get(self, request, *args, **kwargs):
-        context = self.get_context_data(*args, **kwargs)
-        context['dict_form'].fields['dictionary'].queryset = models.Dictionary.objects.all()
-        context['regex_form'].fields['regex'].queryset = models.Node.objects.filter(tree_link=context['tree'], regex__isnull=False)
-        context['subquery_form'].fields['subquery'].queryset = models.Query.objects.annotate(num_parts=Count('parts')).filter(num_parts__gt=1)
-        return self.render_to_response(context)
+        parts = []
+        if len(types) == 1:
+            part_list = request.POST.getlist(type_list[int(types[0])])
+            querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
+            string = type_list[int(types[0])] + ': ' + querypart.name
+            query.string = string
+            query.elastic_json = utils.create_query_from_part(types[0], querypart)
+            query.save()
+        else:
+            dicts = request.POST.getlist('dictionary')
+            regs = request.POST.getlist('regex')
+            pos = request.POST.getlist('part_of_speech')
+            string = ''
+            for count in range(0,len(types)):
+                if count > 0:
+                    op = oplist[count-1]
+                    string = '(' + string
+                else:
+                    op = oplist[count]
+                part_type = int(types[count])
+                part_list = regs
+                if part_type == 1:
+                    part_list = dicts
+                if part_type == 2:
+                    part_list = pos
+                part_id = part_list.pop(0)
+                querypart = utils.create_query_part(type_list[part_type], part_id, query, op=op)
+                opname = 'AND' if op else 'OR'
+                if count == 0:
+                    string += type_list[part_type] + '.' + part_id + ' ' + opname + ' '
+                elif count == 1:
+                    string += type_list[part_type] + '.' + part_id + ') '
+                else:
+                    string += opname + ' ' + type_list[part_type] + '.' + part_id + ')'
+            string += ')'
+            query.string = string
+            query.elastic_json = utils.create_query_from_string(string)
+            query.save()
+        if query.parts.all():
+            analysis = models.Analysis.objects.get(pk=0)
+            analysis.status = 4
+            analysis.save()
+        return HttpResponseRedirect(reverse('configure'))
 
 class DictionaryUpdateView(LoginRequiredMixin, APIView):
-
     def get(self, request, *args, **kwargs):
         tasks.sync_dictionaries.delay()
         return HttpResponseRedirect(reverse('configure'))
@@ -368,5 +316,9 @@ edit_node = EditNodeApi.as_view()
 delete_node = DeleteNodeApi.as_view()
 edit_dict = EditDictionaryApi.as_view()
 delete_dict = DeleteDictionaryApi.as_view()
+add_dict = AddDictionaryApi.as_view()
+add_seeds = AddSeedsApi.as_view()
+update_query = UpdateQueryApi.as_view()
+upload_mindmap = UploadMindMapApi.as_view()
 update_dictionaries = DictionaryUpdateView.as_view()
 home = Home.as_view()
