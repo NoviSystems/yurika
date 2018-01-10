@@ -6,6 +6,7 @@ urlpatterns = [
  url('^execute/start/(?P<pk>[\\d]+)/$', views.start_analysis, name="start-analysis"),
  url('^execute/stop/(?P<pk>[\\d]+)/$', views.stop_analysis, name="stop-analysis"),
  url('^execute/destroy/(?P<pk>[\\d]+)/$', views.destroy_analysis, name="destroy-analysis"),
+ url('^status/execute/(?P<pk>[\\d]+)/$', views.analysis_status, name="analysis-status"),
  url('^status/crawler/(?P<pk>[\\d]+)/$', views.crawler_status, name="crawler-status"),
  url('^status/preprocess/(?P<pk>[\\d]+)/$', views.preprocess_status, name="preprocess-status"),
  url('^status/query/(?P<pk>[\\d]+)/$', views.query_status, name="query-status"),

@@ -32,9 +32,15 @@
         {% if request.user.is_authenticated %}
         <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
-        <li class="active">
+        {% if ANALYSIS_STATUS > 4 and ANALYSIS_STATUS < 8 %}
+          <li>
+            <p class="navbar-text">1. Configure</p>
+          </li>
+        {% else %}
+          <li class="active">
             <a href="{% url 'configure' %}">1. Configure</a>
-        </li>
+          </li>
+        {% endif %}
         {% if ANALYSIS_STATUS > 3 %}
           <li class="active">
             <a href="{% url 'analyze' %}">2. Execute</a>

@@ -3,48 +3,99 @@
 <div class="visible-desktop container body-wrapper">
     <div class="row">
       <div class="col-xs-6">
-        <a href="{% url 'configure' %}" class="btn btn-xs btn-default">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
+        <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if ANALYSIS_STATUS > 4 and ANALYSIS_STATUS < 8 %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       {% if ANALYSIS_STATUS > 7 %}
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer' %}" class="btn btn-xs btn-success">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="btn btn-xs btn-success">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
       {% endif %}
     </div>
     <div class="row">&emsp;</div>
-  <div class="panel {% if ANALYSIS_STATUS > 7 %}panel-success{% else %} panel-info {% endif %}">
+  <div class="panel {% if ANALYSIS_STATUS == 8 %}panel-success{% else %} panel-info {% endif %}">
     <div class="panel-heading"><h3 class="panel-title">Controls</h3></div>
     <div id="controls" class="panel-body">
       <div class="row">
-        <div class="col-xs-12">
-          
-        </div>
+        {% if ANALYSIS_STATUS == 4 or ANALYSIS_STATUS > 7 %}
+          <div class="col-xs-1">
+            <form action="{% url 'start-analysis' analysis.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-success" type="submit" name="start" value="Start" />
+            </form>
+          </div>
+          <div class="col-xs-1">
+            <form action="{% url 'destroy-analysis' analysis.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-danger" type="submit" name="destroy" value="Destroy" />
+            </form>
+          </div>
+        {% else %}
+          <div class="col-xs-1">
+            <form action="{% url 'stop-analysis' analysis.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-primary" type="submit" name="stop" value="Stop" />
+            </form>
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
-  <div class="panel {% if ANALYSIS_STATUS > 7 %}panel-success{% else %}panel-info{% endif %}">
+  <div class="panel {% if ANALYSIS_STATUS == 8 %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading"><h3 class="panel-title">Progress</h3></div>
     <div id="progress" class="panel-body">
       <div class="row">
-
+        <div class="col-xs-12">
+          <h4>Crawling</h4>
+        </div>
+        <div class="col-xs-6">
+          <div class="progress">
+            <div id="crawl" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" ariavaluemax="100" style="width: 0%;">
+            </div>
+          </div>
+        </div>
+        <div id="crawl-text" class="col-xs-6">
+          0 Documents Crawled
+        </div>
       </div>
       <div class="row">
-
+        <div class="col-xs-12">
+          <h4>Processing</h4>
+        </div>
+        <div class="col-xs-6">
+          <div class="progress">
+            <div id="process" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="50" ariavaluemax="100" style="width: 0%;">
+            </div>
+          </div>
+        </div>
+        <div id="process-text" class="col-xs-6">
+          0/0 Documents Processed
+        </div>
       </div>
       <div class="row">
-
+        <div class="col-xs-12">
+          <h4>Querying</h4>
+        </div>
+        <div class="col-xs-6">
+          <div class="progress">
+            <div id="query" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" ariavaluemax="100" style="width: 0%;">
+            </div>
+          </div>
+        </div>
+        <div id="query-text" class="col-xs-6">
+          0 Results Found
+        </div>
       </div>
     </div>
   </div>
   <div class="row">&emsp;</div>
   <div class="row">
       <div class="col-xs-6">
-        <a href="{% url 'configure' %}" class="btn btn-xs btn-default">1. Configure <i 
+        <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if ANALYSIS_STATUS > 4 and ANALYSIS_STATUS < 8 %}disabled{% endif %}">1. Configure <i 
 class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       {% if ANALYSIS_STATUS > 7 %}
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer' %}" class="btn btn-xs btn-success">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="btn btn-xs btn-success">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
       {% endif %}
     </div>
@@ -53,8 +104,86 @@ class="glyphicon glyphicon-arrow-left"></i></a>
 {% endblock %}
 {% block scripts %}
 <script>
-$(document).ready(function() {
+// 5 = crawling, 6 = processing, 7 = querying, 8 = finished, 9=stopped
+var stat = {{ ANALYSIS_STATUS }};
+function crawl_status() {
+    $.getJSON("{% url 'crawler-status' analysis.pk %}", function(data) {
+        var d = JSON.parse(data);
+        $('#crawl-text').text('' + d.count + " Documents Crawled");
+    });
+    $('#crawl').css('width', '100%').attr('aria-valuenow', '100');
+    if($('#crawl').hasClass('active') == false) {
+      $('#crawl').addClass('active').addClass('progress-bar-striped');
+    }
+}
+function process_status() {
+    $.getJSON("{% url 'preprocess-status' analysis.pk %}", function(data) {
+        var d = JSON.parse(data);
+        $('#process-text').text('' + d.count + '/' + d.source + " Documents Processed");
+        var percent = (d.count/d.source)*100;
+        $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
+    });
 
+    if($('#crawl').hasClass('active')) {
+      $('#crawl').removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-info');
+      $('#crawl').addClass('progress-bar-success');
+    }
+    if($('#process').hasClass('active') == false ) {
+      $('#process').addClass('active').addClass('progress-bar-striped');
+    }
+}
+function query_status() {
+    $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
+        var d = JSON.parse(data);
+        $('query-text').text('' + d.count + " Results Found");
+    });
+    $('#query').css('width', '100%').attr('aria-valuenow', '100');
+    if($('#process').hasClass('active')) {
+      $('#process').removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-info');
+      $('#process').addClass('progress-bar-success');
+    }
+    if($('#query').hasClass('active') == false) {
+      $('#query').addClass('active').addClass('progress-bar-striped');
+    }
+}
+$(document).ready(function() {
+    $.getJSON("{% url 'crawler-status' analysis.pk %}", function(data) {
+        var d = JSON.parse(data);
+        if(d.count) {
+            $('#crawl-text').text('' + d.count + " Documents Crawled");
+            $('#crawl').css('width', '100%').attr('aria-valuenow', '100');
+        }
+    });
+    $.getJSON("{% url 'preprocess-status' analysis.pk %}", function(data) {
+        var d = JSON.parse(data);
+        if(d.count) {
+            $('#process-text').text('' + d.count + '/' + d.source + " Documents Processed");
+            var percent = (d.count/d.source)*100;
+            $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
+        }
+    });
+    $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
+       var d = JSON.parse(data);
+       if(d.count) {
+           $('query-text').text('' + d.count + " Results Found");
+           $('#query').css('width', '100%').attr('aria-valuenow', '100');
+       }
+    });
 });
+window.setInterval(function () {
+    $.getJSON("{% url 'analysis-status' analysis.pk %}", function(data) {
+        var d = JSON.parse(data);
+        stat = d.state;
+    });
+    if(stat == 5) {
+      crawl_status();
+    }
+    else if(stat == 6) {
+      process_status();
+    }
+    else if(stat == 7) {
+      query_status();
+    }
+}, 10000);
 </script>
 {% endblock %}

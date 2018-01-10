@@ -29,7 +29,7 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         analysis,created = models.Analysis.objects.get_or_create(id=0)
         source,created = models.ElasticIndex.objects.get_or_create(name="source")
         dest,created = models.ElasticIndex.objects.get_or_create(name="dest")
-        crawler,created = models.Crawler.objects.get_or_create(name="default", category="web", index=source, status=2)
+        crawler,created = models.Crawler.objects.get_or_create(name="default", category="web", index=source)
         mindmap,created = models.Tree.objects.get_or_create(name="default", slug="default", doc_source_index=source, doc_dest_index=dest)
         query,created = models.Query.objects.get_or_create(name="default")
         analysis.crawler = crawler
@@ -80,6 +80,11 @@ class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['analysis'] = analysis
         return context
 
+class AnalysisStatus(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        return Response(json.dumps({'analysis': analysis.pk, 'state': analysis.status}))
+
 class CrawlerStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         try:
@@ -89,9 +94,9 @@ class CrawlerStatus(LoginRequiredMixin, APIView):
             index = crawler.index.name
             es = settings.ES_CLIENT
             count = es.count(index=index).get('count')
-            return Response(json.dumps({'status': crawler.status, 'count': count}))
+            return Response(json.dumps({'analysis': analysis.pk, 'status': crawler.status, 'count': count}))
         except:
-            return Response(json.dumps({}))
+            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0}))
 
 class PreprocessStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -102,10 +107,10 @@ class PreprocessStatus(LoginRequiredMixin, APIView):
             dest = mindmap.doc_dest_index.name
             es = settings.ES_CLIENT
             s_count = es.count(index=source).get('count')
-            d_count = es.count(index=dest).get('count')
-            return Response(json.dumps({'status': 0 if mindmap.process_id else 1, 'count': d_count, 'source': s_count}))
+            d_count = es.count(index=dest, doc_type="doc").get('count')
+            return Response(json.dumps({'analysis': analysis.pk, 'status': 0 if mindmap.process_id else 1, 'count': d_count, 'source': s_count}))
         except:
-            return Response(json.dumps({}))
+            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0, 'source': 0}))
 
 class QueryStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -113,14 +118,14 @@ class QueryStatus(LoginRequiredMixin, APIView):
             analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
             query = analysis.query
             count = models.Annotation.objects.get(query=query).count()
-            return Response(json.dumps({'status': 0 if query.process_id else 1, 'count': count }))
+            return Response(json.dumps({'analysis': analysis.pk, 'status': 0 if query.process_id else 1, 'count': count }))
         except:
-            return Response(json.dumps({}))
+            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0 }))
 
 class StartAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.status:
+        if analysis.status == 4 or analysis.status > 7:
             tasks.analyze.delay(analysis.pk)
             return HttpResponseRedirect(reverse('analyze'))
         else:
@@ -129,27 +134,27 @@ class StartAnalysis(LoginRequiredMixin, APIView):
 class StopAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.status == 2:
+        if analysis.status == 5:
             if analysis.crawler.process_id:
                 revoke(analysis.crawler.process_id, terminate=True)
                 analysis.crawler.process_id = None
                 analysis.crawler.finished_at = datetime.datetime.now()
                 analysis.crawler.status = 2
                 analysis.crawler.save()
-        if analysis.status == 3:
+        if analysis.status == 6:
             if analysis.mindmap.process_id:
                 revoke(analysis.mindmap.process_id, terminate=True)
                 analysis.mindmap.process_id = None
                 analysis.mindmap.finished_at = datetime.datetime.now()
                 analysis.mindmap.save()
-        if analysis.status == 4:
+        if analysis.status == 7:
             if analysis.query.process_id:
                 revoke(analysis.query.process_id, terminate=True)
                 analysis.query.process_id=None
                 analysis.query.finished_at = datetime.datetime.now()
                 analysis.query.save()
                 
-        analysis.status = 6
+        analysis.status = 9
         analysis.finished_at = datetime.datetime.now()
         analysis.save()
         return HttpResponseRedirect(reverse('analyze'))
@@ -300,13 +305,18 @@ class Home(django.views.generic.TemplateView):
     template_name = 'home.html'
 
     def get(self, request, *args, **kwargs):
-        return HttpResponseRedirect(reverse('configure'))
+        analysis,created = models.Analysis.objects.get_or_create(pk=0)
+        if analysis.status < 5:
+            return HttpResponseRedirect(reverse('configure'))
+        else:
+            return HttpResponseRedirect(reverse('analyze'))
 
 configure = ConfigureView.as_view()
 analyze = AnalyzeView.as_view()
 start_analysis = StartAnalysis.as_view()
 stop_analysis = StopAnalysis.as_view()
 destroy_analysis = DestroyAnalysis.as_view()
+analysis_status = AnalysisStatus.as_view()
 crawler_status = CrawlerStatus.as_view()
 preprocess_status = PreprocessStatus.as_view()
 query_status = QueryStatus.as_view()
