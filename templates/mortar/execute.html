@@ -5,11 +5,9 @@
       <div class="col-xs-6">
         <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if ANALYSIS_STATUS > 4 and ANALYSIS_STATUS < 8 %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
-      {% if ANALYSIS_STATUS > 7 %}
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="btn btn-xs btn-success">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if ANALYSIS_STATUS == 8 %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
-      {% endif %}
     </div>
     <div class="row">&emsp;</div>
   <div class="panel {% if ANALYSIS_STATUS == 8 %}panel-success{% else %} panel-info {% endif %}">
@@ -93,11 +91,9 @@
         <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if ANALYSIS_STATUS > 4 and ANALYSIS_STATUS < 8 %}disabled{% endif %}">1. Configure <i 
 class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
-      {% if ANALYSIS_STATUS > 7 %}
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="btn btn-xs btn-success">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if ANALYSIS_STATUS == 8 %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
-      {% endif %}
     </div>
   <span class="row"></span>
 </div>

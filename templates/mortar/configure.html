@@ -1,14 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="visible-desktop container body-wrapper">
-  {% if ANALYSIS_STATUS > 3 %}
     <div class="row">
       <div class="col-xs-12 text-right">
-        <a href="{% url 'analyze' %}" class="btn btn-xs btn-success">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'analyze' %}" class="btn btn-xs {% if ANALYSIS_STATUS > 3 %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
     </div>
     <div class="row">&emsp;</div>
-  {% endif %}
   <div class="panel {% if crawl_conf %}panel-success{% else %} panel-info {% endif %}">
     <div class="panel-heading"><h3 class="panel-title"><a href="#crawler" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if crawl_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 1. Crawler</a>
       {% if seed_list %} 
@@ -219,9 +217,8 @@
       <a href="#dictionaries" class="btn btn-xs btn-default">Configure Dictionaries</a>
     {% elif ANALYSIS_STATUS == 3 %}
       <a href="#query" class="btn btn-xs btn-default">Configure Query</a>
-    {% else %}
-      <a href="{% url 'analyze' %}" class="btn btn-xs btn-success">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
     {% endif %}
+    <a href="{% url 'analyze' %}" class="btn btn-xs {% if ANALYSIS_STATUS > 3 %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
     </div>
   </div>
   <span class="row"></span>
