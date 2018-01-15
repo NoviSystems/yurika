@@ -15,6 +15,7 @@ from django.db.models import Count
 from django.conf import settings
 from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib import messages
+from scrapy.crawler import CrawlerProcess
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -117,7 +118,7 @@ class QueryStatus(LoginRequiredMixin, APIView):
         try: 
             analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
             query = analysis.query
-            count = models.Annotation.objects.get(query=query).count()
+            count = models.Annotation.objects.using('explorer').filter(query_id=query.id).count()
             return Response(json.dumps({'analysis': analysis.pk, 'status': 0 if query.process_id else 1, 'count': count }))
         except:
             return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0 }))
@@ -137,6 +138,7 @@ class StopAnalysis(LoginRequiredMixin, APIView):
         if analysis.status == 5:
             if analysis.crawler.process_id:
                 revoke(analysis.crawler.process_id, terminate=True)
+                CrawlerProcess.stop()
                 analysis.crawler.process_id = None
                 analysis.crawler.finished_at = datetime.datetime.now()
                 analysis.crawler.status = 2
@@ -168,11 +170,72 @@ class DestroyAnalysis(LoginRequiredMixin, APIView):
             analysis.crawler.delete()
         if analysis.query:
             analysis.query.delete()
-        annotations = models.Annotation.objects.filter(analysis_id=analysis.id)
+        annotations = models.Annotation.objects.using('explorer').filter(analysis_id=analysis.id)
         annotations.delete()
         analysis.delete()
+        es = settings.ES_CLIENT
+        es.indices.delete(index='source', ignore=[400, 404])
+        es.indices.delete(index='dest', ignore=[400, 404])
         return HttpResponseRedirect(reverse('configure'))
         
+class StartCrawler(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        crawler = models.Crawler.objects.get(pk=self.kwargs.get('pk'))
+        if not crawler.process_id:
+            tasks.start_crawler.delay(crawler.pk)
+        return HttpResponseRedirect(reverse('analyze'))
+
+class StopCrawler(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        crawler = models.Crawler.objects.get(pk=self.kwargs.get('pk'))
+        if crawler.process_id:
+            revoke(crawler.process_id, terminate=True)
+            analysis = models.Analysis.objects.get(pk=0)
+            crawler.process_id = None
+            crawler.save()
+            analysis.status = 9
+            analysis.save()
+
+        return HttpResponseRedirect(reverse('analyze'))
+
+class StartPreprocess(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        mindmap = models.Tree.objects.get(pk=self.kwargs.get('pk'))
+        if not mindmap.process_id:
+            tasks.preprocess.delay(mindmap.pk)
+        return HttpResponseRedirect(reverse('analyze'))
+
+class StopPreprocess(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        mindmap = models.Tree.objects.get(pk=self.kwargs.get('pk'))
+        if mindmap.process_id:
+            revoke(mindmap.process_id)
+            analysis = models.Analysis.objects.get(pk=0)
+            mindmap.process_id=None
+            mindmap.save()
+            analysis.status = 9
+            analysis.save()
+        return HttpResponseRedirect(reverse('analyze'))
+
+class StartQuery(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        query = models.Query.objects.get(pk=self.kwargs.get('pk'))
+        if not query.process_id:
+            tasks.run_query.delay(query.pk)
+        return HttpResponseRedirect(reverse('analyze'))
+
+class StopQuery(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        query = models.Query.objects.get(pk=self.kwargs.get('pk'))
+        if query.process_id:
+            revoke(query.process_id)
+            analysis = models.Analysis.objects.get(pk=0)
+            query.process_id=None
+            query.save()
+            analysis.status = 9
+            analysis.save()
+        return HttpResponseRedirect(reverse('analyze'))
+
 class UploadMindMapApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         mindmap = models.Tree.objects.get(pk=self.kwargs.get('pk'))
@@ -320,6 +383,12 @@ analysis_status = AnalysisStatus.as_view()
 crawler_status = CrawlerStatus.as_view()
 preprocess_status = PreprocessStatus.as_view()
 query_status = QueryStatus.as_view()
+start_crawler = StartCrawler.as_view()
+stop_crawler = StopCrawler.as_view()
+start_preprocess = StartPreprocess.as_view()
+stop_preprocess = StopPreprocess.as_view()
+start_query = StartQuery.as_view()
+stop_query = StopQuery.as_view()
 edit_seed = EditSeedApi.as_view()
 delete_seed = DeleteSeedApi.as_view()
 edit_node = EditNodeApi.as_view()

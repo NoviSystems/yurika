@@ -36,6 +36,48 @@
           </div>
         {% endif %}
       </div>
+      <div class="row">&emsp;</div>
+      <div class="row">
+        <div class="col-xs-12">
+          <a href="#advanced-controls" data-toggle="collapse">Advanced</a>
+          <div id="advanced-controls" class="collapse">
+            Please run these in the following order, and only one at a time.
+            {% if analysis.crawler.process_id %}
+            <form action="{% url 'stop-crawler' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Stop Crawler" />
+            </form>
+            {% else %}
+            <form action="{% url 'start-crawler' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Crawler" />
+            </form>
+            {% endif %}
+            {% if analysis.mindmap.process_id %}
+            <form action="{% url 'stop-preprocess' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Stop Preprocess" />
+            </form>
+            {% else %}
+            <form action="{% url 'start-preprocess' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Preprocess" />
+            </form>
+            {% endif %}
+            {% if analysis.query.process_id %}
+            <form action="{% url 'stop-query' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Stop Query" />
+            </form>
+            {% else %}
+            <form action="{% url 'start-query' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Query" />
+            </form>
+            {% endif %} 
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="panel {% if ANALYSIS_STATUS == 8 %}panel-success{% else %}panel-info{% endif %}">
@@ -131,7 +173,7 @@ function process_status() {
 function query_status() {
     $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
         var d = JSON.parse(data);
-        $('query-text').text('' + d.count + " Results Found");
+        $('#query-text').text('' + d.count + " Results Found");
     });
     $('#query').css('width', '100%').attr('aria-valuenow', '100');
     if($('#process').hasClass('active')) {
@@ -148,6 +190,7 @@ $(document).ready(function() {
         if(d.count) {
             $('#crawl-text').text('' + d.count + " Documents Crawled");
             $('#crawl').css('width', '100%').attr('aria-valuenow', '100');
+            $('#crawl').removeClass('progress-bar-info').addClass('progress-bar-success');
         }
     });
     $.getJSON("{% url 'preprocess-status' analysis.pk %}", function(data) {
@@ -156,13 +199,19 @@ $(document).ready(function() {
             $('#process-text').text('' + d.count + '/' + d.source + " Documents Processed");
             var percent = (d.count/d.source)*100;
             $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
+            if (percent == 100) {
+                $('#process').removeClass('progress-bar-info').addClass('progress-bar-success');
+            }
         }
     });
     $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
        var d = JSON.parse(data);
        if(d.count) {
-           $('query-text').text('' + d.count + " Results Found");
+           $('#query-text').text('' + d.count + " Results Found");
            $('#query').css('width', '100%').attr('aria-valuenow', '100');
+           if( stat == 8) {
+               $('#query').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
+           }
        }
     });
 });
@@ -180,6 +229,11 @@ window.setInterval(function () {
     else if(stat == 7) {
       query_status();
     }
-}, 10000);
+    else if(stat == 8) {
+        $('#crawl').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
+        $('#process').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
+        $('#query').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
+    }
+}, 3000);
 </script>
 {% endblock %}

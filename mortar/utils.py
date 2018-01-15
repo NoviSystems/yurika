@@ -192,7 +192,7 @@ def make_dict_query(dictionary):
 
 
 def make_regex_query(regex):
-    return {'bool': {'must': {'regexp': {'content': regex.regex}}}}
+    return {'bool': {'must': {'regexp': {'content': regex.regex if regex.regex else regex.name}}}}
 
 
 def make_pos_query(pos):
@@ -251,8 +251,8 @@ def tokenize_doc(esdoc):
     content = esdoc['_source']['content']
     sentences = nltk.tokenize.sent_tokenize(content)
     tokens = [nltk.tokenize.word_tokenize(s) for s in sentences]
-    return (
-     sentences, tokens)
+    pos_tokens = nltk.pos_tag_sents(tokens)
+    return list(zip(sentences, pos_tokens))
 
 def tokenize_paragraph(paragraph):
     sentences = nltk.tokenize.sent_tokenize(paragraph)
@@ -278,10 +278,9 @@ def content_to_sentences(content, paragraph, tree, esdoc, django_id):
     es_out = []
     tagged_paragraph = ''
     place = 0
-    for tupl in content:
-        sent, pos = tupl
+    for sent,pos in content:
         tagged_sentence = ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
-        body = {'_op_type': 'index',
+        body = {
          '_type': 'sentence',
          '_source': {
            'content': sent.rstrip('\n'),
@@ -307,7 +306,7 @@ def content_to_paragraphs(esdoc, tree, django_id):
             sentence_content = tokenize_paragraph(p)
             tags, sentences = content_to_sentences(sentence_content, place, tree, esdoc, django_id)
             out.extend(sentences)
-            body = {'_op_type': 'index',
+            body = {
              '_type': 'paragraph', 
              '_source': {
                'content': p,
@@ -331,14 +330,18 @@ def get_indexed_docs(tree, filter_query):
     return queried
 
 
-def insert_pos_record(id, esdoc, tree):
+def insert_pos_record(id, esdoc, tree, query):
     es = settings.ES_CLIENT
     body = {'url': esdoc['_source']['url'],
      'tstamp': esdoc['_source']['tstamp'],
      'content': esdoc['_source']['content']}
     es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
-    es_actions = content_to_paragraphs(esdoc, tree, id)
-    helpers.bulk(client=es, actions=es_actions)
+    if query.category == 0:
+        parag,es_out = content_to_sentences(tokenize_doc(esdoc), 0, tree, esdoc, id)
+        helpers.bulk(client=es, actions=es_out)
+    elif query.category == 1:
+        helpers.bulk(client=es, actions=content_to_paragraphs(esdoc, tree, id))
+        
 
 def create_pos_index(tree):
     es = settings.ES_CLIENT
@@ -350,24 +353,26 @@ def create_pos_index(tree):
         i_client.create(index=name, body=json.dumps(pos_settings))
     
 
-def process(tree, query):
-    docs = get_indexed_docs(tree, query)
+def process(tree, filter, query):
+    docs = get_indexed_docs(tree, filter)
     create_pos_index(tree)
     for esdoc in docs:
         doc = clean_doc(esdoc, tree)
         if doc is not None:
-            insert_pos_record(doc.id, esdoc, tree)
+            insert_pos_record(doc.id, esdoc, tree, query)
 
 
-def annotate(analysis, tree, category, query):
+def annotate(analysis):
+    tree = analysis.mindmap
+    query = analysis.query
     es = settings.ES_CLIENT
     i_client = IndicesClient(client=es)
     if not i_client.exists(tree.doc_dest_index.name):
         process(tree, {'names': [], 'regexs': []})
     doc_type = 'doc'
-    if category == 'S':
+    if query.category == 0:
         doc_type = 'sentence'
-    elif category == 'P':
+    elif query.category == 1:
         doc_type = 'paragraph'
     else: 
         doc_type = 'doc'
@@ -375,4 +380,5 @@ def annotate(analysis, tree, category, query):
     search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
-        anno = models.Annotation.objects.create(content=hit['_source']['content'], analysis_id=analysis.id, query_id=query.id, document=doc.id, category=category)
+        with transaction.atomic():
+            anno = models.Annotation.objects.using('explorer').create(content=hit['_source']['content'], analysis_id=analysis.id, query_id=query.id, document_id=doc.id, category=query.category)

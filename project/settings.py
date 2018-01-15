@@ -50,6 +50,12 @@ PARTS_OF_SPEECH = (('CC', 'Coordinating Conjunction'),
                    ('WP$', 'Possessive wh-pronoun'),
                    ('WRB', 'Wh-adverb')) 
 
+DO_NOT_CRAWL = [
+    'amazon',
+    'twitter',
+    'wikipedia',
+]
+
 STATIC_ROOT = os.path.join(BASE_DIR, 'static_root')
 ES_URL = 'http://127.0.0.1:9200/'
 ES_CLIENT = Elasticsearch([ES_URL], connection_class=RequestsHttpConnection)
