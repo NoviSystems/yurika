@@ -1,8 +1,16 @@
-
-{% extends "explorer/base.html" %}
-
-{% block sql_explorer_content_takeover %}
-<div class="schema-wrapper">
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">  
+    <link href="{% static 'css/codemirror.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'css/pivot.min.css' %}" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/explorer.css' %}" />
+</head>
+<body>
+  <div class="schema-wrapper">
     <h4 class="text-center">Schema</h4>
     <div id="tables">
         <p class="text-center">
@@ -44,10 +52,12 @@
         </ul>
     </div>
 </div>
-{% endblock %}
-{% block sql_explorer_footer %}{% endblock %}
-
-{% block sql_explorer_scripts %}
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/jquery.cookie-1.4.1.min.js' %}"></script>
+<script src="{% static 'js/jquery-ui.11.4.min.js' %}"></script>
+<script src="{% static 'js/explorer.js' %}"></script>
+<script src="{% static 'js/list.min.js' %}"></script>
 <script>
     $(function() {
     function SearchFocus() {
@@ -72,4 +82,5 @@
         });
     });
 </script>
-{% endblock %}
+</body>
+</html>
