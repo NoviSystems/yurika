@@ -1,5 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
+
+<style>
+    .panel-heading:hover {
+        cursor: pointer;
+    }
+    .panel-heading:hover span {
+        text-decoration: underline;
+    }
+</style>
+
 <div class="visible-desktop container body-wrapper">
     <div class="row">
       <div class="col-xs-12 text-right">
@@ -8,7 +18,7 @@
     </div>
     <div class="row">&emsp;</div>
   <div class="panel {% if crawl_conf %}panel-success{% else %} panel-info {% endif %}">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#crawler" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if crawl_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 1. Crawler</a>
+    <div class="panel-heading" data-toggle="collapse" data-target="#crawler"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if crawl_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>1. Crawler</span>
       {% if seed_list %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
@@ -60,7 +70,7 @@
     </div>
   </div>
   <div class="panel {% if mm_conf %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#mindmap" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if mm_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 2. MindMap</a>
+    <div class="panel-heading" data-toggle="collapse" data-target="#mindmap"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if mm_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>2. MindMap</span>
       {% if mm_conf %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
@@ -105,7 +115,7 @@
     </div>
   </div>
   <div class="panel {% if dict_conf %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#dictionaries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if dict_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 3. Dictionaries</a>
+    <div class="panel-heading" data-toggle="collapse" data-target="#dictionaries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if dict_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>3. Dictionaries</span>
       {% if dict_conf %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
@@ -156,8 +166,7 @@
     </div>
   </div>
   <div class="panel {% if query_conf %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading"><h3 class="panel-title"><a href="#queries" class="root" data-toggle="collapse"><i id="dropdown" class="glyphicon {% if query_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> 4. Query</a>
-      {% if query_conf %} 
+    <div class="panel-heading" data-toggle="collapse" data-target="#queries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if query_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>4. Query</span> {% if query_conf %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
