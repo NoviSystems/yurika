@@ -126,8 +126,9 @@ class QueryStatus(LoginRequiredMixin, APIView):
 class StartAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.all_configured and not analysis.any_running:
-            tasks.analyze.delay(analysis.pk)
+        if analysis.all_configured:
+            if not analysis.any_running:
+                tasks.analyze.delay(analysis.pk)
             return HttpResponseRedirect(reverse('analyze'))
         else:
             return HttpResponseRedirect(reverse('configure'))
