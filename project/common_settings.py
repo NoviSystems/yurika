@@ -368,3 +368,5 @@ EXPLORER_DEFAULT_CONNECTION = 'explorer'
 # Each web crawl needs a new worker, since twisted reactors (used by scrapy)
 # cannot be restarted.
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
+
+EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ('django_', 'auth_', 'contenttypes_', 'sessions_', 'admin_')
