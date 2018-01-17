@@ -297,8 +297,8 @@ class EditDictionaryApi(LoginRequiredMixin, APIView):
 
         words = request.POST.get('words').split('\n')
         clean = [word.replace("&#13;",'').replace('&#10;', '').strip() for word in words]
-        d.words = clean.join('\n')
-        d.save()
+        dic.words = '\n'.join(clean)
+        dic.save()
         return HttpResponseRedirect(reverse('configure'))
 
 class DeleteDictionaryApi(LoginRequiredMixin, APIView):

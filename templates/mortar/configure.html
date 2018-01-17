@@ -50,7 +50,7 @@
           {% for seed,pk in seed_list %}
             <li class="list-group-item">
               <a href="{{ seed }}">{{ seed }}</a> &emsp;
-              <a href="#seed-{{pk}}" id="seed-{{pk}}" class="glyphicon glyphicon-pencil"></a>
+              <a href="#" id="seed-{{pk}}" class="glyphicon glyphicon-pencil"></a>
               <a href="{% url 'delete-seed-pk' pk %}" class="glyphicon glyphicon-trash"></a>
             </li>
           {% endfor %}
@@ -63,7 +63,7 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm btn-success" type="submit" name="save" value="crawler">Save Crawler</button>
+            <button class="btn btn-sm {% if seed_list %}btn-success{% else %} disabled {% endif %}" type="submit" name="save" value="crawler">Save Crawler</button>
           </form>
         </div>
       </div>
@@ -147,7 +147,7 @@
             {% for dict in dictionaries %}
               <div class="list-group-item">
                 {{ dict.name }} &emsp;
-                <a href="#dict-{{dict.pk}}" id="dict-{{dict.pk}}" class="glyphicon glyphicon-pencil"></a>
+                <a href="#" id="dict-{{dict.pk}}" class="glyphicon glyphicon-pencil"></a>
                 <a href="{% url 'delete-dict-pk' dict.pk %}" class="glyphicon glyphicon-trash"></a>
               </div>
             {% endfor %}
@@ -295,7 +295,7 @@ function unroll(node) {
         if(node.regex) {
             list += " : " + node.regex;
         }
-        list += "</a> " + `&emsp;<a href="#node-` + node.id + `" id="node-` + node.id + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a>`
+        list += "</a> " + `&emsp;<a href="#" id="node-` + node.id + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a>`
         list += `</div><div id="n-` + node.id + `" class="list-group collapse">`;
         for (var child in node['children']) {
             list += unroll(node['children'][child]);
@@ -307,7 +307,7 @@ function unroll(node) {
         if(node.regex) {
             list += " : " + node.regex;
         }
-        list += `</a>&emsp;<a href="#node-` + node.id + `" id="node-` + node.id + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a></div>`
+        list += `</a>&emsp;<a href="#" id="node-` + node.id + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + node.id + `" class="glyphicon glyphicon-trash"></a></div>`
     }
     return list;
 }
@@ -331,7 +331,7 @@ function edit_seed_form(pk, item, edit) {
             }
         }
         var li = `<a href="` + url + `">` + url + `</a>&emsp;
-            <a href="#seed-` + pk + `" id="seed-` + pk + `" class="glyphicon glyphicon-pencil"></a>
+            <a href="#" id="seed-` + pk + `" class="glyphicon glyphicon-pencil"></a>
             <a href="{% url 'delete-seed' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`;
         $(item).html(li);
     }
@@ -373,7 +373,7 @@ function edit_node_form(pk, item, edit) {
         if(regex) {
             div += " : " + regex;
         }
-        div += "</a> " + `&emsp;<a href="#node-` + pk + `" id="node-` + pk + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`; 
+        div += "</a> " + `&emsp;<a href="#" id="node-` + pk + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`; 
         $(item).parent().parent().html(div);
     }
 }
@@ -391,7 +391,7 @@ function edit_dict_form(pk, item, edit) {
         $(item).html(form);
     } else {
         var name = $(item).parent().parent().parent().find('p').text().trim();
-        var div = `` + name + `&emsp;<a href="#dict-` + pk +`" id="dict-` + pk + `" class="glyphicon glyphicon-pencil"></a><a href="{% url 'delete-dict' %}` + pk +`" class="glyphicon glyphicon-trash"></a>`;
+        var div = `` + name + `&emsp;<a href="#" id="dict-` + pk + `" class="glyphicon glyphicon-pencil"></a><a href="{% url 'delete-dict' %}` + pk +`" class="glyphicon glyphicon-trash"></a>`;
         $(item).parent().parent().parent().html(div);
     }
 }
