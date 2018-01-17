@@ -139,7 +139,6 @@ class StopAnalysis(LoginRequiredMixin, APIView):
         if analysis.crawler_running:
             if analysis.crawler.process_id:
                 revoke(analysis.crawler.process_id, terminate=True)
-                CrawlerProcess.stop()
                 analysis.crawler.process_id = None
                 analysis.crawler.finished_at = datetime.datetime.now()
                 analysis.crawler.status = 2
