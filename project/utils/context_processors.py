@@ -12,7 +12,7 @@ def analysis_status(request):
     if request.user.is_authenticated():
         try:
             analysis,created = Analysis.objects.get_or_create(id=0)
-            return {'ANALYSIS_STATUS': analysis.status}
+            return {'CONFIGURED': analysis.all_configured, 'RUNNING': analysis.any_running}
         except:
-            return {'ANALYSIS_STATUS': 0}
-    return {'ANALYSIS_STATUS': 0}
+            return {'CONFIGURED': False, 'RUNNING': False}
+    return {'CONFIGURED': False, 'RUNNING': False}

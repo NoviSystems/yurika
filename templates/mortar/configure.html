@@ -13,19 +13,19 @@
 <div class="visible-desktop container body-wrapper">
     <div class="row">
       <div class="col-xs-12 text-right">
-        <a href="{% url 'analyze' %}" class="btn btn-xs {% if ANALYSIS_STATUS > 3 %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'analyze' %}" class="btn btn-xs {% if CONFIGURED %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
     </div>
     <div class="row">&emsp;</div>
-  <div class="panel {% if crawl_conf %}panel-success{% else %} panel-info {% endif %}">
-    <div class="panel-heading" data-toggle="collapse" data-target="#crawler"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if crawl_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>1. Crawler</span>
-      {% if seed_list %} 
+  <div class="panel {% if analysis.crawler_configured %}panel-success{% else %} panel-info {% endif %}">
+    <div class="panel-heading" data-toggle="collapse" data-target="#crawler"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.crawler_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>1. Crawler</span>
+      {% if analysis.crawler_configured %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="crawler" class="panel-body collapse {% if not crawl_conf %}in{% endif %}">
+    <div id="crawler" class="panel-body collapse {% if not analysis.crawler_configured %}in{% endif %}">
       <form action="{% url 'add-seeds' crawler.pk %}" method="POST">
         <div class="row">
           <div class="col-xs-12"><p>Add some URLs to crawl!</p></div>
@@ -63,21 +63,21 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm {% if seed_list %}btn-success{% else %} disabled {% endif %}" type="submit" name="save" value="crawler">Save Crawler</button>
+            <button class="btn btn-sm {% if seed_list %}btn-success{% else %} btn-default disabled {% endif %}" type="submit" name="save" value="crawler">Save Crawler</button>
           </form>
         </div>
       </div>
     </div>
   </div>
-  <div class="panel {% if mm_conf %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading" data-toggle="collapse" data-target="#mindmap"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if mm_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>2. MindMap</span>
-      {% if mm_conf %} 
+  <div class="panel {% if analysis.mindmap_configured %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading" data-toggle="collapse" data-target="#mindmap"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.mindmap_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>2. MindMap</span>
+      {% if analysis.mindmap_configured %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="mindmap" class="panel-body collapse {% if not mm_conf %}in{% endif %}">
+    <div id="mindmap" class="panel-body collapse {% if not analysis.mindmap_configured %}in{% endif %}">
       <form action="{% url 'upload-mindmap' mindmap.pk %}" method="POST" enctype="multipart/form-data">
         <div class="row">
           <div class="col-xs-12"><p>Import a MindMap (.mm) file to create rules from Regular Expressions</p></div>
@@ -108,21 +108,21 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm btn-success" type="submit" name="save" value="mindmap">Save MindMap</button>
+            <button class="btn btn-sm {% if mindmap.nodes.all %}btn-success{% else %} btn-default disabled {% endif %}" type="submit" name="save" value="mindmap">Save MindMap</button>
           </form>
         </div>
       </div>
     </div>
   </div>
-  <div class="panel {% if dict_conf %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading" data-toggle="collapse" data-target="#dictionaries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if dict_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>3. Dictionaries</span>
-      {% if dict_conf %} 
+  <div class="panel {% if analysis.dicts_configured %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading" data-toggle="collapse" data-target="#dictionaries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.dicts_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>3. Dictionaries</span>
+      {% if analysis.dicts_configured %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="dictionaries" class="panel-body collapse {% if not dict_conf %}in{% endif %}">
+    <div id="dictionaries" class="panel-body collapse {% if not analysis.dicts_configured %}in{% endif %}">
       <form action="{% url 'add-dict' %}" method="POST">
         <div class="row">
           <div class="col-xs-12"><p><a href="{% url 'update-dicts' %}">Load System Dictionaries</a> : reads in all dictionaries from {{ dict_path }} (may take a while)</p></div>
@@ -159,20 +159,20 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm btn-success" type="submit" name="save" value="dicts">Save Dictionaries</button>
+            <button class="btn btn-sm {% if dictionaries %}btn-success{% else %} btn-default disabled{% endif %}" type="submit" name="save" value="dicts">Save Dictionaries</button>
           </form>
         </div>
       </div>
     </div>
   </div>
-  <div class="panel {% if query_conf %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading" data-toggle="collapse" data-target="#queries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if query_conf %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>4. Query</span> {% if query_conf %} 
+  <div class="panel {% if analysis.query_configured %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading" data-toggle="collapse" data-target="#queries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.query_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>4. Query</span> {% if analysis.query_configured %} 
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
       {% endif %}
     </h3></div>
-    <div id="queries" class="panel-body collapse {% if not query_conf %}in{% endif %}">
+    <div id="queries" class="panel-body collapse {% if not analysis.query_configured %}in{% endif %}">
       <div class="row">
         <div class="col-xs-12">
           <p>{{ query.string }}</p><p>Needs intuitive way of explaining/showing how this form works</p>
@@ -218,16 +218,16 @@
   <div class="row">&emsp;</div>
   <div class="row">
     <div class="col-xs-12 text-right">
-    {% if ANALYSIS_STATUS == 0 %}
+    {% if not analysis.crawler_configured %}
       <a href="#crawler" class="btn btn-xs btn-default">Configure Crawler</a>
-    {% elif ANALYSIS_STATUS == 1 %}
+    {% elif not analysis.mindmap_configured %}
       <a href="#mindmap" class="btn btn-xs btn-default">Configure MindMap</a>
-    {% elif ANALYSIS_STATUS == 2 %}
+    {% elif not analysis.dicts_configured %}
       <a href="#dictionaries" class="btn btn-xs btn-default">Configure Dictionaries</a>
-    {% elif ANALYSIS_STATUS == 3 %}
+    {% elif not analysis.query_configured %}
       <a href="#query" class="btn btn-xs btn-default">Configure Query</a>
     {% endif %}
-    <a href="{% url 'analyze' %}" class="btn btn-xs {% if ANALYSIS_STATUS > 3 %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
+    <a href="{% url 'analyze' %}" class="btn btn-xs {% if CONFIGURED %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
     </div>
   </div>
   <span class="row"></span>

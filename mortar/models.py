@@ -11,7 +11,35 @@ class Analysis(models.Model):
     query = models.ForeignKey('Query', related_name="analyses", null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
-    status = models.IntegerField(default=0, choices=((0, 'Not Configured'), (1, 'Crawler Configured'), (2, 'MindMap Configured'), (3, 'Dictionaries Configured'), (4, 'Query Configured'), (5, 'Crawling'), (6, 'Preprocessing'), (7, 'Querying'), (8, 'Finished'), (9, 'Stopped')))
+    crawler_configured = models.BooleanField(default=False)
+    mindmap_configured = models.BooleanField(default=False)
+    dicts_configured = models.BooleanField(default=False)
+    query_configured = models.BooleanField(default=False) 
+    #status = models.IntegerField(default=0, choices=((0, 'Not Configured'), (1, 'Crawler Configured'), (2, 'MindMap Configured'), (3, 'Dictionaries Configured'), (4, 'Query Configured'), (5, 'Crawling'), (6, 'Preprocessing'), (7, 'Querying'), (8, 'Finished'), (9, 'Stopped')))
+
+    @property
+    def all_configured(self):
+        return self.crawler_configured and self.mindmap_configured and self.dicts_configured and self.query_configured
+
+    @property
+    def crawler_running(self):
+        return self.crawler.process_id != None
+
+    @property
+    def preprocess_running(self):
+        return self.mindmap.process_id != None
+
+    @property
+    def query_running(self):
+        return self.query.process_id != None
+
+    @property
+    def any_running(self):
+        return self.crawler_running or self.preprocess_running or self.query_running
+
+    @property
+    def all_finished(self):
+        return self.finished_at != None and not self.any_running
 
 class Crawler(models.Model):
     name = models.CharField(max_length=50)

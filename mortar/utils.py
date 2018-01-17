@@ -65,17 +65,6 @@ def get_anno_json(tree):
 
     return out
 
-def test_status(analysis):
-    if not analysis.crawler.seed_list.all():
-        return 0
-    elif not analysis.mindmap.nodes.all():
-        return 1
-    elif not models.Dictionary.objects.all():
-        return 2
-    elif not analysis.query.parts.all():
-        return 3
-    return 4
-
 def read_mindmap(tree, mmstring):
     root = etree.fromstring(mmstring)
     for child in root:

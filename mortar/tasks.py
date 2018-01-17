@@ -26,8 +26,8 @@ def analyze(self, analysis_pk):
         crawler.started_at = datetime.datetime.now()
         crawler.save()
 
+        analysis.finished_at = None
         analysis.started_at = datetime.datetime.now()
-        analysis.status = 5
         analysis.save()
 
         process = CrawlerProcess({'USER_AGENT': ''})
@@ -44,9 +44,6 @@ def analyze(self, analysis_pk):
     tree.process_id = self.request.id
     tree.save()
 
-    analysis.status = 6
-    analysis.save()
-
     utils.process(tree, {'names': [], 'regexs': []}, analysis.query)
 
     tree.finished_at = datetime.datetime.now()
@@ -58,16 +55,12 @@ def analyze(self, analysis_pk):
     query.process_id = self.request.id
     query.save()
 
-    analysis.status = 7
-    analysis.save()
-
     utils.annotate(analysis)
 
     query.finished_at = datetime.datetime.now()
     query.process_id = None
     query.save()
 
-    analysis.status = 8
     analysis.finished_at = datetime.datetime.now()
     analysis.save()
 
@@ -89,8 +82,8 @@ def start_crawler(self, crawler_pk):
     crawler.started_at = datetime.datetime.now()
     crawler.save()
 
+    analysis.finished_at = None
     analysis.started_at = datetime.datetime.now()
-    analysis.status = 5
     analysis.save()
 
     process = CrawlerProcess({'USER_AGENT': ''})
@@ -116,9 +109,6 @@ def preprocess(self, tree_pk):
     tree.process_id = self.request.id
     tree.save()
 
-    analysis.status = 6
-    analysis.save()
-
     utils.process(tree, {'names': [], 'regexs': []}, analysis.query)
 
     tree.finished_at = datetime.datetime.now()
@@ -130,12 +120,10 @@ def preprocess(self, tree_pk):
 def run_query(self, query_pk):
     analysis = models.Analysis.objects.get(pk=0)
     query = models.Query.objects.get(pk=query_pk)
+
     query.started_at = datetime.datetime.now()
     query.process_id = self.request.id
     query.save()
-
-    analysis.status = 7
-    analysis.save()
 
     utils.annotate(analysis)
 
@@ -143,6 +131,5 @@ def run_query(self, query_pk):
     query.process_id = None
     query.save()
 
-    analysis.status = 8
     analysis.finished_at = datetime.datetime.now()
     analysis.save()

@@ -36,7 +36,14 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         analysis.crawler = crawler
         analysis.mindmap = mindmap
         analysis.query = query
-        analysis.status = utils.test_status(analysis)
+        if not crawler.seed_list.all():
+            analysis.crawler_configured = False
+        if not mindmap.nodes.all():
+            analysis.mindmap_configured = False
+        if not models.Dictionary.objects.all():
+            analysis.dicts_configured = False
+        if not query.parts.all():
+            analysis.query_configured = False
         analysis.save()
         context['analysis'] = analysis
         context['crawler'] = crawler
@@ -50,10 +57,6 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['dictionaries'] = models.Dictionary.objects.all()
         context['dict_list'] = utils.get_dict_list()
         context['form'] = forms.ConfigureForm()
-        context['crawl_conf'] = True if crawler.seed_list.all() else False
-        context['mm_conf'] = True if mindmap.nodes.all() else False
-        context['dict_conf'] = True if context['dictionaries'] else False
-        context['query_conf'] = True if query.parts.all() else False
         return context
 
     def post(self, request, *args, **kwargs):
@@ -61,14 +64,11 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         form = forms.ConfigureForm(request.POST, request.FILES)
         val = request.POST.get('save')
         if val == 'crawler' and context['crawler'].seed_list.all():
-            context['analysis'].status = 1
-            context['crawl_conf'] = True
-        elif val == 'mindmap':
-            context['analysis'].status = 2
-            context['mm_conf'] = True
-        elif val == 'dicts':
-            context['analysis'].status = 3
-            context['dict_conf'] = True
+            context['analysis'].crawler_configured = True
+        elif val == 'mindmap' and context['mindmap'].nodes.all():
+            context['analysis'].mindmap_configured = True
+        elif val == 'dicts' and context['dictionaries']:
+            context['analysis'].dicts_configured = True
         context['analysis'].save()
         return render(request, self.template_name, context=context)
 
@@ -84,7 +84,7 @@ class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
 class AnalysisStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        return Response(json.dumps({'analysis': analysis.pk, 'state': analysis.status}))
+        return Response(json.dumps({'analysis': analysis.pk, 'crawler_running': analysis.crawler_running, 'preprocess_running': analysis.preprocess_running, 'query_running': analysis.query_running}))
 
 class CrawlerStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -126,7 +126,7 @@ class QueryStatus(LoginRequiredMixin, APIView):
 class StartAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.status == 4 or analysis.status > 7:
+        if analysis.all_configured and not analysis.any_running:
             tasks.analyze.delay(analysis.pk)
             return HttpResponseRedirect(reverse('analyze'))
         else:
@@ -135,7 +135,7 @@ class StartAnalysis(LoginRequiredMixin, APIView):
 class StopAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.status == 5:
+        if analysis.crawler_running:
             if analysis.crawler.process_id:
                 revoke(analysis.crawler.process_id, terminate=True)
                 CrawlerProcess.stop()
@@ -143,20 +143,19 @@ class StopAnalysis(LoginRequiredMixin, APIView):
                 analysis.crawler.finished_at = datetime.datetime.now()
                 analysis.crawler.status = 2
                 analysis.crawler.save()
-        if analysis.status == 6:
+        if analysis.preprocess_running:
             if analysis.mindmap.process_id:
                 revoke(analysis.mindmap.process_id, terminate=True)
                 analysis.mindmap.process_id = None
                 analysis.mindmap.finished_at = datetime.datetime.now()
                 analysis.mindmap.save()
-        if analysis.status == 7:
+        if analysis.query_running:
             if analysis.query.process_id:
                 revoke(analysis.query.process_id, terminate=True)
                 analysis.query.process_id=None
                 analysis.query.finished_at = datetime.datetime.now()
                 analysis.query.save()
                 
-        analysis.status = 9
         analysis.finished_at = datetime.datetime.now()
         analysis.save()
         return HttpResponseRedirect(reverse('analyze'))
@@ -190,12 +189,8 @@ class StopCrawler(LoginRequiredMixin, APIView):
         crawler = models.Crawler.objects.get(pk=self.kwargs.get('pk'))
         if crawler.process_id:
             revoke(crawler.process_id, terminate=True)
-            analysis = models.Analysis.objects.get(pk=0)
             crawler.process_id = None
             crawler.save()
-            analysis.status = 9
-            analysis.save()
-
         return HttpResponseRedirect(reverse('analyze'))
 
 class StartPreprocess(LoginRequiredMixin, APIView):
@@ -210,11 +205,8 @@ class StopPreprocess(LoginRequiredMixin, APIView):
         mindmap = models.Tree.objects.get(pk=self.kwargs.get('pk'))
         if mindmap.process_id:
             revoke(mindmap.process_id)
-            analysis = models.Analysis.objects.get(pk=0)
             mindmap.process_id=None
             mindmap.save()
-            analysis.status = 9
-            analysis.save()
         return HttpResponseRedirect(reverse('analyze'))
 
 class StartQuery(LoginRequiredMixin, APIView):
@@ -229,11 +221,8 @@ class StopQuery(LoginRequiredMixin, APIView):
         query = models.Query.objects.get(pk=self.kwargs.get('pk'))
         if query.process_id:
             revoke(query.process_id)
-            analysis = models.Analysis.objects.get(pk=0)
             query.process_id=None
             query.save()
-            analysis.status = 9
-            analysis.save()
         return HttpResponseRedirect(reverse('analyze'))
 
 class UploadMindMapApi(LoginRequiredMixin, APIView):
@@ -356,7 +345,7 @@ class UpdateQueryApi(LoginRequiredMixin, APIView):
             query.save()
         if query.parts.all():
             analysis = models.Analysis.objects.get(pk=0)
-            analysis.status = 4
+            analysis.query_configured = True
             analysis.save()
         return HttpResponseRedirect(reverse('configure'))
 
@@ -370,7 +359,7 @@ class Home(django.views.generic.TemplateView):
 
     def get(self, request, *args, **kwargs):
         analysis,created = models.Analysis.objects.get_or_create(pk=0)
-        if analysis.status < 5:
+        if not analysis.all_configured:
             return HttpResponseRedirect(reverse('configure'))
         else:
             return HttpResponseRedirect(reverse('analyze'))
