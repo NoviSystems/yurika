@@ -316,13 +316,14 @@ class UpdateQueryApi(LoginRequiredMixin, APIView):
         types = request.POST.getlist('part_type')
         oplist = request.POST.getlist('op')
         parts = []
-        if len(types) == 1:
-            part_list = request.POST.getlist(type_list[int(types[0])])
-            querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
-            string = type_list[int(types[0])] + ': ' + querypart.name
-            query.string = string
-            query.elastic_json = utils.create_query_from_part(types[0], querypart)
-            query.save()
+        part_list = request.POST.getlist(type_list[int(types[0])])
+        if len(types) == 1 and len(part_list):
+            if part_list[0]:
+                querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
+                string = type_list[int(types[0])] + ': ' + querypart.name
+                query.string = string
+                query.elastic_json = utils.create_query_from_part(types[0], querypart)
+                query.save()
         else:
             dicts = request.POST.getlist('dictionary')
             regs = request.POST.getlist('regex')
