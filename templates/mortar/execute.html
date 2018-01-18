@@ -148,6 +148,7 @@ var preprocess_running = "{{ analysis.preprocess_running }}";
 var query_running = "{{ analysis.query_running }}";
 var finished = "{{ analysis.all_finished }}";
 var query_count = 0;
+
 function crawl_status() {
     $.getJSON("{% url 'crawler-status' analysis.pk %}", function(data) {
         var d = JSON.parse(data);
@@ -158,6 +159,7 @@ function crawl_status() {
       $('#crawl').addClass('active').addClass('progress-bar-striped');
     }
 }
+
 function process_status() {
     $.getJSON("{% url 'preprocess-status' analysis.pk %}", function(data) {
         var d = JSON.parse(data);
@@ -166,7 +168,7 @@ function process_status() {
         $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
     });
 
-    if(! crawler_running && $('#crawl').hasClass('active')) {
+    if(crawler_running == "False" && $('#crawl').hasClass('active')) {
       $('#crawl').removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-info');
       $('#crawl').addClass('progress-bar-success');
     }
@@ -174,6 +176,7 @@ function process_status() {
       $('#process').addClass('active').addClass('progress-bar-striped');
     }
 }
+
 function query_status() {
     $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
         var d = JSON.parse(data);
@@ -183,7 +186,7 @@ function query_status() {
         }
     });
     $('#query').css('width', '100%').attr('aria-valuenow', '100');
-    if(!preprocess_running && $('#process').hasClass('active')) {
+    if(preprocess_running == "False"  && $('#process').hasClass('active')) {
       $('#process').removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-info');
       $('#process').addClass('progress-bar-success');
     }
@@ -191,6 +194,7 @@ function query_status() {
       $('#query').addClass('active').addClass('progress-bar-striped');
     }
 }
+
 $(document).ready(function() {
     $.getJSON("{% url 'crawler-status' analysis.pk %}", function(data) {
         var d = JSON.parse(data);
