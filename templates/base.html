@@ -32,7 +32,7 @@
         {% if request.user.is_authenticated %}
         <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
-        {% if ANALYSIS_STATUS > 4 and ANALYSIS_STATUS < 8 %}
+        {% if RUNNING %}
           <li>
             <p class="navbar-text">1. Configure</p>
           </li>
@@ -41,7 +41,7 @@
             <a href="{% url 'configure' %}">1. Configure</a>
           </li>
         {% endif %}
-        {% if ANALYSIS_STATUS > 3 %}
+        {% if CONFIGURED %}
           <li class="active">
             <a href="{% url 'analyze' %}">2. Execute</a>
           </li>
@@ -50,7 +50,7 @@
             <p class="navbar-text">2. Execute</p>
           </li>
         {% endif %}
-        {% if ANALYSIS_STATUS > 7 %}
+        {% if FINISHED %}
           <li class="active">
             <a href="{% url 'explorer_index' %}">3. Explore</a>
           </li>

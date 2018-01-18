@@ -6,11 +6,11 @@
         <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if analysis.all_finished %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
     </div>
     <div class="row">&emsp;</div>
-  <div class="panel {% if analysis.finished_at %}panel-success{% else %} panel-info {% endif %}">
+  <div class="panel {% if FINISHED %}panel-success{% else %} panel-info {% endif %}">
     <div class="panel-heading"><h3 class="panel-title">Controls</h3></div>
     <div id="controls" class="panel-body">
       <div class="row">
@@ -80,7 +80,7 @@
       </div>
     </div>
   </div>
-  <div class="panel {% if analysis.finished_at %}panel-success{% else %}panel-info{% endif %}">
+  <div class="panel {% if FINISHED %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading"><h3 class="panel-title">Progress</h3></div>
     <div id="progress" class="panel-body">
       <div class="row">
@@ -134,7 +134,7 @@
 class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if analysis.all_finished %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div> 
     </div>
   <span class="row"></span>
@@ -142,7 +142,6 @@ class="glyphicon glyphicon-arrow-left"></i></a>
 {% endblock %}
 {% block scripts %}
 <script>
-// 5 = crawling, 6 = processing, 7 = querying, 8 = finished, 9=stopped
 var crawler_running = "{{ analysis.crawler_running }}";
 var preprocess_running = "{{ analysis.preprocess_running }}";
 var query_running = "{{ analysis.query_running }}";
@@ -228,7 +227,6 @@ $(document).ready(function() {
     });
 });
 window.setInterval(function () {
-    console.log(crawler_running + " " + preprocess_running + " " + query_running + " " + finished);
     $.getJSON("{% url 'analysis-status' analysis.pk %}", function(data) {
         var d = JSON.parse(data);
         stat = d.state;

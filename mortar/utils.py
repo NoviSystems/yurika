@@ -175,7 +175,8 @@ def associate_tree(tree):
 def make_dict_query(dictionary):
     out = []
     for word in dictionary.words.split('\n'):
-        out.append({'match': {'content': word.strip()}})
+        if len(word):
+            out.append({'match': {'content': word.strip()}})
 
     return {'bool': {'should': out}}
 
@@ -230,11 +231,9 @@ def clean_doc(esdoc, tree):
         tstamp = esdoc['_source']['tstamp']
         dt_tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%dT%H:%M:%S.%f')
         doc, created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp, tree=tree, index=tree.doc_source_index)
-        print(created)
         return doc
     except Exception as e:
         print(e)
-
 
 def tokenize_doc(esdoc):
     content = esdoc['_source']['content']
@@ -338,7 +337,6 @@ def create_pos_index(tree):
     name = tree.doc_dest_index.name
     if not i_client.exists(name):
         pos_settings = {'mappings': {'doc': {'properties': {'content': {'type': 'text'}, 'url': {'type': 'text', 'index': 'false'}, 'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'}}}, 'sentence': {'_parent': {'type': 'doc'}, 'properties': {'content': {'type': 'text'}, 'tokens': {'type': 'text'}}}, 'paragraph': {'_parent': {'type': 'doc'}, 'properties': {'content': {'type': 'text'}, 'tokens': {'type': 'text'}}}}}
-        print(json.dumps(pos_settings))
         i_client.create(index=name, body=json.dumps(pos_settings))
     
 

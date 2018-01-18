@@ -104,6 +104,8 @@ def sync_dictionaries(self):
 @shared_task(bind=True)
 def preprocess(self, tree_pk):
     analysis = models.Analysis.objects.get(pk=0)
+    analysis.finished_at = None
+    analysis.started_at = datetime.datetime.now()
     tree = models.Tree.objects.get(pk=tree_pk)
     tree.started_at = datetime.datetime.now()
     tree.process_id = self.request.id

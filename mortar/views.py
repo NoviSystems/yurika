@@ -311,7 +311,7 @@ class UpdateQueryApi(LoginRequiredMixin, APIView):
                 querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
                 string = type_list[int(types[0])] + ': ' + querypart.name
                 query.string = string
-                query.elastic_json = utils.create_query_from_part(types[0], querypart)
+                query.elastic_json = utils.create_query_from_part(type_list[int(types[0])], querypart)
                 query.save()
         else:
             dicts = request.POST.getlist('dictionary')
