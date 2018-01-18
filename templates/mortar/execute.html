@@ -209,7 +209,7 @@ $(document).ready(function() {
             $('#process-text').text('' + d.count + '/' + d.source + " Documents Processed");
             var percent = (d.count/d.source)*100;
             $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
-            if (percent == 100) {
+            if (percent == 100 or preprocess_running == "False") {
                 $('#process').removeClass('progress-bar-info').addClass('progress-bar-success');
             }
         }
