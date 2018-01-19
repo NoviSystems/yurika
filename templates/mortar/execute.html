@@ -142,109 +142,50 @@ class="glyphicon glyphicon-arrow-left"></i></a>
 {% endblock %}
 {% block scripts %}
 <script>
-var crawler_running = "{{ analysis.crawler_running }}";
-var preprocess_running = "{{ analysis.preprocess_running }}";
-var query_running = "{{ analysis.query_running }}";
-var finished = "{{ analysis.all_finished }}";
-var query_count = 0;
 
-function crawl_status() {
-    $.getJSON("{% url 'crawler-status' analysis.pk %}", function(data) {
-        var d = JSON.parse(data);
-        $('#crawl-text').text('' + d.count + " Documents Crawled");
-    });
-    $('#crawl').css('width', '100%').attr('aria-valuenow', '100');
-    if($('#crawl').hasClass('active') == false) {
-      $('#crawl').addClass('active').addClass('progress-bar-striped');
+function set_bar(id, running, stat, percent) {
+    console.log(id, running, stat, percent);
+    $(id).css('width', ''+percent+'%').attr('aria-valuenow', ''+percent);
+    if(stat == 0 && running) {  // Running
+        $(id).addClass('active').addClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
+    } else if(stat == 2) {  // Stopped
+        $(id).removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
+        $(id).css('width', '0%').attr('aria-valuenow', 0);
+    } else {  // Finished
+        $(id).removeClass('active').removeClass('progress-bar-striped').addClass('progress-bar-success').removeClass('progress-bar-info');
     }
 }
 
-function process_status() {
-    $.getJSON("{% url 'preprocess-status' analysis.pk %}", function(data) {
-        var d = JSON.parse(data);
-        $('#process-text').text('' + d.count + '/' + d.source + " Documents Processed");
-        var percent = (d.count/d.source)*100;
-        $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
-    });
+function update(d) {
+    var crawler = d['crawler'];
+    var process = d['preprocess'];
+    var query = d['query'];
 
-    if(crawler_running == "False" && $('#crawl').hasClass('active')) {
-      $('#crawl').removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-info');
-      $('#crawl').addClass('progress-bar-success');
-    }
-    if($('#process').hasClass('active') == false ) {
-      $('#process').addClass('active').addClass('progress-bar-striped');
-    }
+    console.log("Updating");
+    console.log(d);
+
+    // Crawler
+    $('#crawl-text').text('' + crawler['count'] + " Documents Crawled");
+    set_bar('#crawl', crawler['running'], crawler['status'], 100)
+
+    // Process
+    $('#process-text').text('' + process['n_processed'] + '/' + process['n_total'] + " Documents Processed");
+    var percent = (process['n_processed'] / process['n_total'])*100;
+    set_bar('#process', process['running'], process['status'], percent)
+
+    // Query
+    $('#query-text').text('' + query['count'] + " Results Found");
+    set_bar('#query', query['running'], query['status'], query['status']==2 ? 0 : 100)
+
+}
+function fetch_status_update() {
+    $.getJSON("{% url 'analysis-status' analysis.pk %}", function(response) {
+        update(JSON.parse(response));
+    });
 }
 
-function query_status() {
-    $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
-        var d = JSON.parse(data);
-        if(d.count > query_count) {
-            $('#query-text').text('' + d.count + " Results Found");
-            query_count = d.count;
-        }
-    });
-    $('#query').css('width', '100%').attr('aria-valuenow', '100');
-    if(preprocess_running == "False"  && $('#process').hasClass('active')) {
-      $('#process').removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-info');
-      $('#process').addClass('progress-bar-success');
-    }
-    if($('#query').hasClass('active') == false) {
-      $('#query').addClass('active').addClass('progress-bar-striped');
-    }
-}
+$(document).ready(fetch_status_update);
+window.setInterval(fetch_status_update, 3000);
 
-$(document).ready(function() {
-    $.getJSON("{% url 'crawler-status' analysis.pk %}", function(data) {
-        var d = JSON.parse(data);
-        if(d.count) {
-            $('#crawl-text').text('' + d.count + " Documents Crawled");
-            $('#crawl').css('width', '100%').attr('aria-valuenow', '100');
-            $('#crawl').removeClass('progress-bar-info').addClass('progress-bar-success');
-        }
-    });
-    $.getJSON("{% url 'preprocess-status' analysis.pk %}", function(data) {
-        var d = JSON.parse(data);
-        if(d.count) {
-            $('#process-text').text('' + d.count + '/' + d.source + " Documents Processed");
-            var percent = (d.count/d.source)*100;
-            $('#process').css('width', '' + percent + '%').attr('aria-valuenow', '' + percent);
-            if (percent == 100 or preprocess_running == "False") {
-                $('#process').removeClass('progress-bar-info').addClass('progress-bar-success');
-            }
-        }
-    });
-    $.getJSON("{% url 'query-status' analysis.pk %}", function(data) {
-       var d = JSON.parse(data);
-       if(d.count) {
-           $('#query-text').text('' + d.count + " Results Found");
-           query_count = d.count;
-           $('#query').css('width', '100%').attr('aria-valuenow', '100');
-           if(finished == "True") {
-               $('#query').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
-           }
-       }
-    });
-});
-window.setInterval(function () {
-    $.getJSON("{% url 'analysis-status' analysis.pk %}", function(data) {
-        var d = JSON.parse(data);
-        stat = d.state;
-    });
-    if(crawler_running == "True") {
-      crawl_status();
-    }
-    if(preprocess_running == "True") {
-      process_status();
-    }
-    if(query_running == "True") {
-      query_status();
-    }
-    else if(finished == "True") {
-        $('#crawl').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
-        $('#process').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
-        $('#query').removeClass('progress-bar-info').removeClass('active').addClass('progress-bar-success');
-    }
-}, 3000);
 </script>
 {% endblock %}

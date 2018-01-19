@@ -1,9 +1,13 @@
+from datetime import datetime
+
 from django.db import models
 from django.conf import settings
 from django.core.validators import RegexValidator
 from mptt.models import MPTTModel, TreeForeignKey
 import django.db.models.options as options
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
+
+import elasticsearch
 
 class Analysis(models.Model):
     crawler = models.ForeignKey('Crawler', related_name="analyses", null=True, blank=True) 
@@ -52,6 +56,28 @@ class Crawler(models.Model):
     status = models.IntegerField(default=2, choices=((0, 'Running'), (1, 'Finished'),
                                                       (2, 'Stopped')))
     process_id = models.CharField(max_length=50, null=True, blank=True)
+
+    def clear_errors(self):
+        self.errors.delete()
+
+    def log_error(self, msg, error_type=None):
+        e = ExecuteError(step=0, msg=msg, error_type=error_type, analysis=self.analyses.first())
+        e.save()
+
+    @property
+    def errors(self):
+        return ExecuteError.objects.filter(step=0, analysis=self.analyses.first())
+
+    @property
+    def count(self):
+        es = settings.ES_CLIENT
+        try:
+            return es.count(index=self.index.name).get('count')
+        except elasticsearch.exceptions.NotFoundError as e:
+            if e.error == 'index_not_found_exception':
+                return 0  # ElasticSeach index not created yet
+            else:
+                raise
 
     def __str__(self):
         return 'Crawler: %s' % self.name
@@ -102,6 +128,40 @@ class Tree(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     process_id = models.CharField(max_length=50, null=True, blank=True)
+
+    def clear_errors(self):
+        self.errors.delete()
+
+    def log_error(self, msg, error_type=None):
+        e = ExecuteError(step=1, msg=msg, error_type=error_type, analysis=self.analyses.first())
+        e.save()
+
+    @property
+    def errors(self):
+        return ExecuteError.objects.filter(step=1, analysis=self.analyses.first())
+
+    @property
+    def n_processed(self):
+        es = settings.ES_CLIENT
+        try:
+            return es.count(index=self.doc_dest_index.name, doc_type="doc").get('count')
+        except elasticsearch.exceptions.NotFoundError as e:
+            if e.error == 'index_not_found_exception':
+                return 0  # ElasticSeach index not created yet
+            else:
+                raise
+
+    @property
+    def n_total(self):
+        es = settings.ES_CLIENT
+        try:
+            return es.count(index=self.doc_source_index.name).get('count')
+        except elasticsearch.exceptions.NotFoundError as e:
+            if e.error == 'index_not_found_exception':
+                return 0  # ElasticSeach index not created yet
+            else:
+                raise
+
 
     def __str__(self):
         return 'Tree: %s' % self.name
@@ -185,6 +245,26 @@ class Query(models.Model):
     process_id = models.CharField(max_length=50, null=True, blank=True)
     category = models.IntegerField(choices=((0, 'Sentence'), (1, 'Paragraph'),(2, 'Document')), null=True, blank=True)
 
+    @property
+    def status(self):
+        if self.started_at == None:
+            return 2  # Stopped
+        elif self.process_id:
+            return 0  # Running
+        else:
+            return 1  # Finished
+
+    def clear_errors(self):
+        self.errors.delete()
+
+    def log_error(self, msg, error_type=None):
+        e = ExecuteError(step=2, msg=msg, error_type=error_type, analysis=self.analyses.first())
+        e.save()
+
+    @property
+    def errors(self):
+        return ExecuteError.objects.filter(step=2, analysis=self.analyses.first())
+
     def __str__(self):
         return self.name
 
@@ -215,3 +295,22 @@ class SubQueryPart(QueryPart):
 
 class PartOfSpeechPart(QueryPart):
     part_of_speech = models.CharField(max_length=4, choices=settings.PARTS_OF_SPEECH)
+
+
+class ExecuteError(models.Model):
+    STEP_CHOICES = (
+        (0, "Crawling"),
+        (1, "Processing"),
+        (2, "Querying"),
+    )
+
+    step = models.IntegerField(choices=STEP_CHOICES)
+    time = models.DateTimeField(default=datetime.now)
+    msg = models.TextField()
+    error_type = models.CharField(max_length=32, null=True, blank=True)
+    analysis = models.ForeignKey('Analysis', related_name='errors')
+
+    def __str__(self):
+        step_str = dict(self.STEP_CHOICES)[self.step]
+        type_str = " {}".format(self.error_type) if self.error_type else ""
+        return "{} Error{}: {}".format(step_str, type_str, self.msg)

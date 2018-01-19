@@ -12,70 +12,27 @@ import mortar.crawlers as crawler_classes
 @shared_task(bind=True)
 def analyze(self, analysis_pk):
     analysis = models.Analysis.objects.get(pk=analysis_pk)
-    crawler = analysis.crawler
-    elastic_url = settings.ES_URL
 
-    if crawler.category == 'web':
-        name = crawler.name
-        index = crawler.index.name
-        seeds = [seed.urlseed.url for seed in crawler.seed_list.all()]
-
-
-        crawler.process_id = self.request.id
-        crawler.status = 0
-        crawler.started_at = datetime.datetime.now()
-        crawler.save()
-
-        analysis.finished_at = None
-        analysis.started_at = datetime.datetime.now()
-        analysis.save()
-
-        process = CrawlerProcess({'USER_AGENT': ''})
-        process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
-        process.start()
-
-        crawler.finished_at = datetime.datetime.now()
-        crawler.status = 1
-        crawler.process_id = None
-        crawler.save()
-
-    tree = analysis.mindmap
-    tree.started_at = datetime.datetime.now()
-    tree.process_id = self.request.id
-    tree.save()
-
-    utils.process(tree, {'names': [], 'regexs': []}, analysis.query)
-
-    tree.finished_at = datetime.datetime.now()
-    tree.process_id = None
-    tree.save()
-
-    query = analysis.query 
-    query.started_at = datetime.datetime.now()
-    query.process_id = self.request.id
-    query.save()
-
-    utils.annotate(analysis)
-
-    query.finished_at = datetime.datetime.now()
-    query.process_id = None
-    query.save()
-
-    analysis.finished_at = datetime.datetime.now()
-    analysis.save()
-
+    run_crawler(analysis.crawler.pk)
+    preprocess(analysis.mindmap.pk)
+    run_query(analysis.query.pk)
     
 # Start Crawler
 @shared_task(bind=True)
-def start_crawler(self, crawler_pk):
+def run_crawler(self, crawler_pk):
     analysis = models.Analysis.objects.get(pk=0)
     crawler = models.Crawler.objects.get(pk=crawler_pk)
     elastic_url = settings.ES_URL
 
+    crawler.clear_errors()
+
+    if crawler.category != 'web':
+        crawler.log_error('Only web crawlers are currently supported, not "{}"'.format(crawler.category))
+        return
+
     name = crawler.name
     index = crawler.index.name
     seeds = [seed.urlseed.url for seed in crawler.seed_list.all()]
-
 
     crawler.process_id = self.request.id
     crawler.status = 0
@@ -87,8 +44,12 @@ def start_crawler(self, crawler_pk):
     analysis.save()
 
     process = CrawlerProcess({'USER_AGENT': ''})
-    process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
-    process.start()
+    try:
+        process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
+        process.start()
+    except Exception as e:
+        crawler.log_error(e)
+        raise
 
     crawler.finished_at = datetime.datetime.now()
     crawler.status = 1
@@ -111,7 +72,13 @@ def preprocess(self, tree_pk):
     tree.process_id = self.request.id
     tree.save()
 
-    utils.process(tree, {'names': [], 'regexs': []}, analysis.query)
+    tree.clear_errors()
+
+    try:
+        utils.process(tree, {'names': [], 'regexs': []}, analysis.query)
+    except Exception as e:
+        tree.log_error(e)
+        raise
 
     tree.finished_at = datetime.datetime.now()
     tree.process_id = None
@@ -127,7 +94,13 @@ def run_query(self, query_pk):
     query.process_id = self.request.id
     query.save()
 
-    utils.annotate(analysis)
+    query.clear_errors()
+
+    try:
+        utils.annotate(analysis)
+    except Exception as e:
+        query.log_error(e)
+        raise
 
     query.finished_at = datetime.datetime.now()
     query.process_id = None

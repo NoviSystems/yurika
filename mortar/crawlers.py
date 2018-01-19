@@ -8,6 +8,19 @@ from scrapy.crawler import CrawlerProcess
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import Rule, CrawlSpider
 
+from mortar import models
+
+def log_errors_decorator(func):
+    def catch_err(self, *args, **kwargs):
+        try:
+            ret = func(self, *args, **kwargs)
+            return ret
+        except Exception as e:
+            self.errback(failure)
+            raise e
+    return catch_err
+
+
 class Document(scrapy.Item):
     refer_url = scrapy.Field()
     url = scrapy.Field()
@@ -19,7 +32,12 @@ class Document(scrapy.Item):
 class WebCrawler(CrawlSpider):
     name = 'MyTest'
     rules = (
-        Rule(LinkExtractor(canonicalize=True, unique=True), follow=True, callback="parse_item"),
+        Rule(
+            LinkExtractor(canonicalize=True, unique=True),
+            follow=True,
+            callback="parse_item",
+            #process_request="add_errback",
+        ),
     )
 
     def __init__(self, *args, **kwargs):
@@ -35,6 +53,34 @@ class WebCrawler(CrawlSpider):
             i_client.create(index=self.index_name)
             time.sleep(10)
 
+    #TODO: Commented out below is an attempt to log http errors and exceptions
+    #      from scrapy. There's apparently no good way to do it when using a
+    #      CrawlSpider. I think the only reasonable thing to do is write a
+    #      middleware for logging.
+    '''
+    @log_errors_decorator
+    def start_requests(self):
+        """
+        Overwrite scrapy.Spider.start_requests to add error callback to initial
+        requests.
+        """
+        try:
+            for request in super().start_requests():
+                request.errback = self.errback
+                yield request
+        except Exception as e:
+            self.errback(e)
+            raise
+    '''
+    '''
+    @log_errors_decorator
+    def add_errback(self, request):
+        """Add an error callback to the given request and return it."""
+        request.errback = self.errback
+        return request
+    '''
+
+    @log_errors_decorator
     def parse_item(self, response):
         #reformat any html entities that make tags appear in text
         text = response.text.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
@@ -54,3 +100,8 @@ class WebCrawler(CrawlSpider):
         doc_item = Document(url=doc['url'], tstamp=doc['tstamp'], content=doc['content'], title=doc['title'])
 
         return doc_item
+
+    def errback(self, failure):
+        #TODO: If HTTP status code error returned, include that in log_error()
+        analysis = models.Analysis.objects.get(pk=0)
+        analysis.crawler.log_error(failure)

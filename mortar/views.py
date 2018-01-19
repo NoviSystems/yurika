@@ -84,7 +84,37 @@ class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
 class AnalysisStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        return Response(json.dumps({'analysis': analysis.pk, 'crawler_running': analysis.crawler_running, 'preprocess_running': analysis.preprocess_running, 'query_running': analysis.query_running}))
+        crawler = analysis.crawler
+        mindmap = analysis.mindmap
+        query = analysis.query
+        es = settings.ES_CLIENT
+
+        annotation_count = models.Annotation.objects.using('explorer').filter(query_id=query.id).count()
+        return Response(json.dumps({
+            'analysis': analysis.pk,
+            'crawler': {
+                'running': analysis.crawler_running,
+                'status': crawler.status,
+                'count': crawler.count,
+                'errors': list(map(str, crawler.errors)),
+            },
+            'preprocess': {
+                'running': analysis.preprocess_running,
+                'status': 0 if mindmap.process_id else 1,
+                'n_processed': mindmap.n_processed,
+                'n_total': mindmap.n_total,
+            },
+            'query': {
+                'running': analysis.query_running,
+                'status': query.status,
+                'count': annotation_count,
+            },
+
+            #TODO: These are duplicates of the above. Consider removing them
+            'crawler_running': analysis.crawler_running,
+            'preprocess_running': analysis.preprocess_running,
+            'query_running': analysis.query_running,
+        }))
 
 class CrawlerStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -95,9 +125,9 @@ class CrawlerStatus(LoginRequiredMixin, APIView):
             index = crawler.index.name
             es = settings.ES_CLIENT
             count = es.count(index=index).get('count')
-            return Response(json.dumps({'analysis': analysis.pk, 'status': crawler.status, 'count': count}))
+            return Response(json.dumps({'analysis': analysis.pk, 'status': crawler.status, 'count': count, 'errors': crawler.errors}))
         except:
-            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0}))
+            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0, 'errors': []}))
 
 class PreprocessStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -181,7 +211,7 @@ class StartCrawler(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         crawler = models.Crawler.objects.get(pk=self.kwargs.get('pk'))
         if not crawler.process_id:
-            tasks.start_crawler.delay(crawler.pk)
+            tasks.run_crawler.delay(crawler.pk)
         return HttpResponseRedirect(reverse('analyze'))
 
 class StopCrawler(LoginRequiredMixin, APIView):
