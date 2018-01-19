@@ -72,6 +72,7 @@ def preprocess(self, tree_pk):
     analysis.started_at = datetime.datetime.now()
     tree = models.Tree.objects.get(pk=tree_pk)
     tree.clear_errors()
+    tree.status = 0;
     tree.started_at = datetime.datetime.now()
     tree.process_id = self.request.id
     tree.save()
@@ -82,6 +83,7 @@ def preprocess(self, tree_pk):
         tree.log_error(e)
         raise
 
+    tree.status = 1;
     tree.finished_at = datetime.datetime.now()
     tree.process_id = None
     tree.save()
@@ -93,6 +95,7 @@ def run_query(self, query_pk):
     query = models.Query.objects.get(pk=query_pk)
     query.clear_errors()
 
+    query.status = 0;
     query.started_at = datetime.datetime.now()
     query.process_id = self.request.id
     query.save()
@@ -104,6 +107,7 @@ def run_query(self, query_pk):
         query.log_error(e)
         raise
 
+    query.status = 1;
     query.finished_at = datetime.datetime.now()
     query.process_id = None
     query.save()

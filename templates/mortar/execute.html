@@ -148,19 +148,28 @@ class="glyphicon glyphicon-arrow-left"></i></a>
 
 function set_bar(id, running, stat, percent) {
     $(id).css('width', ''+percent+'%').attr('aria-valuenow', ''+percent);
-    if(stat == 0 && running) {  // Running
+
+    // Running
+    if(stat == 0) {
         $(id).addClass('active').addClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
-    } else if(stat == 2) {  // Stopped
+
+    // Stopped
+    } else if(stat == 2) {
         $(id).removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
         $(id).css('width', '0%').attr('aria-valuenow', 0);
-    } else {  // Finished
+
+    // Finished
+    } else {
         $(id).removeClass('active').removeClass('progress-bar-striped').addClass('progress-bar-success').removeClass('progress-bar-info');
     }
+
 }
 
 function get_error_text(errors) {
-    if(errors.length > 0) {
-        return '' + errors.length + ' Error'+ (errors > 1 ? 's' : '');
+    if(errors.length == 1) {
+        return errors[0];
+    } else if(errors.length > 0) {
+        return '' + errors.length + ' Errors';
     } else {
         return '';
     }

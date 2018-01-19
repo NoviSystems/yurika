@@ -311,6 +311,7 @@ class ExecuteError(models.Model):
     analysis = models.ForeignKey('Analysis', related_name='errors')
 
     def __str__(self):
-        step_str = dict(self.STEP_CHOICES)[self.step]
+        #step_str = dict(self.STEP_CHOICES)[self.step]
         type_str = " {}".format(self.error_type) if self.error_type else ""
-        return "{} Error{}: {}".format(step_str, type_str, self.msg)
+        #return "{} Error{}: {}".format(step_str, type_str, self.msg)
+        return self.msg
