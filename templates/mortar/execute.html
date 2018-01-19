@@ -93,8 +93,9 @@
             </div>
           </div>
         </div>
-        <div id="crawl-text" class="col-xs-6">
-          0 Documents Crawled
+        <div class="col-xs-6">
+          <span id="crawl-text"></span><br>
+          <span id="crawl-error-text" style="color: red;"></span>
         </div>
       </div>
       <div class="row">
@@ -107,8 +108,9 @@
             </div>
           </div>
         </div>
-        <div id="process-text" class="col-xs-6">
-          0/0 Documents Processed
+        <div class="col-xs-6">
+          <span id="process-text"></span><br>
+          <span id="process-error-text" style="color: red;"></span>
         </div>
       </div>
       <div class="row">
@@ -121,8 +123,9 @@
             </div>
           </div>
         </div>
-        <div id="query-text" class="col-xs-6">
-          0 Results Found
+        <div class="col-xs-6">
+          <span id="query-text"></span><br>
+          <span id="query-error-text" style="color: red;"></span>
         </div>
       </div>
     </div>
@@ -144,7 +147,6 @@ class="glyphicon glyphicon-arrow-left"></i></a>
 <script>
 
 function set_bar(id, running, stat, percent) {
-    console.log(id, running, stat, percent);
     $(id).css('width', ''+percent+'%').attr('aria-valuenow', ''+percent);
     if(stat == 0 && running) {  // Running
         $(id).addClass('active').addClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
@@ -156,28 +158,39 @@ function set_bar(id, running, stat, percent) {
     }
 }
 
+function get_error_text(errors) {
+    if(errors.length > 0) {
+        return '' + errors.length + ' Error'+ (errors > 1 ? 's' : '');
+    } else {
+        return '';
+    }
+}
+
 function update(d) {
     var crawler = d['crawler'];
     var process = d['preprocess'];
     var query = d['query'];
 
-    console.log("Updating");
     console.log(d);
 
     // Crawler
+    $('#crawl-error-text').text(get_error_text(crawler['errors']));
     $('#crawl-text').text('' + crawler['count'] + " Documents Crawled");
     set_bar('#crawl', crawler['running'], crawler['status'], 100)
 
     // Process
+    $('#process-error-text').text(get_error_text(process['errors']));
     $('#process-text').text('' + process['n_processed'] + '/' + process['n_total'] + " Documents Processed");
     var percent = (process['n_processed'] / process['n_total'])*100;
     set_bar('#process', process['running'], process['status'], percent)
 
     // Query
+    $('#query-error-text').text(get_error_text(query['errors']));
     $('#query-text').text('' + query['count'] + " Results Found");
     set_bar('#query', query['running'], query['status'], query['status']==2 ? 0 : 100)
 
 }
+
 function fetch_status_update() {
     $.getJSON("{% url 'analysis-status' analysis.pk %}", function(response) {
         update(JSON.parse(response));

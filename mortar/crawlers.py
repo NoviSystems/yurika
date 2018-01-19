@@ -16,10 +16,16 @@ def log_errors_decorator(func):
             ret = func(self, *args, **kwargs)
             return ret
         except Exception as e:
-            self.errback(failure)
+            analysis = models.Analysis.objects.get(pk=0)
+            analysis.crawler.log_error(e)
             raise e
     return catch_err
 
+class ErrorLogMiddleware(object):
+
+    def process_spider_exception(self, response, exception, spider):
+        analysis = models.Analysis.objects.get(pk=0)
+        analysis.crawler.log_error(exception)
 
 class Document(scrapy.Item):
     refer_url = scrapy.Field()
@@ -36,7 +42,6 @@ class WebCrawler(CrawlSpider):
             LinkExtractor(canonicalize=True, unique=True),
             follow=True,
             callback="parse_item",
-            #process_request="add_errback",
         ),
     )
 
@@ -52,33 +57,6 @@ class WebCrawler(CrawlSpider):
         if not i_client.exists(self.index_name):
             i_client.create(index=self.index_name)
             time.sleep(10)
-
-    #TODO: Commented out below is an attempt to log http errors and exceptions
-    #      from scrapy. There's apparently no good way to do it when using a
-    #      CrawlSpider. I think the only reasonable thing to do is write a
-    #      middleware for logging.
-    '''
-    @log_errors_decorator
-    def start_requests(self):
-        """
-        Overwrite scrapy.Spider.start_requests to add error callback to initial
-        requests.
-        """
-        try:
-            for request in super().start_requests():
-                request.errback = self.errback
-                yield request
-        except Exception as e:
-            self.errback(e)
-            raise
-    '''
-    '''
-    @log_errors_decorator
-    def add_errback(self, request):
-        """Add an error callback to the given request and return it."""
-        request.errback = self.errback
-        return request
-    '''
 
     @log_errors_decorator
     def parse_item(self, response):
@@ -100,8 +78,3 @@ class WebCrawler(CrawlSpider):
         doc_item = Document(url=doc['url'], tstamp=doc['tstamp'], content=doc['content'], title=doc['title'])
 
         return doc_item
-
-    def errback(self, failure):
-        #TODO: If HTTP status code error returned, include that in log_error()
-        analysis = models.Analysis.objects.get(pk=0)
-        analysis.crawler.log_error(failure)

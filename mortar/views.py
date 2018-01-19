@@ -103,11 +103,13 @@ class AnalysisStatus(LoginRequiredMixin, APIView):
                 'status': 0 if mindmap.process_id else 1,
                 'n_processed': mindmap.n_processed,
                 'n_total': mindmap.n_total,
+                'errors': list(map(str, mindmap.errors)),
             },
             'query': {
                 'running': analysis.query_running,
                 'status': query.status,
                 'count': annotation_count,
+                'errors': list(map(str, query.errors)),
             },
 
             #TODO: These are duplicates of the above. Consider removing them

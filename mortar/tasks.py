@@ -43,7 +43,10 @@ def run_crawler(self, crawler_pk):
     analysis.started_at = datetime.datetime.now()
     analysis.save()
 
-    process = CrawlerProcess({'USER_AGENT': ''})
+    process = CrawlerProcess({
+        'USER_AGENT': '',
+        "SPIDER_MIDDLEWARES": {"mortar.crawlers.ErrorLogMiddleware": 1000},
+    })
     try:
         process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
         process.start()
@@ -68,11 +71,10 @@ def preprocess(self, tree_pk):
     analysis.finished_at = None
     analysis.started_at = datetime.datetime.now()
     tree = models.Tree.objects.get(pk=tree_pk)
+    tree.clear_errors()
     tree.started_at = datetime.datetime.now()
     tree.process_id = self.request.id
     tree.save()
-
-    tree.clear_errors()
 
     try:
         utils.process(tree, {'names': [], 'regexs': []}, analysis.query)
@@ -89,12 +91,12 @@ def preprocess(self, tree_pk):
 def run_query(self, query_pk):
     analysis = models.Analysis.objects.get(pk=0)
     query = models.Query.objects.get(pk=query_pk)
+    query.clear_errors()
 
     query.started_at = datetime.datetime.now()
     query.process_id = self.request.id
     query.save()
 
-    query.clear_errors()
 
     try:
         utils.annotate(analysis)
