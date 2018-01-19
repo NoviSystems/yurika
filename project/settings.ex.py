@@ -50,7 +50,7 @@ PARTS_OF_SPEECH = (('CC', 'Coordinating Conjunction'),
                    ('WP$', 'Possessive wh-pronoun'),
                    ('WRB', 'Wh-adverb')) 
 
-ES_URL = 'http://10.36.1.1:9200/'
+ES_URL = 'http://xx.xx.x.xx:9200/'
 ES_CLIENT = Elasticsearch([ES_URL], connection_class=RequestsHttpConnection)
 DICTIONARIES_PATH = 'dictionaries/'
 CRAWLERS_PATH = '/opt/yurika/mortar/crawlers/'
