@@ -25,7 +25,7 @@ class ErrorLogMiddleware(object):
 
     def process_spider_exception(self, response, exception, spider):
         analysis = models.Analysis.objects.get(pk=0)
-        analysis.crawler.log_error(exception)
+        analysis.crawler.log_error("{} {}".format(exception, response))
 
 class Document(scrapy.Item):
     refer_url = scrapy.Field()
@@ -57,6 +57,20 @@ class WebCrawler(CrawlSpider):
         if not i_client.exists(self.index_name):
             i_client.create(index=self.index_name)
             time.sleep(10)
+
+    @log_errors_decorator
+    def start_requests(self):
+        """Overwrite scrapy.Spider.start_requests to log errors."""
+        # Yes, we both use log_errors_decorator and have a try..except here,
+        # because this is a generator, errors in super().start_requests() may
+        # not be caught otherwise.
+        try:
+            for request in super().start_requests():
+                yield request
+        except Exception as e:
+            analysis = models.Analysis.objects.get(pk=0)
+            analysis.crawler.log_error(e)
+            raise
 
     @log_errors_decorator
     def parse_item(self, response):
