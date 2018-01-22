@@ -85,7 +85,13 @@
     <div id="progress" class="panel-body">
       <div class="row">
         <div class="col-xs-12">
-          <h4>Crawling</h4>
+          <form action="{% url 'stop-crawler' analysis.crawler.pk %}" method="POST">
+            {% csrf_token %}
+            <h4>Crawling
+              &nbsp;&nbsp;
+                <span id="crawler-stop-button-area"></span>
+            </h4>
+          </form>
         </div>
         <div class="col-xs-6">
           <div class="progress">
@@ -186,6 +192,13 @@ function update(d) {
     $('#crawl-error-text').text(get_error_text(crawler['errors']));
     $('#crawl-text').text('' + crawler['count'] + " Documents Crawled");
     set_bar('#crawl', crawler['running'], crawler['status'], 100)
+
+    if(crawler['status'] == 0) {
+        button_txt = '<button class="btn btn-sm btn-danger" type="submit" value="submit">Stop</button>';
+    } else {
+        button_txt = '';
+    }
+    $('#crawler-stop-button-area').html(button_txt);
 
     // Process
     $('#process-error-text').text(get_error_text(process['errors']));

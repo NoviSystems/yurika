@@ -9,14 +9,6 @@ import mortar.utils as utils
 import mortar.models as models
 import mortar.crawlers as crawler_classes
 
-@shared_task(bind=True)
-def analyze(self, analysis_pk):
-    analysis = models.Analysis.objects.get(pk=analysis_pk)
-
-    run_crawler(analysis.crawler.pk)
-    preprocess(analysis.mindmap.pk)
-    run_query(analysis.query.pk)
-    
 # Start Crawler
 @shared_task(bind=True)
 def run_crawler(self, crawler_pk):

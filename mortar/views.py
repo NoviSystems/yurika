@@ -160,7 +160,14 @@ class StartAnalysis(LoginRequiredMixin, APIView):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
         if analysis.all_configured:
             if not analysis.any_running:
-                tasks.analyze.delay(analysis.pk)
+
+                # Chain together tasks, so if crawler is killed manually, the
+                # other tasks proceed after.
+                chain = tasks.run_crawler.signature((analysis.crawler.pk,), immutable=True) \
+                      | tasks.preprocess.signature((analysis.mindmap.pk,), immutable=True) \
+                      | tasks.run_query.signature((analysis.query.pk,), immutable=True)
+                chain()
+
             return HttpResponseRedirect(reverse('analyze'))
         else:
             return HttpResponseRedirect(reverse('configure'))
