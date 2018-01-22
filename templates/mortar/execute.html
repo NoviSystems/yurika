@@ -7,7 +7,7 @@
       </div>
       <div class="col-xs-6 text-right">
         <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
-      </div> 
+      </div>
     </div>
     <div class="row">&emsp;</div>
   <div class="panel {% if FINISHED %}panel-success{% else %} panel-info {% endif %}">
@@ -74,7 +74,7 @@
               {% csrf_token %}
               <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Query" />
             </form>
-            {% endif %} 
+            {% endif %}
           </div>
         </div>
       </div>
@@ -139,12 +139,12 @@
   <div class="row">&emsp;</div>
   <div class="row">
       <div class="col-xs-6">
-        <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i 
+        <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i
 class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       <div class="col-xs-6 text-right">
         <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
-      </div> 
+      </div>
     </div>
   <span class="row"></span>
 </div>
@@ -181,6 +181,20 @@ function get_error_text(errors) {
     }
 }
 
+function enable_or_disable_href(navbar_li_selector, url, should_enable) {
+    li = $(navbar_li_selector);
+    a = $(navbar_li_selector + '> a')[0];
+    if(should_enable) {
+        console.log("Enabling" + url);
+        li.removeClass('disabled');
+        a.href = url;
+    } else {
+        console.log("Disabling" + url);
+        li.addClass('disabled');
+        a.href = '#';
+    }
+}
+
 function update(d) {
     var crawler = d['crawler'];
     var process = d['preprocess'];
@@ -210,6 +224,18 @@ function update(d) {
     $('#query-error-text').text(get_error_text(query['errors']));
     $('#query-text').text('' + query['count'] + " Results Found");
     set_bar('#query', query['running'], query['status'], query['status']==2 ? 0 : 100)
+
+    // Enable/Disable "Configure"/"Explore" in navbar
+    enable_or_disable_href(
+        '#nav-configure',
+        '{% url 'configure' %}',
+        !d['any_running']
+    );
+    enable_or_disable_href(
+        '#nav-explore',
+        '{% url 'explorer_index' %}',
+        d['all_finished']
+    );
 
 }
 

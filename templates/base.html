@@ -19,6 +19,16 @@
       ga('send', 'pageview');
     </script>
     {% endif %}
+
+    <style>
+      .navbar-inverse .navbar-nav>li>a {
+        color: #ffffff;
+      }
+      .navbar-inverse .navbar-nav>.disabled>a {
+        color: #9d9d9d;
+      }
+    </style>
+
 </head>
 <body>
 
@@ -32,33 +42,19 @@
         {% if request.user.is_authenticated %}
         <div class="collapse navbar-collapse">
         <ul class="nav navbar-nav">
-        {% if RUNNING %}
-          <li>
-            <p class="navbar-text">1. Configure</p>
+
+          <li class="{% if nav_active == 'configure' %}active{% endif %} {% if RUNNING %}disabled{% endif %}" id="nav-configure">
+            <a href="{% if not RUNNING %}{% url 'configure' %}{% endif %}">1. Configure</a>
           </li>
-        {% else %}
-          <li class="active">
-            <a href="{% url 'configure' %}">1. Configure</a>
+
+          <li class="{% if nav_active == 'execute' %}active{% endif %} {% if not CONFIGURED %}disabled{% endif %}" id="nav-execute">
+            <a href="{% if CONFIGURED %}{% url 'analyze' %}{% endif %}">2. Execute</a>
           </li>
-        {% endif %}
-        {% if CONFIGURED %}
-          <li class="active">
-            <a href="{% url 'analyze' %}">2. Execute</a>
+
+          <li class="{% if nav_active == 'explorer' %}active{% endif %} {% if not FINISHED %}disabled{% endif %}" id="nav-explore">
+            <a href="{% if FINISHED %}{% url 'explorer_index' %}{% endif %}">3. Explore</a>
           </li>
-        {% else %}
-          <li>
-            <p class="navbar-text">2. Execute</p>
-          </li>
-        {% endif %}
-        {% if FINISHED %}
-          <li class="active">
-            <a href="{% url 'explorer_index' %}">3. Explore</a>
-          </li>
-        {% else %}
-          <li>
-            <p class="navbar-text">3. Explorer</p>
-          </li>
-        {% endif %}
+
         </ul>
         <p class="navbar-text navbar-right">
         Logged in as {{ request.user }}

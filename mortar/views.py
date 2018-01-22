@@ -93,6 +93,8 @@ class AnalysisStatus(LoginRequiredMixin, APIView):
         annotation_count = models.Annotation.objects.using('explorer').filter(query_id=query.id).count()
         return Response(json.dumps({
             'analysis': analysis.pk,
+            'any_running': analysis.any_running,
+            'all_finished': analysis.all_finished,
             'crawler': {
                 'running': analysis.crawler_running,
                 'status': crawler.status,
@@ -153,7 +155,7 @@ class StopAnalysis(LoginRequiredMixin, APIView):
                 analysis.query.process_id=None
                 analysis.query.finished_at = timezone.now()
                 analysis.query.save()
-                
+
         analysis.finished_at = timezone.now()
         analysis.save()
         return HttpResponseRedirect(reverse('analyze'))
@@ -174,7 +176,7 @@ class DestroyAnalysis(LoginRequiredMixin, APIView):
         es.indices.delete(index='source', ignore=[400, 404])
         es.indices.delete(index='dest', ignore=[400, 404])
         return HttpResponseRedirect(reverse('configure'))
-        
+
 class StartCrawler(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         crawler = models.Crawler.objects.get(pk=self.kwargs.get('pk'))
