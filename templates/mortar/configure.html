@@ -63,7 +63,7 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm {% if seed_list %}btn-success{% else %} btn-default disabled {% endif %}" type="submit" name="save" value="crawler">Save Crawler</button>
+            <button class="btn btn-sm {% if seed_list %}btn-success{% else %} btn-default {% endif %}"{% if not seed_list %} disabled="disabled"{% endif %} type="submit" name="save" value="crawler">Save Crawler</button>
           </form>
         </div>
       </div>
@@ -108,7 +108,7 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm {% if mindmap.nodes.all %}btn-success{% else %} btn-default disabled {% endif %}" type="submit" name="save" value="mindmap">Save MindMap</button>
+            <button class="btn btn-sm {% if mindmap.nodes.all %}btn-success{% else %} btn-default disabled {% endif %}"{% if not mindmap.nodes.all %} disabled="disabled"{% endif %} type="submit" name="save" value="mindmap">Save MindMap</button>
           </form>
         </div>
       </div>
@@ -159,7 +159,7 @@
         <div class="col-xs-2 text-right">
           <form action="" method="POST">
             {% csrf_token %}
-            <button class="btn btn-sm {% if dictionaries %}btn-success{% else %} btn-default disabled{% endif %}" type="submit" name="save" value="dicts">Save Dictionaries</button>
+            <button class="btn btn-sm {% if dictionaries %}btn-success{% else %} btn-default disabled{% endif %}"{% if not dictionaries %} disabled="disabled"{% endif %} type="submit" name="save" value="dicts">Save Dictionaries</button>
           </form>
         </div>
       </div>
