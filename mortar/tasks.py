@@ -95,7 +95,6 @@ def run_query(self, query_pk):
     query = models.Query.objects.get(pk=query_pk)
     query.clear_errors()
 
-    query.status = 0;
     query.started_at = datetime.datetime.now()
     query.process_id = self.request.id
     query.save()
@@ -107,7 +106,6 @@ def run_query(self, query_pk):
         query.log_error(e)
         raise
 
-    query.status = 1;
     query.finished_at = datetime.datetime.now()
     query.process_id = None
     query.save()
