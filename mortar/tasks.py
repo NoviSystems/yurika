@@ -38,6 +38,7 @@ def run_crawler(self, crawler_pk):
     process = CrawlerProcess({
         'USER_AGENT': '',
         "SPIDER_MIDDLEWARES": {"mortar.crawlers.ErrorLogMiddleware": 1000},
+        'ROBOTSTXT_OBEY': True,
     })
     try:
         process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
