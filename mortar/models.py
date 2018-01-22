@@ -1,7 +1,6 @@
-from datetime import datetime
-
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 from django.core.validators import RegexValidator
 from mptt.models import MPTTModel, TreeForeignKey
 import django.db.models.options as options
@@ -305,7 +304,7 @@ class ExecuteError(models.Model):
     )
 
     step = models.IntegerField(choices=STEP_CHOICES)
-    time = models.DateTimeField(default=datetime.now)
+    time = models.DateTimeField(default=timezone.now)
     msg = models.TextField()
     error_type = models.CharField(max_length=32, null=True, blank=True)
     analysis = models.ForeignKey('Analysis', related_name='errors')

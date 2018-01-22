@@ -6,9 +6,10 @@ import mortar.tasks as tasks
 import subprocess
 import os
 import psutil
-import datetime, json, uuid
+import json, uuid
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 from django.db import transaction
 from django.db.models import Count
@@ -179,23 +180,23 @@ class StopAnalysis(LoginRequiredMixin, APIView):
             if analysis.crawler.process_id:
                 revoke(analysis.crawler.process_id, terminate=True)
                 analysis.crawler.process_id = None
-                analysis.crawler.finished_at = datetime.datetime.now()
+                analysis.crawler.finished_at = timezone.now()
                 analysis.crawler.status = 2
                 analysis.crawler.save()
         if analysis.preprocess_running:
             if analysis.mindmap.process_id:
                 revoke(analysis.mindmap.process_id, terminate=True)
                 analysis.mindmap.process_id = None
-                analysis.mindmap.finished_at = datetime.datetime.now()
+                analysis.mindmap.finished_at = timezone.now()
                 analysis.mindmap.save()
         if analysis.query_running:
             if analysis.query.process_id:
                 revoke(analysis.query.process_id, terminate=True)
                 analysis.query.process_id=None
-                analysis.query.finished_at = datetime.datetime.now()
+                analysis.query.finished_at = timezone.now()
                 analysis.query.save()
                 
-        analysis.finished_at = datetime.datetime.now()
+        analysis.finished_at = timezone.now()
         analysis.save()
         return HttpResponseRedirect(reverse('analyze'))
 

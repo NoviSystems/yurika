@@ -1,6 +1,8 @@
 import scrapy
-import time, datetime
+import time
+from datetime import datetime
 import argparse, json
+from django.utils import timezone
 from bs4 import BeautifulSoup
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch.client import IndicesClient
@@ -84,7 +86,7 @@ class WebCrawler(CrawlSpider):
         doc = {}
         doc['url'] = response.url
         doc['refer_url'] = str(response.request.headers.get('Referer', None))
-        doc['tstamp'] = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H:%M:%S.%f")
+        doc['tstamp'] = datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f")
         doc['content'] = soup.get_text()
         doc['title'] = soup.title.string
         self.client.index(index=self.index_name, id=response.url, doc_type='doc', body=json.dumps(doc))         

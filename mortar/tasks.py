@@ -1,9 +1,9 @@
-import datetime
 
 from celery import shared_task
 from django.db.transaction import atomic
 from scrapy.crawler import CrawlerProcess
 from django.conf import settings
+from django.utils import timezone
 
 import mortar.utils as utils
 import mortar.models as models
@@ -28,11 +28,11 @@ def run_crawler(self, crawler_pk):
 
     crawler.process_id = self.request.id
     crawler.status = 0
-    crawler.started_at = datetime.datetime.now()
+    crawler.started_at = timezone.now()
     crawler.save()
 
     analysis.finished_at = None
-    analysis.started_at = datetime.datetime.now()
+    analysis.started_at = timezone.now()
     analysis.save()
 
     process = CrawlerProcess({
@@ -47,7 +47,7 @@ def run_crawler(self, crawler_pk):
         crawler.log_error(e)
         raise
 
-    crawler.finished_at = datetime.datetime.now()
+    crawler.finished_at = timezone.now()
     crawler.status = 1
     crawler.process_id = None
     crawler.save()
@@ -62,11 +62,11 @@ def sync_dictionaries(self):
 def preprocess(self, tree_pk):
     analysis = models.Analysis.objects.get(pk=0)
     analysis.finished_at = None
-    analysis.started_at = datetime.datetime.now()
+    analysis.started_at = timezone.now()
     tree = models.Tree.objects.get(pk=tree_pk)
     tree.clear_errors()
     tree.status = 0;
-    tree.started_at = datetime.datetime.now()
+    tree.started_at = timezone.now()
     tree.process_id = self.request.id
     tree.save()
 
@@ -77,7 +77,7 @@ def preprocess(self, tree_pk):
         raise
 
     tree.status = 1;
-    tree.finished_at = datetime.datetime.now()
+    tree.finished_at = timezone.now()
     tree.process_id = None
     tree.save()
 
@@ -88,7 +88,7 @@ def run_query(self, query_pk):
     query = models.Query.objects.get(pk=query_pk)
     query.clear_errors()
 
-    query.started_at = datetime.datetime.now()
+    query.started_at = timezone.now()
     query.process_id = self.request.id
     query.save()
 
@@ -99,9 +99,9 @@ def run_query(self, query_pk):
         query.log_error(e)
         raise
 
-    query.finished_at = datetime.datetime.now()
+    query.finished_at = timezone.now()
     query.process_id = None
     query.save()
 
-    analysis.finished_at = datetime.datetime.now()
+    analysis.finished_at = timezone.now()
     analysis.save()

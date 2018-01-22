@@ -1,6 +1,6 @@
 import os
 import json, string
-import datetime
+from datetime import datetime
 import nltk
 from elasticsearch import helpers
 from elasticsearch.client import IndicesClient
@@ -8,6 +8,7 @@ from xml.etree import ElementTree as etree
 from pyparsing import nestedExpr
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 import mortar.models as models
 
 def get_json_tree(queryset, max_level=None):
@@ -229,7 +230,7 @@ def clean_doc(esdoc, tree):
     try:
         url = esdoc['_source']['url']
         tstamp = esdoc['_source']['tstamp']
-        dt_tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%dT%H:%M:%S.%f')
+        dt_tstamp = datetime.strptime(tstamp, '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=timezone.utc)
         doc, created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp, tree=tree, index=tree.doc_source_index)
         return doc
     except Exception as e:
