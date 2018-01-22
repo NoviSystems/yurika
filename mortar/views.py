@@ -112,49 +112,7 @@ class AnalysisStatus(LoginRequiredMixin, APIView):
                 'count': annotation_count,
                 'errors': list(map(str, query.errors)),
             },
-
-            #TODO: These are duplicates of the above. Consider removing them
-            'crawler_running': analysis.crawler_running,
-            'preprocess_running': analysis.preprocess_running,
-            'query_running': analysis.query_running,
         }))
-
-class CrawlerStatus(LoginRequiredMixin, APIView):
-    def get(self, request, *args, **kwargs):
-        try:
-            analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-
-            crawler = analysis.crawler
-            index = crawler.index.name
-            es = settings.ES_CLIENT
-            count = es.count(index=index).get('count')
-            return Response(json.dumps({'analysis': analysis.pk, 'status': crawler.status, 'count': count, 'errors': crawler.errors}))
-        except:
-            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0, 'errors': []}))
-
-class PreprocessStatus(LoginRequiredMixin, APIView):
-    def get(self, request, *args, **kwargs):
-        try:
-            analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-            mindmap = analysis.mindmap
-            source = mindmap.doc_source_index.name
-            dest = mindmap.doc_dest_index.name
-            es = settings.ES_CLIENT
-            s_count = es.count(index=source).get('count')
-            d_count = es.count(index=dest, doc_type="doc").get('count')
-            return Response(json.dumps({'analysis': analysis.pk, 'status': 0 if mindmap.process_id else 1, 'count': d_count, 'source': s_count}))
-        except:
-            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0, 'source': 0}))
-
-class QueryStatus(LoginRequiredMixin, APIView):
-    def get(self, request, *args, **kwargs):
-        try: 
-            analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-            query = analysis.query
-            count = models.Annotation.objects.using('explorer').filter(query_id=query.id).count()
-            return Response(json.dumps({'analysis': analysis.pk, 'status': 0 if query.process_id else 1, 'count': count }))
-        except:
-            return Response(json.dumps({'analysis': 0, 'status': 0, 'count': 0 }))
 
 class StartAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -410,9 +368,6 @@ start_analysis = StartAnalysis.as_view()
 stop_analysis = StopAnalysis.as_view()
 destroy_analysis = DestroyAnalysis.as_view()
 analysis_status = AnalysisStatus.as_view()
-crawler_status = CrawlerStatus.as_view()
-preprocess_status = PreprocessStatus.as_view()
-query_status = QueryStatus.as_view()
 start_crawler = StartCrawler.as_view()
 stop_crawler = StopCrawler.as_view()
 start_preprocess = StartPreprocess.as_view()
