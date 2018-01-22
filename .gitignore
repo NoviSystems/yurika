@@ -1,3 +1,7 @@
+# Mortar
+dictionaries/
+static_root/
+
 # Application
 bundles/
 *.sqlite3
