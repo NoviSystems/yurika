@@ -273,9 +273,9 @@ class AddDictionaryApi(LoginRequiredMixin, APIView):
         name = request.POST.get('dict_name')
         words = request.POST.get('words').split('\n')
         clean = [word.replace("&#13;",'').replace('&#10;', '').strip() for word in words]
-        d_words = clean.join('\n')
+        d_words = '\n'.join(clean)
         new_dict = models.Dictionary.objects.create(name=name, filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]), words=d_words)
-        d.save()
+        new_dict.save()
         return HttpResponseRedirect(reverse('configure'))
 
 class EditDictionaryApi(LoginRequiredMixin, APIView):
