@@ -257,9 +257,9 @@ function update(d) {
     );
 
     // Enable/Disable controls
-    enable_or_disable_control('#btn-start', !d['any_running']);
-    enable_or_disable_control('#btn-destroy', !d['any_running']);
-    enable_or_disable_control('#btn-stop', d['any_running']);
+    enable_or_disable_control('#start-btn', !d['any_running']);
+    enable_or_disable_control('#destroy-btn', !d['any_running']);
+    enable_or_disable_control('#stop-btn', d['any_running']);
 
     // Enable/Disable Explore buttons at top/bottom of content
     if(d['all_finished']) {
