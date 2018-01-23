@@ -29,3 +29,4 @@ def nav_current_page(request):
     for nav_url, name in nav.items():
         if url.startswith(nav_url):
             return {'nav_active': name}
+    return {}
