@@ -164,16 +164,16 @@ class DestroyAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
         if analysis.mindmap:
+            analysis.mindmap.clear_errors()
             analysis.mindmap.delete()
         if analysis.crawler:
+            analysis.crawler.clear_errors()
             analysis.crawler.delete()
         if analysis.query:
+            analysis.query.clear_errors()
             analysis.query.delete()
         annotations = models.Annotation.objects.using('explorer').filter(analysis_id=analysis.id)
         annotations.delete()
-        analysis.crawler.clear_errors()
-        analysis.mindmap.clear_errors()
-        analysis.query.clear_errors()
         analysis.delete()
         es = settings.ES_CLIENT
         es.indices.delete(index='source', ignore=[400, 404])
