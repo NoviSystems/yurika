@@ -1,6 +1,7 @@
 # Mortar
 dictionaries/
 static_root/
+mortar/migrations/
 
 # Application
 bundles/
