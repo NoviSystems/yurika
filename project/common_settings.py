@@ -330,13 +330,25 @@ LOGGING = {
             #
             # * Django enables this behavior by calling
             #   https://docs.python.org/3.5/library/logging.html#logging.captureWarnings
-        }
+        },
+        "elasticsearch": {
+            # Set to DEBUG to see ElasticSearch requests
+            "level": "INFO",
+        },
+        "scrapy": {
+            # Set to DEBUG to see contents of scraped documents
+            "level": "INFO",
+        },
+        "urllib3": {
+            "level": "INFO",
+        },
     },
     "root": {
         "handlers": ["stderr"],
         "level": "DEBUG" if DEBUG else "INFO",
     }
 }
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,

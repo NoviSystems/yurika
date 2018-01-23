@@ -1,4 +1,6 @@
 
+from logging.config import dictConfig
+
 from celery import shared_task
 from django.db.transaction import atomic
 from scrapy.crawler import CrawlerProcess
@@ -39,7 +41,8 @@ def run_crawler(self, crawler_pk):
         'USER_AGENT': '',
         "SPIDER_MIDDLEWARES": {"mortar.crawlers.ErrorLogMiddleware": 1000},
         'ROBOTSTXT_OBEY': True,
-    })
+    }, install_root_handler=False)
+    dictConfig(settings.LOGGING)  # scrapy messes with logging. Undo that.
     try:
         process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
         process.start()
