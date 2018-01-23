@@ -3,10 +3,10 @@
 <div class="visible-desktop container body-wrapper">
     <div class="row">
       <div class="col-xs-6">
-        <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
+        <a href="{% url 'configure' %}" class="config-btn btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="explore-btn btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div>
     </div>
     <div class="row">&emsp;</div>
@@ -14,27 +14,28 @@
     <div class="panel-heading"><h3 class="panel-title">Controls</h3></div>
     <div id="controls" class="panel-body">
       <div class="row">
-        {% if CONFIGURED and not RUNNING %}
-          <div class="col-xs-1">
+
+            <div class="col-xs-1" id="start-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
             <form action="{% url 'start-analysis' analysis.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-success" type="submit" name="start" value="Start" />
+              <input class="btn btn-success" type="submit" name="start" value="Start" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
             </form>
           </div>
-          <div class="col-xs-1">
+
+          <div class="col-xs-1" id="destroy-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
             <form action="{% url 'destroy-analysis' analysis.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-danger" type="submit" name="destroy" value="Destroy" />
+              <input class="btn btn-danger" type="submit" name="destroy" value="Destroy" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
             </form>
           </div>
-        {% else %}
-          <div class="col-xs-1">
+
+          <div class="col-xs-1" id="stop-btn" style="display: {% if CONFIGURED and not RUNNING %}none{% else %}block{% endif %};">
             <form action="{% url 'stop-analysis' analysis.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-primary" type="submit" name="stop" value="Stop" />
+              <input class="btn btn-primary" type="submit" name="stop" value="Stop" {% if CONFIGURED and not RUNNING %}disabled="disabled"{% else %}{% endif %} />
             </form>
           </div>
-        {% endif %}
+
       </div>
       <div class="row">&emsp;</div>
       <div class="row">
@@ -42,39 +43,37 @@
           <a href="#advanced-controls" data-toggle="collapse">Advanced</a>
           <div id="advanced-controls" class="collapse">
             Please run these in the following order, and only one at a time.
-            {% if analysis.crawler_running %}
+
             <form action="{% url 'stop-crawler' analysis.crawler.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Stop Crawler" />
+              <input class="btn btn-sm btn-danger{% if not analysis.crawler_running %} hidden{% endif %}" id="adv-crawler-stop" type="submit" name="stop" value="Stop Crawler" />
             </form>
-            {% else %}
+
             <form action="{% url 'start-crawler' analysis.crawler.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Crawler" />
+              <input class="btn btn-sm btn-success{% if analysis.crawler_running %} hidden{% endif %}" id="adv-crawler-start" type="submit" name="stop" value="Start Crawler" />
             </form>
-            {% endif %}
-            {% if analysis.preprocess_running %}
-            <form action="{% url 'stop-preprocess' analysis.crawler.pk %}" method="POST">
+
+            <form action="{% url 'stop-preprocess' analysis.mindmap.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Stop Preprocess" />
+              <input class="btn btn-sm btn-danger{% if not analysis.preprocess_running %} hidden{% endif %}" id="adv-preprocess-stop" type="submit" name="stop" value="Stop Preprocess" />
             </form>
-            {% else %}
-            <form action="{% url 'start-preprocess' analysis.crawler.pk %}" method="POST">
+
+            <form action="{% url 'start-preprocess' analysis.mindmap.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Preprocess" />
+              <input class="btn btn-sm btn-success{% if analysis.preprocess_running %} hidden{% endif %}" id="adv-preprocess-start" type="submit" name="stop" value="Start Preprocess" />
             </form>
-            {% endif %}
-            {% if analysis.query_running %}
-            <form action="{% url 'stop-query' analysis.crawler.pk %}" method="POST">
+
+            <form action="{% url 'stop-query' analysis.query.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Stop Query" />
+              <input class="btn btn-sm btn-danger{% if not analysis.query_running %} hidden{% endif %}" id="adv-query-stop" type="submit" name="stop" value="Stop Query" />
             </form>
-            {% else %}
-            <form action="{% url 'start-query' analysis.crawler.pk %}" method="POST">
+
+            <form action="{% url 'start-query' analysis.query.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-sm btn-primary" type="submit" name="stop" value="Start Query" />
+              <input class="btn btn-sm btn-success{% if analysis.query_running %} hidden{% endif %}" id="adv-query-start" type="submit" name="stop" value="Start Query" />
             </form>
-            {% endif %}
+
           </div>
         </div>
       </div>
@@ -139,11 +138,11 @@
   <div class="row">&emsp;</div>
   <div class="row">
       <div class="col-xs-6">
-        <a href="{% url 'configure' %}" class="btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i
+        <a href="{% url 'configure' %}" class="config-btn btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i
 class="glyphicon glyphicon-arrow-left"></i></a>
       </div>
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="explore-btn btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
       </div>
     </div>
   <span class="row"></span>
@@ -185,13 +184,33 @@ function enable_or_disable_href(navbar_li_selector, url, should_enable) {
     li = $(navbar_li_selector);
     a = $(navbar_li_selector + '> a')[0];
     if(should_enable) {
-        console.log("Enabling" + url);
         li.removeClass('disabled');
         a.href = url;
     } else {
-        console.log("Disabling" + url);
         li.addClass('disabled');
         a.href = '#';
+    }
+}
+
+function enable_or_disable_control(button_div_selector, should_enable) {
+    div = $(button_div_selector);
+    btn = $(button_div_selector + ' input[type="submit"]');
+    if(should_enable) {
+        div.css('display', 'block');
+        btn.prop('disabled', false)
+    } else {
+        div.css('display', 'none');
+        btn.prop('disabled', true)
+    }
+}
+
+function show_or_hide_advanced(selector_prefix, is_running) {
+    if(is_running) {
+        $(selector_prefix+'-start').addClass('hidden');
+        $(selector_prefix+'-stop').removeClass('hidden');
+    } else {
+        $(selector_prefix+'-start').removeClass('hidden');
+        $(selector_prefix+'-stop').addClass('hidden');
     }
 }
 
@@ -236,6 +255,34 @@ function update(d) {
         '{% url 'explorer_index' %}',
         d['all_finished']
     );
+
+    // Enable/Disable controls
+    enable_or_disable_control('#btn-start', !d['any_running']);
+    enable_or_disable_control('#btn-destroy', !d['any_running']);
+    enable_or_disable_control('#btn-stop', d['any_running']);
+
+    // Enable/Disable Explore buttons at top/bottom of content
+    if(d['all_finished']) {
+        $('.explore-btn').addClass('btn-success')
+                         .removeClass('btn-default')
+                         .removeClass('disabled');
+    } else {
+        $('.explore-btn').removeClass('btn-success')
+                         .addClass('btn-default')
+                         .addClass('disabled');
+    }
+
+    // Enable/Disable Configure buttons at top/bottom of content
+    if(!d['any_running']) {
+        $('.config-btn').removeClass('disabled');
+    } else {
+        $('.config-btn').addClass('disabled');
+    }
+
+    // Hide/Unhide "Advanced" buttons
+    show_or_hide_advanced('#adv-crawler', d['crawler']['running']);
+    show_or_hide_advanced('#adv-preprocess', d['preprocess']['running']);
+    show_or_hide_advanced('#adv-query', d['query']['running']);
 
 }
 
