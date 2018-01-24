@@ -348,7 +348,8 @@ LOGGING = {
         "level": "DEBUG" if DEBUG else "INFO",
     }
 }
-CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Keep django log config in tasks
+CELERY_WORKER_REDIRECT_STDOUTS = False  # Prevents duplicate messages
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,

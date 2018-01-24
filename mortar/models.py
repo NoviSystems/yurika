@@ -59,9 +59,8 @@ class Crawler(models.Model):
     def clear_errors(self):
         self.errors.delete()
 
-    def log_error(self, msg, error_type=None):
-        e = ExecuteError(step=0, msg=msg, error_type=error_type, analysis=self.analyses.first())
-        e.save()
+    def log_error(self, error, error_type=None):
+        ExecuteError.log_error(self.analyses.first(), 0, error, error_type)
 
     @property
     def errors(self):
@@ -131,9 +130,8 @@ class Tree(models.Model):
     def clear_errors(self):
         self.errors.delete()
 
-    def log_error(self, msg, error_type=None):
-        e = ExecuteError(step=1, msg=msg, error_type=error_type, analysis=self.analyses.first())
-        e.save()
+    def log_error(self, error, error_type=None):
+        ExecuteError.log_error(self.analyses.first(), 1, error, error_type)
 
     @property
     def errors(self):
@@ -256,9 +254,8 @@ class Query(models.Model):
     def clear_errors(self):
         self.errors.delete()
 
-    def log_error(self, msg, error_type=None):
-        e = ExecuteError(step=2, msg=msg, error_type=error_type, analysis=self.analyses.first())
-        e.save()
+    def log_error(self, error, error_type=None):
+        ExecuteError.log_error(self.analyses.first(), 2, error, error_type)
 
     @property
     def errors(self):
@@ -314,3 +311,13 @@ class ExecuteError(models.Model):
         type_str = " {}".format(self.error_type) if self.error_type else ""
         #return "{} Error{}: {}".format(step_str, type_str, self.msg)
         return self.msg
+
+    @classmethod
+    def log_error(cls, analysis, step, error, error_type=None):
+        e = ExecuteError(
+            step=step,
+            msg=error,
+            error_type=error_type,
+            analysis=analysis,
+        )
+        e.save()

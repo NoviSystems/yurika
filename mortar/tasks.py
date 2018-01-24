@@ -1,5 +1,5 @@
 
-from logging.config import dictConfig
+import logging
 
 from celery import shared_task
 from django.db.transaction import atomic
@@ -7,9 +7,19 @@ from scrapy.crawler import CrawlerProcess
 from django.conf import settings
 from django.utils import timezone
 
+from twisted.python import log as twisted_log
+
 import mortar.utils as utils
 import mortar.models as models
 import mortar.crawlers as crawler_classes
+
+class CrawlerErrorLogHandler(logging.Handler):
+
+    def emit(self, record):
+        if record.levelno < logging.WARNING:
+            return
+        analysis = models.Analysis.objects.get(pk=0)
+        analysis.crawler.log_error(self.format(record))
 
 # Start Crawler
 @shared_task(bind=True)
@@ -42,9 +52,31 @@ def run_crawler(self, crawler_pk):
         "SPIDER_MIDDLEWARES": {"mortar.crawlers.ErrorLogMiddleware": 1000},
         'ROBOTSTXT_OBEY': True,
     }, install_root_handler=False)
-    dictConfig(settings.LOGGING)  # scrapy messes with logging. Undo that.
+
+    # Scrapy messes with logging. Undo that.
+    logging.config.dictConfig(settings.LOGGING)
+
+    # Log errors in ExecuteError table
+    handler = CrawlerErrorLogHandler()
+    logging.root.addHandler(handler)
+
+    # Log twisted errors in ExecuteError table
+    def log_twisted_error(twisted_error_dict):
+        if twisted_error_dict['isError']:
+            analysis = models.Analysis.objects.get(pk=0)
+            msg = '\n'.join(twisted_error_dict['message'])
+            analysis.crawler.log_error(msg)
+    twisted_log.addObserver(log_twisted_error)
+
     try:
-        process.crawl(crawler_classes.WebCrawler, start_urls=seeds, name=name, elastic_url=elastic_url, index=index, index_mapping=crawler._meta.index_mapping)
+        process.crawl(
+            crawler_classes.WebCrawler,
+            start_urls=seeds,
+            name=name,
+            elastic_url=elastic_url,
+            index=index,
+            index_mapping=crawler._meta.index_mapping
+        )
         process.start()
     except Exception as e:
         crawler.log_error(e)
