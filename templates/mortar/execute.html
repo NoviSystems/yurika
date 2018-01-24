@@ -287,13 +287,15 @@ function update(d) {
 }
 
 function fetch_status_update() {
-    $.getJSON("{% url 'analysis-status' analysis.pk %}", function(response) {
-        update(JSON.parse(response));
-    });
+    if(document.visibilityState != "hidden") {
+        $.getJSON("{% url 'analysis-status' analysis.pk %}", function(response) {
+            update(JSON.parse(response));
+        });
+    }
 }
 
 $(document).ready(fetch_status_update);
-window.setInterval(fetch_status_update, 3000);
+window.setInterval(fetch_status_update, 1000);
 
 </script>
 {% endblock %}
