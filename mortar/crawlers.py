@@ -1,16 +1,33 @@
-import scrapy
 import time
+import os
 from datetime import datetime
 import argparse, json
+import re
+
+import logging
+log = logging.getLogger(__name__)
+
 from django.utils import timezone
+from django.conf import settings
+
 from bs4 import BeautifulSoup
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from elasticsearch.client import IndicesClient
+import scrapy
 from scrapy.crawler import CrawlerProcess
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import Rule, CrawlSpider
+from scrapy.http import Request
+from scrapy.exceptions import NotConfigured
+from scrapy.utils.httpobj import urlparse_cached
+from w3lib.url import safe_url_string
 
 from mortar import models
+
+def remove_prefix(s, prefix):
+    return s[len(prefix):] if s.startswith(prefix) else s
+def remove_suffix(s, suffix):
+    return s[:-len(suffix)] if s.endswith(suffix) else s
 
 def log_errors_decorator(func):
     def catch_err(self, *args, **kwargs):
@@ -28,6 +45,62 @@ class ErrorLogMiddleware(object):
     def process_spider_exception(self, response, exception, spider):
         analysis = models.Analysis.objects.get(pk=0)
         analysis.crawler.log_error("{} {}".format(exception, response))
+
+class BlockUrlMiddleware(object):
+
+    def __init__(self):
+
+        # Read urls and build regex
+        self.regex = None
+        if os.path.exists(settings.BLOCKED_URL_LIST):
+            with open(settings.BLOCKED_URL_LIST) as f:
+                self.regex = self.build_regex(f)
+
+        if not self.regex:
+            log.info("Found no urls to block in: "
+                    "{}".format(settings.BLOCKED_URL_LIST))
+            raise NotConfigured  # Remove this middleware from the stack
+
+    def build_regex(self, urls):
+        is_url = lambda url: len(url.strip()) > 0 and url[0] != '#'
+        urls = filter(is_url, urls)
+        re_part = '|'.join(re.escape(self.normalize_url(url)) for url in urls)
+        if not re_part:
+            return None
+        regex = '^({})'.format(re_part)
+        return re.compile(regex)
+
+    def normalize_url(self, url):
+        url = url.strip()
+        url = remove_prefix(url, 'http://')
+        url = remove_prefix(url, 'https://')
+        url = remove_prefix(url, 'www.')
+        url = remove_suffix(url, '/')
+        return url
+
+    def filter_results(self, results):
+        for x in results:
+            if isinstance(x, Request):
+                if self.should_follow(x):
+                    yield x
+                else:
+                    log.info("Ignoring URL on blocked list: {}".format(x.url))
+            else:
+                yield x
+
+    def should_follow(self, request):
+        escaped_url = safe_url_string(request.url, request.encoding)
+        if self.regex.match(self.normalize_url(escaped_url)):
+            return False
+
+        return True
+
+    def process_start_requests(self, start_requests, spider):
+        return self.filter_results(start_requests)
+
+    def process_spider_output(self, response, result, spider):
+        return self.filter_results(result)
+
 
 class Document(scrapy.Item):
     refer_url = scrapy.Field()

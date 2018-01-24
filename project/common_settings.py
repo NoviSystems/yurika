@@ -380,3 +380,7 @@ EXPLORER_DEFAULT_CONNECTION = 'explorer'
 CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
 
 EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ('django_', 'auth_', 'contenttypes_', 'sessions_', 'admin_')
+
+# Do not crawl urls that start with one of the lines in this file.
+# Ignored if file not found.
+BLOCKED_URL_LIST = path("blocked_urls.txt")

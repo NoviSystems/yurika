@@ -49,7 +49,10 @@ def run_crawler(self, crawler_pk):
 
     process = CrawlerProcess({
         'USER_AGENT': '',
-        "SPIDER_MIDDLEWARES": {"mortar.crawlers.ErrorLogMiddleware": 1000},
+        "SPIDER_MIDDLEWARES": {
+            "mortar.crawlers.ErrorLogMiddleware": 1000,
+            "mortar.crawlers.BlockUrlMiddleware": 900,
+        },
         'ROBOTSTXT_OBEY': True,
     }, install_root_handler=False)
 

@@ -1,6 +1,7 @@
 # Mortar
 dictionaries/
 static_root/
+blocked_urls.txt
 mortar/migrations/
 
 # Application
