@@ -51,15 +51,19 @@ class BlockUrlMiddleware(object):
     def __init__(self):
 
         # Read urls and build regex
-        self.regex = None
-        if os.path.exists(settings.BLOCKED_URL_LIST):
-            with open(settings.BLOCKED_URL_LIST) as f:
-                self.regex = self.build_regex(f)
+        self.regex = self.build_regex(self.read_block_files())
 
         if not self.regex:
-            log.info("Found no urls to block in: "
-                    "{}".format(settings.BLOCKED_URL_LIST))
             raise NotConfigured  # Remove this middleware from the stack
+
+    def read_block_files(self):
+        """Yield every line from every file in BLOCK_LISTS setting."""
+        for path in settings.BLOCK_LISTS:
+            if not os.path.exists(path):
+                raise ValueError("Misconfigured BLOCK_LISTS: File not found: "
+                        "{}".format(path))
+            with open(path) as f:
+                yield from f
 
     def build_regex(self, urls):
         is_url = lambda url: len(url.strip()) > 0 and url[0] != '#'
