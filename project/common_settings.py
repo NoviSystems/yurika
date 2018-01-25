@@ -331,6 +331,9 @@ LOGGING = {
             # * Django enables this behavior by calling
             #   https://docs.python.org/3.5/library/logging.html#logging.captureWarnings
         },
+        "parso": {  # These debug messages clutter the ipython console
+            "level": "WARNING",
+        },
         "elasticsearch": {
             # Set to DEBUG to see ElasticSearch requests
             "level": "INFO",
