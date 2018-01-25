@@ -165,7 +165,7 @@ class WebCrawler(CrawlSpider):
         doc['refer_url'] = str(response.request.headers.get('Referer', None))
         doc['tstamp'] = datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f")
         doc['content'] = soup.get_text()
-        doc['title'] = soup.title.string
+        doc['title'] = soup.title.string if soup.title else ""
         self.client.index(index=self.index_name, id=response.url, doc_type='doc', body=json.dumps(doc))         
 
         doc_item = Document(url=doc['url'], tstamp=doc['tstamp'], content=doc['content'], title=doc['title'])
