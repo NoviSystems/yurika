@@ -138,7 +138,11 @@ class StopAnalysis(LoginRequiredMixin, APIView):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
         if analysis.crawler_running:
             if analysis.crawler.process_id:
-                revoke(analysis.crawler.process_id, terminate=True)
+                # Send SIGABRT instead of SIGTERM to crawler. Scrapy catches
+                # SIGTERM and cleanly exits the crawler, but here we need the
+                # task to fail so the next task in the chain (preprocessing)
+                # doesn't run.
+                revoke(analysis.crawler.process_id, terminate=True, signal="SIGABRT")
                 analysis.crawler.process_id = None
                 analysis.crawler.finished_at = timezone.now()
                 analysis.crawler.status = 2
