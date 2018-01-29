@@ -52,8 +52,8 @@ PARTS_OF_SPEECH = (('CC', 'Coordinating Conjunction'),
 
 ES_URL = 'http://xx.xx.x.xx:9200/'
 ES_CLIENT = Elasticsearch([ES_URL], connection_class=RequestsHttpConnection)
-DICTIONARIES_PATH = 'dictionaries/'
-CRAWLERS_PATH = '/opt/yurika/mortar/crawlers/'
+DICTIONARIES_PATH = path('dictionaries/')
+STATIC_ROOT = path("static_root")
 
 # Do not crawl urls that start with one of the lines in these files.
 BLOCK_LISTS = (
