@@ -31,7 +31,7 @@ Start the elasticsearch service:
 
     [user@yurika]$ sudo service elasticsearch start
 
-Wait a few seconds for the service to start, then make a test request to ensure
+Wait a minute for the service to start, then make a test request to ensure
 the cluster is running. Note that "status" will show as yellow unless we add at
 least one other node in the cluster.
 
@@ -59,7 +59,6 @@ least one other node in the cluster.
 Install Python 3:
 
     [user@yurika]$ sudo -i
-    [root@yurika]# yum -y install yum-utils
     [root@yurika]# yum -y groupinstall development
     [root@yurika]# yum -y install https://centos7.iuscommunity.org/ius-release.rpm
     [root@yurika]# yum -y install python36u python36u-devel
@@ -75,10 +74,9 @@ Clone and pull the latest version of the Yurika code:
     [root@yurika]# git clone https://github.com/ITNG/yurika.git
     [root@yurika]# cd yurika
 
-Switch to the branch you want (optional):
+Switch to another branch (optional):
 
     [root@yurika]# git checkout dev
-    [root@yurika]# git pull origin dev
 
 Create Mortar user and set permissions:
 
@@ -147,7 +145,7 @@ Start Django in another terminal:
     [mortar@yurika]$ source .venv/bin/activate
     [mortar@yurika]$ python manage.py runserver
 
-You can now access yurika at `http://127.0.0.1:8000`
+You can now access Yurika at `http://127.0.0.1:8000`
 
 
 ## Production Setup
@@ -174,7 +172,8 @@ Copy over server config file:
 Edit NGINX config file in `/etc/nginx/conf.d/yurika.conf`:
 
   * Change `server_name` to your hostname. Include any hostnames you want the
-    server to serve yurika on (including 127.0.0.1 if desired).
+    server to serve Yurika on (including 127.0.0.1 if desired) separated by
+    spaces.
 
 Restart Nginx:
 
@@ -182,9 +181,10 @@ Restart Nginx:
 
 ### PostgreSQL
 
-Initialize database:
+Initialize database and start Postgres:
 
     [root@yurika]# postgresql-setup initdb
+    [root@yurika]# service postgresql start
 
 Create postgres database and user:
 
@@ -210,22 +210,25 @@ Restart PostgreSQL:
 
 ### Django Confguration
 
-Change Django settings in `/opt/yurika/.env` to use postgres:
+Change Django settings in `/opt/yurika/.env` to use postgres and disable debug
+mode:
 
     DATABASE_URL=psql://mortar:ratrom@127.0.0.1:5432/mortar
+    DEBUG=false
 
 Install Python requirements:
 
     [user@yurika]$ sudo -iu mortar
     [mortar@yurika]$ cd /opt/yurika/
-    [mortar@yurika]$ ./.venv/bin/pip install -r requirements_production.txt
-    [mortar@yurika]$ exit
+    [mortar@yurika]$ source .venv/bin/activate
+    [mortar@yurika]$ pip install -r requirements_production.txt
 
 Create database schema and create Django superuser:
 
-    [mortar@yurika]$ ./.venv/bin/python manage.py migrate
-    [mortar@yurika]$ ./.venv/bin/python manage.py migrate --database explorer
-    [mortar@yurika]# ./.venv/bin/python manage.py createsuperuser
+    [mortar@yurika]$ python manage.py migrate
+    [mortar@yurika]$ python manage.py migrate --database explorer
+    [mortar@yurika]$ python manage.py createsuperuser
+    [mortar@yurika]$ exit
 
 ### Supervisor
 
