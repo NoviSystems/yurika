@@ -10,17 +10,17 @@ most Linux distributions.
 
 Install Java > 1.8:
 
-    [user@yurika]$ sudo yum install java
+    [user@yurika]$ sudo yum install -y java
 
 Currently ElasticSearch 5.x is required. Download the latest 5.x version on
 their [past releases page](https://www.elastic.co/downloads/past-releases) and
 install it, or use the commands:
 
-    [user@yurika]$ sudo yum install wget
+    [user@yurika]$ sudo yum install -y wget
     [user@yurika]$ wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.6.rpm
     [user@yurika]$ sudo rpm -Uvh elasticsearch-5.6.6.rpm
 
-Edit the elasticsearch configuration at /etc/elasticsearch/elasticsearch.yml
+Edit the elasticsearch configuration at `/etc/elasticsearch/elasticsearch.yml`
 and uncomment or add the following lines:
 
     cluster.name: yurika
@@ -62,13 +62,11 @@ Install Python 3:
     [root@yurika]# yum -y install yum-utils
     [root@yurika]# yum -y groupinstall development
     [root@yurika]# yum -y install https://centos7.iuscommunity.org/ius-release.rpm
-    [root@yurika]# yum -y install python36u
-    [root@yurika]# yum -y install python36u-devel
+    [root@yurika]# yum -y install python36u python36u-devel
 
-Set up Redis server for Celery tasks
+Set up Redis server for Celery tasks:
 
-    [root@yurika]# yum install epel-release -y
-    [root@yurika]# yum install redis -y
+    [root@yurika]# yum install -y epel-release redis
     [root@yurika]# systemctl start redis.service
 
 Clone and pull the latest version of the Yurika code:
@@ -79,8 +77,8 @@ Clone and pull the latest version of the Yurika code:
 
 Switch to the branch you want (optional):
 
-    [root@yurika]# git checkout v2
-    [root@yurika]# git pull origin v2
+    [root@yurika]# git checkout dev
+    [root@yurika]# git pull origin dev
 
 Create Mortar user and set permissions:
 
@@ -115,16 +113,14 @@ Create Django settings:
 Edit settings in `project/settings.py`:
 
   * Set `ES_URL` to your IP address
-  * Set `ALLOWED_HOSTS` to `['<your ip addr>', '<your fqdn>']`
-  * Set `STATIC_ROOT` to `/opt/yurika/static_root`
 
 Make migrations, run collect static and create Django superuser:
 
-    [mortar@yurika] python manage.py makemigrations
-    [mortar@yurika] python manage.py migrate
-    [mortar@yurika] python manage.py migrate --database explorer
-    [mortar@yurika] python manage.py collectstatic
-    [mortar@yurika] python manage.py createsuperuser
+    [mortar@yurika]$ python manage.py makemigrations
+    [mortar@yurika]$ python manage.py migrate
+    [mortar@yurika]$ python manage.py migrate --database explorer
+    [mortar@yurika]$ python manage.py collectstatic
+    [mortar@yurika]$ python manage.py createsuperuser
 
 Install NLTK packages:
 
@@ -140,70 +136,73 @@ Django serves the webpages.
 Start Celery in one terminal:
 
     [user@yurika]$ sudo -iu mortar
+    [mortar@yurika]$ cd /opt/yurika
     [mortar@yurika]$ source .venv/bin/activate
     [mortar@yurika]$ celery -A project.celery worker -l info
 
 Start Django in another terminal:
 
     [user@yurika]$ sudo -iu mortar
+    [mortar@yurika]$ cd /opt/yurika
     [mortar@yurika]$ source .venv/bin/activate
     [mortar@yurika]$ python manage.py runserver
+
+You can now access yurika at `http://127.0.0.1:8000`
 
 
 ## Production Setup
 
-For the development setup, supervisor will be used to run Celery and Django.
-Instead of the Django development server, gunicorn will run our Django
-application.
+The following is used for the development setup:
 
-### Supervisor
+  * NGINX: webserver. Handles static files and passes other requests to
+           Gunicorn.
+  * Gunicorn: serves Django requests.
+  * Supervisor: runs Gunicorn and Celery workers.
+  * PostgreSQL: database.
 
-Install supervisor and copy gunicorn configuration to
-`/etc/supervisord.d/mortar.conf`:
+Install yum requirements:
 
     [user@yurika]$ sudo -i
-    [root@yurika]# yum install supervisor
-    [root@yurika]# cp /opt/yurika/scripts/configs/supervisor.ini /etc/supervisord.d/yurika.ini
+    [root@yurika]# yum install -y nginx postgresql-server supervisor
 
-Install nginx and copy over server config file:
+### NGINX
 
-    [root@yurika]# yum install nginx
+Copy over server config file:
+
     [root@yurika]# cp /opt/yurika/scripts/configs/nginx.conf /etc/nginx/conf.d/yurika.conf
 
-Edit nginx config file in `/etc/nginx/conf.d/yurika.conf`:
+Edit NGINX config file in `/etc/nginx/conf.d/yurika.conf`:
 
-  * Change `server_name` to your hostname
+  * Change `server_name` to your hostname. Include any hostnames you want the
+    server to serve yurika on (including 127.0.0.1 if desired).
 
-Start supervisord and nginx services:
+Restart Nginx:
 
-    [root@yurika]# service supervisord restart
     [root@yurika]# service nginx restart
 
 ### PostgreSQL
 
-Install postgres server:
+Initialize database:
 
-    [user@yurika]$ sudo -i
-    [root@yurika]# yum install -y postgresql-server
-    [root@yurika]# service postgresql initdb
+    [root@yurika]# postgresql-setup initdb
 
 Create postgres database and user:
 
     [root@yurika] sudo -iu postgres
-    [postgres@yurika-dev]$ createdb mortar
-    [postgres@yurika-dev]$ createuser mortar
-    [postgres@yurika-dev]$ psql mortar
+    [postgres@yurika]$ createdb mortar
+    [postgres@yurika]$ createuser mortar
+    [postgres@yurika]$ psql mortar
     mortar=# GRANT ALL ON DATABASE mortar TO mortar;
     mortar=# ALTER USER mortar PASSWORD 'ratrom';
     mortar=# \q
-    [postgres@yurika-dev]$ exit
+    [postgres@yurika]$ exit
 
 Update `/var/lib/pgsql/data/pg_hba.conf` to allow md5 passwords over http
 connections. Line order is significant; put this as the first non-commented
 line:
 
-    # TYPE  DATABASE    USER        ADDRESS             METHOD
-    host    mortar      mortar      127.0.0.1/32        md5
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+    host    mortar          mortar          127.0.0.1/32            md5
 
 Restart PostgreSQL:
 
@@ -214,3 +213,28 @@ Restart PostgreSQL:
 Change Django settings in `/opt/yurika/.env` to use postgres:
 
     DATABASE_URL=psql://mortar:ratrom@127.0.0.1:5432/mortar
+
+Install Python requirements:
+
+    [user@yurika]$ sudo -iu mortar
+    [mortar@yurika]$ cd /opt/yurika/
+    [mortar@yurika]$ ./.venv/bin/pip install -r requirements_production.txt
+    [mortar@yurika]$ exit
+
+Create database schema and create Django superuser:
+
+    [mortar@yurika]$ ./.venv/bin/python manage.py migrate
+    [mortar@yurika]$ ./.venv/bin/python manage.py migrate --database explorer
+    [mortar@yurika]# ./.venv/bin/python manage.py createsuperuser
+
+### Supervisor
+
+Install supervisor and copy Gunicorn configuration to
+`/etc/supervisord.d/mortar.conf`:
+
+    [user@yurika]$ sudo -i
+    [root@yurika]# cp /opt/yurika/scripts/configs/supervisor.ini /etc/supervisord.d/yurika.ini
+
+Start supervisord:
+
+    [root@yurika]# service supervisord restart

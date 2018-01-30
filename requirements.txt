@@ -22,11 +22,3 @@ csvkit
 #explorer
 six==1.10.0
 unicodecsv==0.14.1
-
-# Production Packages
-#psycopg2
-#gunicorn
-#raven
-
-# OAuth Packages
-#oauth2client
