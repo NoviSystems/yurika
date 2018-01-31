@@ -44,6 +44,75 @@ class Analysis(models.Model):
     def all_finished(self):
         return self.finished_at != None and not self.any_running
 
+    def stop(self):
+        if self.crawler_running:
+            if self.crawler.process_id:
+                # Send SIGABRT instead of SIGTERM to crawler. Scrapy catches
+                # SIGTERM and cleanly exits the crawler, but here we need the
+                # task to fail so the next task in the chain (preprocessing)
+                # doesn't run.
+                revoke(self.crawler.process_id, terminate=True, signal="SIGABRT")
+                self.crawler.process_id = None
+                self.crawler.finished_at = timezone.now()
+                self.crawler.status = 2
+                self.crawler.save()
+        if self.preprocess_running:
+            if self.mindmap.process_id:
+                revoke(self.mindmap.process_id, terminate=True)
+                self.mindmap.process_id = None
+                self.mindmap.finished_at = timezone.now()
+                self.mindmap.save()
+        if self.query_running:
+            if self.query.process_id:
+                revoke(self.query.process_id, terminate=True)
+                self.query.process_id=None
+                self.query.finished_at = timezone.now()
+                self.query.save()
+
+        self.finished_at = timezone.now()
+        self.save()
+
+    def clear_results(self):
+        self.stop()
+
+        if self.crawler:
+            self.crawler.clear_errors()
+            self.crawler.started_at = None
+            self.crawler.finished_at = None
+            self.crawler.status = 2
+            self.crawler.save()
+        if self.mindmap:
+            self.mindmap.clear_errors()
+            self.mindmap.started_at = None
+            self.mindmap.finished_at = None
+            self.mindmap.save()
+        if self.query:
+            self.query.clear_errors()
+            self.query.started_at = None
+            self.query.finished_at = None
+            self.query.save()
+
+        es = settings.ES_CLIENT
+        es.indices.delete(index='source', ignore=[400, 404])
+        es.indices.delete(index='dest', ignore=[400, 404])
+
+        annotations = Annotation.objects.using('explorer').filter(analysis_id=self.id)
+        annotations.delete()
+
+        self.save()
+
+    def clear_config(self):
+        self.clear_results()
+
+        if self.crawler:
+            self.crawler.delete()
+        if self.mindmap:
+            self.mindmap.delete()
+        if self.query:
+            self.query.delete()
+
+        self.delete()
+
 class Crawler(models.Model):
     name = models.CharField(max_length=50)
     category = models.CharField(max_length=3, choices=(('txt', 'File System Crawler'),

@@ -15,24 +15,24 @@
     <div id="controls" class="panel-body">
       <div class="row">
 
-            <div class="col-xs-1" id="start-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
+          <div class="col-xs-3" id="start-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
             <form action="{% url 'start-analysis' analysis.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-success" type="submit" name="start" value="Start" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
+              <input class="btn btn-lg btn-success" type="submit" name="start" value="Start" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
             </form>
           </div>
 
-          <div class="col-xs-1" id="destroy-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
-            <form action="{% url 'destroy-analysis' analysis.pk %}" method="POST">
+          <div class="col-xs-1" id="clear-results-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
+            <form action="{% url 'clear-results' analysis.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-danger" type="submit" name="destroy" value="Destroy" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
+              <input class="btn btn-lg btn-danger" type="submit" name="clear-results" value="Clear Results" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
             </form>
           </div>
 
           <div class="col-xs-1" id="stop-btn" style="display: {% if CONFIGURED and not RUNNING %}none{% else %}block{% endif %};">
             <form action="{% url 'stop-analysis' analysis.pk %}" method="POST">
               {% csrf_token %}
-              <input class="btn btn-primary" type="submit" name="stop" value="Stop" {% if CONFIGURED and not RUNNING %}disabled="disabled"{% else %}{% endif %} />
+              <input class="btn btn-lg btn-primary" type="submit" name="stop" value="Stop" {% if CONFIGURED and not RUNNING %}disabled="disabled"{% else %}{% endif %} />
             </form>
           </div>
 
@@ -227,7 +227,7 @@ function update(d) {
     set_bar('#crawl', crawler['running'], crawler['status'], 100)
 
     if(crawler['status'] == 0) {
-        button_txt = '<button class="btn btn-sm btn-danger" type="submit" value="submit">Stop</button>';
+        button_txt = '<button class="btn btn-sm btn-success" type="submit" value="submit">Finish Crawl</button>';
     } else {
         button_txt = '';
     }
@@ -258,7 +258,7 @@ function update(d) {
 
     // Enable/Disable controls
     enable_or_disable_control('#start-btn', !d['any_running']);
-    enable_or_disable_control('#destroy-btn', !d['any_running']);
+    enable_or_disable_control('#clear-results-btn', !d['any_running']);
     enable_or_disable_control('#stop-btn', d['any_running']);
 
     // Enable/Disable Explore buttons at top/bottom of content

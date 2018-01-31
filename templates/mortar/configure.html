@@ -12,14 +12,20 @@
 
 <div class="visible-desktop container body-wrapper">
     <div class="row">
-      <div class="col-xs-12 text-right">
+      <div class="col-xs-10 text-right">
+        <form action="{% url 'clear-config' analysis.pk %}" method="POST">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-default btn-danger">Clear Config</button>
+        </form>
+      </div>
+      <div class="col-xs-2 text-right">
         <a href="{% url 'analyze' %}" class="btn btn-xs {% if CONFIGURED %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
-      </div> 
+      </div>
     </div>
     <div class="row">&emsp;</div>
   <div class="panel {% if analysis.crawler_configured %}panel-success{% else %} panel-info {% endif %}">
     <div class="panel-heading" data-toggle="collapse" data-target="#crawler"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.crawler_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>1. Crawler</span>
-      {% if analysis.crawler_configured %} 
+      {% if analysis.crawler_configured %}
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
@@ -71,7 +77,7 @@
   </div>
   <div class="panel {% if analysis.mindmap_configured %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading" data-toggle="collapse" data-target="#mindmap"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.mindmap_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>2. MindMap</span>
-      {% if analysis.mindmap_configured %} 
+      {% if analysis.mindmap_configured %}
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
@@ -97,7 +103,7 @@
       <div class="row">
         <div class="col-xs-6"><p>Your uploaded MindMap:</p></div>
       </div>
-      <div class="row">  
+      <div class="row">
         {% if mindmap.nodes.all %}
         <div id="tree" class="col-xs-6">
         </div>
@@ -116,7 +122,7 @@
   </div>
   <div class="panel {% if analysis.dicts_configured %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading" data-toggle="collapse" data-target="#dictionaries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.dicts_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>3. Dictionaries</span>
-      {% if analysis.dicts_configured %} 
+      {% if analysis.dicts_configured %}
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
@@ -166,7 +172,7 @@
     </div>
   </div>
   <div class="panel {% if analysis.query_configured %}panel-success{% else %}panel-info{% endif %}">
-    <div class="panel-heading" data-toggle="collapse" data-target="#queries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.query_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>4. Query</span> {% if analysis.query_configured %} 
+    <div class="panel-heading" data-toggle="collapse" data-target="#queries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.query_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>4. Query</span> {% if analysis.query_configured %}
         <i class="glyphicon glyphicon-ok"></i>
       {% else %}
         <i class="glyphicon glyphicon-warning-sign"></i>
@@ -181,9 +187,9 @@
       <form id="query_form" action="{% url 'edit-query' query.pk %}" method="POST">
       {% csrf_token %}
         <div id="query_parts">
-          <div id="query_1" class="row"> 
+          <div id="query_1" class="row">
             <div class="col-xs-4">
-              {{ form.part_type }} 
+              {{ form.part_type }}
               <div id="query_part_1">
                 {{ form.regex }}
               </div>
@@ -373,7 +379,7 @@ function edit_node_form(pk, item, edit) {
         if(regex) {
             div += " : " + regex;
         }
-        div += "</a> " + `&emsp;<a href="#" id="node-` + pk + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`; 
+        div += "</a> " + `&emsp;<a href="#" id="node-` + pk + `" class="glyphicon glyphicon-pencil"></a>` + " " + `<a href="{% url 'delete-node' %}` + pk + `" class="glyphicon glyphicon-trash"></a>`;
         $(item).parent().parent().html(div);
     }
 }

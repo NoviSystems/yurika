@@ -2,10 +2,11 @@ from django.conf.urls import url
 from . import views
 urlpatterns = [
  url('^configure/$', views.configure, name='configure'),
+ url('^configure/clear/(?P<pk>[\\d]+)/$', views.clear_config, name='clear-config'),
  url('^execute/$', views.analyze, name='analyze'),
  url('^execute/start/(?P<pk>[\\d]+)/$', views.start_analysis, name="start-analysis"),
  url('^execute/stop/(?P<pk>[\\d]+)/$', views.stop_analysis, name="stop-analysis"),
- url('^execute/destroy/(?P<pk>[\\d]+)/$', views.destroy_analysis, name="destroy-analysis"),
+ url('^execute/clear/(?P<pk>[\\d]+)/$', views.clear_results, name="clear-results"),
  url('^status/execute/(?P<pk>[\\d]+)/$', views.analysis_status, name="analysis-status"),
  url('^crawler/start/(?P<pk>[\\d]+)/$', views.start_crawler, name="start-crawler"),
  url('^crawler/stop/(?P<pk>[\\d]+)/$', views.stop_crawler, name="stop-crawler"),

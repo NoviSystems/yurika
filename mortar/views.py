@@ -73,6 +73,12 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['analysis'].save()
         return render(request, self.template_name, context=context)
 
+class ClearConfigureView(LoginRequiredMixin, APIView):
+    def post(self, request, *args, **kwargs):
+        analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
+        analysis.clear_config()
+        return HttpResponseRedirect(reverse('configure'))
+
 class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
     template_name = 'mortar/execute.html'
 
@@ -136,53 +142,14 @@ class StartAnalysis(LoginRequiredMixin, APIView):
 class StopAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.crawler_running:
-            if analysis.crawler.process_id:
-                # Send SIGABRT instead of SIGTERM to crawler. Scrapy catches
-                # SIGTERM and cleanly exits the crawler, but here we need the
-                # task to fail so the next task in the chain (preprocessing)
-                # doesn't run.
-                revoke(analysis.crawler.process_id, terminate=True, signal="SIGABRT")
-                analysis.crawler.process_id = None
-                analysis.crawler.finished_at = timezone.now()
-                analysis.crawler.status = 2
-                analysis.crawler.save()
-        if analysis.preprocess_running:
-            if analysis.mindmap.process_id:
-                revoke(analysis.mindmap.process_id, terminate=True)
-                analysis.mindmap.process_id = None
-                analysis.mindmap.finished_at = timezone.now()
-                analysis.mindmap.save()
-        if analysis.query_running:
-            if analysis.query.process_id:
-                revoke(analysis.query.process_id, terminate=True)
-                analysis.query.process_id=None
-                analysis.query.finished_at = timezone.now()
-                analysis.query.save()
-
-        analysis.finished_at = timezone.now()
-        analysis.save()
+        analysis.stop()
         return HttpResponseRedirect(reverse('analyze'))
 
-class DestroyAnalysis(LoginRequiredMixin, APIView):
+class ClearResults(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = models.Analysis.objects.get(pk=self.kwargs.get('pk'))
-        if analysis.mindmap:
-            analysis.mindmap.clear_errors()
-            analysis.mindmap.delete()
-        if analysis.crawler:
-            analysis.crawler.clear_errors()
-            analysis.crawler.delete()
-        if analysis.query:
-            analysis.query.clear_errors()
-            analysis.query.delete()
-        annotations = models.Annotation.objects.using('explorer').filter(analysis_id=analysis.id)
-        annotations.delete()
-        analysis.delete()
-        es = settings.ES_CLIENT
-        es.indices.delete(index='source', ignore=[400, 404])
-        es.indices.delete(index='dest', ignore=[400, 404])
-        return HttpResponseRedirect(reverse('configure'))
+        analysis.clear_results()
+        return HttpResponseRedirect(reverse('analyze'))
 
 class StartCrawler(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -372,10 +339,11 @@ class Home(django.views.generic.TemplateView):
             return HttpResponseRedirect(reverse('analyze'))
 
 configure = ConfigureView.as_view()
+clear_config = ClearConfigureView.as_view()
 analyze = AnalyzeView.as_view()
 start_analysis = StartAnalysis.as_view()
 stop_analysis = StopAnalysis.as_view()
-destroy_analysis = DestroyAnalysis.as_view()
+clear_results = ClearResults.as_view()
 analysis_status = AnalysisStatus.as_view()
 start_crawler = StartCrawler.as_view()
 stop_crawler = StopCrawler.as_view()
