@@ -87,7 +87,6 @@ Create a virtual environment:
 
     [root@yurika]# sudo -iu mortar
     [mortar@yurika]$ cd /opt/yurika
-    [mortar@yurika]$ cp project/develop/env .env
     [mortar@yurika]$ python3.6 -m venv .venv
 
 For convenience in later commands, activate your virtualenv for this terminal.
@@ -104,9 +103,10 @@ Clone dictionaries repository from github:
 
     [mortar@yurika] git clone https://github.com/ITNG/yurika-dictionaries.git dictionaries
 
-Create Django settings:
+Copy settings files:
 
     [mortar@yurika]$ cp project/settings.ex.py project/settings.py
+    [mortar@yurika]$ cp project/develop/env .env
 
 Edit settings in `project/settings.py`:
 
