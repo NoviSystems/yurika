@@ -8,6 +8,8 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
 import elasticsearch
 
+from celery.task.control import revoke
+
 class Analysis(models.Model):
     crawler = models.ForeignKey('Crawler', related_name="analyses", null=True, blank=True) 
     mindmap = models.ForeignKey('Tree', related_name="analyses", null=True, blank=True)
