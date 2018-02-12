@@ -143,14 +143,10 @@ def update_dictionaries():
         for f in files:
             if f.endswith('.txt') and os.path.getsize(os.sep.join([root, f])) > 1:
                 filepath = os.sep.join([root, f])
-                with open(filepath, 'rb+') as dictfile:
-                    words = ''
-                    buff = dictfile.read(2048).decode('utf-8')
-                    while buff:
-                        words += buff
-                        buff = dictfile.read(2048).decode('utf-8')
-                    d_words = words
-                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]), words=d_words)
+                with open(filepath, encoding='utf-8') as dictfile:
+                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.path.join(root, f))
+                    d.words = dictfile.read()
+                    d.save()
                     '''es_actions.append({'_op_type': 'index', '_type': 'dictionary',
                         '_source': {
                             'name': d.name,
