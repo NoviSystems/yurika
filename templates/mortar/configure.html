@@ -86,7 +86,7 @@
     <div id="mindmap" class="panel-body collapse {% if not analysis.mindmap_configured %}in{% endif %}">
       <form action="{% url 'upload-mindmap' mindmap.pk %}" method="POST" enctype="multipart/form-data">
         <div class="row">
-          <div class="col-xs-12"><p>Import a MindMap (.mm) file to create rules from Regular Expressions</p></div>
+          <div class="col-xs-12"><p>Import a MindMap (.mm) file to create rules from Regular Expressions.</p></div>
           {% csrf_token %}
           <div class="col-xs-6">
             {{ form.file }}
@@ -131,7 +131,10 @@
     <div id="dictionaries" class="panel-body collapse {% if not analysis.dicts_configured %}in{% endif %}">
       <form action="{% url 'add-dict' %}" method="POST">
         <div class="row">
-          <div class="col-xs-12"><p><a href="{% url 'update-dicts' %}">Load System Dictionaries</a> : reads in all dictionaries from {{ dict_path }} (may take a while)</p></div>
+          <div class="col-xs-12">
+            <p>Add dictionaries to create rules for many terms at once.</p>
+            <p><a href="{% url 'update-dicts' %}">Load System Dictionaries</a> : reads in all dictionaries from {{ dict_path }} (may take a while)</p>
+          </div>
           {% csrf_token %}
           <div class="col-xs-6">
               {{ form.dict_name }}
@@ -181,7 +184,8 @@
     <div id="queries" class="panel-body collapse {% if not analysis.query_configured %}in{% endif %}">
       <div class="row">
         <div class="col-xs-12">
-          <p>{{ query.string }}</p><p>Needs intuitive way of explaining/showing how this form works</p>
+          <p>{{ query.string }}</p>
+          <p>Build your query to search crawled documents.</p>
         </div>
       </div>
       <form id="query_form" action="{% url 'edit-query' query.pk %}" method="POST">
@@ -198,20 +202,20 @@
         </div>
         <div class="row">&emsp;</div>
         <div class="row">
-          <div class="col-xs-4"></div>
-          <div id="query_buttons" class="col-xs-2 text-right" role="group">
+          <div id="query_buttons" class="col-xs-4 text-center" role="group">
             <input type="button" id="add_query" value="+" class="btn btn-sm btn-primary" onclick="javascript: add_query_part();" />
           </div>
         </div>
         <div class="row">&emsp;</div>
           <div class="row">
             <div class="col-xs-4">
+              <p>Choose your search granularity.</p>
               {{ form.category }}
             </div>
           </div>
+        <div class="row">&emsp;</div>
         <div class="row">
-          <div class="col-xs-4"></div>
-          <div class="col-xs-2 text-right">
+          <div class="col-xs-4 text-right">
             <form action="" method="POST">
               {% csrf_token %}
               <button class="btn btn-sm btn-success" type="submit" name="save" value="crawler">Save Query</button>

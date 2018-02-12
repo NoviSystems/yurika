@@ -8,7 +8,7 @@ import re
 class ConfigureForm(forms.Form):
     seed_list = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'URLs (one per line)'}), required=False)
     file = forms.FileField(label="Import MindMap", required=False)
-    part_type = forms.ChoiceField(choices=((0, 'Regular Expression'), (1, 'Dictionary'), (2, 'Part of Speech')))
+    part_type = forms.ChoiceField(choices=((0, 'MindMap Term'), (1, 'Dictionary'), (2, 'Part of Speech')))
     regex = forms.ModelChoiceField(queryset=models.Node.objects.filter(tree_link__slug='default').distinct(), required=False)
     part_of_speech = forms.ChoiceField(choices=settings.PARTS_OF_SPEECH)
     dictionary = forms.ModelChoiceField(queryset=models.Dictionary.objects.all(), required=False)
