@@ -1,5 +1,7 @@
 # Yurika Rules-based Analytics Platform
+
 ## The Augmented Intelligence Process
+
 Our process consists of five steps:
 * Gathering
 * Filtering
@@ -17,4 +19,3 @@ Annotating is a second run of culling our data to gain insight into our question
 After annotating the data, we export it into a structured format (usually csv or json) to be stored in a SQL database. Typically, each type of annotation we have created is given its own table, along with the tables of pre-structured data we gathered in the first step.
 ### Visualizing
 Where the magic happens. Now that we have all of our data in an easily-managed format, we can analyze the relationships between our annotations and structured data, and create a Truth Table with adjustable weighted values to craft an answer to our question that’s backed by the data. 
-

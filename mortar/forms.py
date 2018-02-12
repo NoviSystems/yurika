@@ -1,8 +1,27 @@
 from django import forms
+from django.conf import settings
 from django.db.models import Q
 from django.utils.text import slugify
 import mortar.models as models
 import re
+
+class ConfigureForm(forms.Form):
+    seed_list = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'URLs (one per line)'}), required=False)
+    file = forms.FileField(label="Import MindMap", required=False)
+    part_type = forms.ChoiceField(choices=((0, 'Regular Expression'), (1, 'Dictionary'), (2, 'Part of Speech')))
+    regex = forms.ModelChoiceField(queryset=models.Node.objects.filter(tree_link__slug='default').distinct(), required=False)
+    part_of_speech = forms.ChoiceField(choices=settings.PARTS_OF_SPEECH)
+    dictionary = forms.ModelChoiceField(queryset=models.Dictionary.objects.all(), required=False)
+    op = forms.ChoiceField(choices=((0, 'OR'), (1, 'AND')), label="Operation")
+
+    category = forms.ChoiceField(choices=((0, 'Sentence'), (1, 'Paragraph'), (2, 'Document')), label='Type')
+    dict_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'placeholder': 'Dictionary Name'}), label="Name", required=False)
+    words = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Words or Phrases (one per line)'}), label="Words", required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
 
 class BSModelForm(forms.ModelForm):
 
@@ -11,9 +30,11 @@ class BSModelForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
 
-
+class QueryForm(forms.Form):
+    category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
+    
 class CrawlerForm(BSModelForm):
-    index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False)
+    index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False, label="Document Index")
     new_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
 
     def __init__(self, *args, **kwargs):
@@ -79,10 +100,6 @@ class DictionaryForm(BSModelForm):
         model = models.Dictionary
         fields = ['name']
 
-class WordForm(BSModelForm):
-    class Meta:
-        model = models.Word
-        fields = ['name']
 
 class TreeEditForm(BSModelForm):
     doc_source_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')
@@ -103,21 +120,17 @@ class TreeEditForm(BSModelForm):
         if 'slug' in self.changed_data:
             slugs = models.Tree.objects.filter(slug=data['slug'])
             if len(slugs) > 0:
-                print('1')
                 raise forms.ValidationError('That slug is already taken.')
 
         if not data['new_source_index'] and not data['doc_source_index'] or not data['new_dest_index'] and not data['doc_dest_index']:
-            print('2')
             raise forms.ValidationError('Must choose index or create new one')
         else:
             if not data['doc_source_index'] and data['new_source_index']:
                 new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_source_index'])
                 data['doc_source_index'] = new_ei
-                print('3')
             if not data['doc_dest_index'] and data['new_dest_index']:
                 new_ei, created = models.ElasticIndex.objects.get_or_create(name=data['new_dest_index'])
                 data['doc_dest_index'] = new_ei
-                print('4')
         print(data)
         return data
   

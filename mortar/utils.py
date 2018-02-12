@@ -1,6 +1,6 @@
 import os
 import json, string
-import datetime
+from datetime import datetime
 import nltk
 from elasticsearch import helpers
 from elasticsearch.client import IndicesClient
@@ -8,40 +8,53 @@ from xml.etree import ElementTree as etree
 from pyparsing import nestedExpr
 from django.conf import settings
 from django.db import transaction
+from django.utils import timezone
 import mortar.models as models
 
 def get_json_tree(queryset, max_level=None):
-    pk_attname = 'id'
     tree = []
+    flat_tree = []
     node_dict = dict()
     min_level = None
-    for cat in queryset:
+    for node in queryset:
         if min_level is None:
-            min_level = cat.level
-        pk = getattr(cat, pk_attname)
+            min_level = node.level
+        pk = getattr(node, 'id')
         try:
-            dict_id = cat.dictionary.id
+            dict_id = node.dictionary.id
         except:
             dict_id = None
 
-        node_info = dict(label=cat.name, id=pk, regex=cat.regex, dictionary=dict_id)
-        if max_level is not None and not cat.is_leaf_node():
-            node_info['load_on_demand'] = True
-        if cat.level == min_level:
+        node_info = dict(label=node.name, id=pk, regex=node.regex, dictionary=dict_id)
+        flat_tree.append(node_info)
+        if node.level == min_level:
             tree.append(node_info)
         else:
-            parent_id = cat.parent_id
+            parent_id = node.parent_id
             parent_info = node_dict.get(parent_id)
             if parent_info:
                 if 'children' not in parent_info:
                     parent_info['children'] = []
                 parent_info['children'].append(node_info)
-                if max_level is not None:
-                    parent_info['load_on_demand'] = False
         node_dict[pk] = node_info
+    return tree,flat_tree
 
-    return tree
+def get_dict_json():
+    dicts = models.Dictionary.objects.all()
+    out = []
+    for d in dicts:
+        j = {'id': d.id,
+             'name': d.name, 
+             'words': [w.strip() for w in d.words.split('\n')]}
+        out.append(j)
+    return out
 
+def get_dict_list():
+    dicts = models.Dictionary.objects.all()
+    out = {}
+    for d in dicts:
+        out[d.id] = d.words
+    return json.dumps(out)
 
 def get_anno_json(tree):
     annos = models.Annotation.objects.filter(tree=tree)
@@ -52,7 +65,6 @@ def get_anno_json(tree):
         num += 1
 
     return out
-
 
 def read_mindmap(tree, mmstring):
     root = etree.fromstring(mmstring)
@@ -96,7 +108,7 @@ def copy_nodes(old_tree, new_tree):
 
 def create_query_part(qtype, qid, query, op=None):
     if not op:
-        op = '+'
+        op = 1
     if qtype == 'dictionary':
         dictionary = models.Dictionary.objects.get(id=qid)
         part = models.DictionaryPart.objects.create(query=query, dictionary=dictionary, op=op, name=dictionary.name)
@@ -120,16 +132,33 @@ def create_query_part(qtype, qid, query, op=None):
 
 
 def update_dictionaries():
+    '''es = settings.ES_CLIENT
+    i_client = IndicesClient(client=es)
+    if not i_client.exists('dictionaries'):
+        i_client.create('dictionaries')'''
+    chunk_size = 2048
+    es_actions = []
     dict_path = settings.DICTIONARIES_PATH
     for root, dirs, files in os.walk(dict_path):
         for f in files:
             if f.endswith('.txt') and os.path.getsize(os.sep.join([root, f])) > 1:
                 filepath = os.sep.join([root, f])
                 with open(filepath, 'rb+') as dictfile:
-                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]))
-                    for line in dictfile:
-                        word = line.decode('utf-8').rstrip('\n')
-                        w, created = models.Word.objects.get_or_create(name=word, dictionary=d)
+                    words = ''
+                    buff = dictfile.read(2048).decode('utf-8')
+                    while buff:
+                        words += buff
+                        buff = dictfile.read(2048).decode('utf-8')
+                    d_words = words
+                    d,created = models.Dictionary.objects.get_or_create(name=f.split('.')[0], filepath=os.sep.join([root, f]), words=d_words)
+                    '''es_actions.append({'_op_type': 'index', '_type': 'dictionary',
+                        '_source': {
+                            'name': d.name,
+                            'words': [w for w in d.words.all()]
+                        },
+                      '_index': tree.doc_dest_index.name
+                    })
+    helpers.bulk(client=es, actions=es_actions)'''
 
 #TODO
 def write_to_new_dict(new_dict):
@@ -146,14 +175,15 @@ def associate_tree(tree):
 
 def make_dict_query(dictionary):
     out = []
-    for word in dictionary.words.all():
-        out.append({'match': {'content': word.name}})
+    for word in dictionary.words.split('\n'):
+        if len(word):
+            out.append({'match': {'content': word.strip()}})
 
     return {'bool': {'should': out}}
 
 
 def make_regex_query(regex):
-    return {'bool': {'must': {'regexp': {'content': regex.regex}}}}
+    return {'bool': {'must': {'regexp': {'content': regex.regex if regex.regex else regex.name}}}}
 
 
 def make_pos_query(pos):
@@ -200,20 +230,18 @@ def clean_doc(esdoc, tree):
     try:
         url = esdoc['_source']['url']
         tstamp = esdoc['_source']['tstamp']
-        dt_tstamp = datetime.datetime.strptime(tstamp, '%Y-%m-%dT%H:%M:%S.%f')
+        dt_tstamp = datetime.strptime(tstamp, '%Y-%m-%dT%H:%M:%S.%f').replace(tzinfo=timezone.utc)
         doc, created = models.Document.objects.get_or_create(url=url, crawled_at=dt_tstamp, tree=tree, index=tree.doc_source_index)
-        print(created)
         return doc
     except Exception as e:
         print(e)
-
 
 def tokenize_doc(esdoc):
     content = esdoc['_source']['content']
     sentences = nltk.tokenize.sent_tokenize(content)
     tokens = [nltk.tokenize.word_tokenize(s) for s in sentences]
-    return (
-     sentences, tokens)
+    pos_tokens = nltk.pos_tag_sents(tokens)
+    return list(zip(sentences, pos_tokens))
 
 def tokenize_paragraph(paragraph):
     sentences = nltk.tokenize.sent_tokenize(paragraph)
@@ -239,10 +267,9 @@ def content_to_sentences(content, paragraph, tree, esdoc, django_id):
     es_out = []
     tagged_paragraph = ''
     place = 0
-    for tupl in content:
-        sent, pos = tupl
+    for sent,pos in content:
         tagged_sentence = ''.join([' ' + i[0] + '|' + i[1] for i in pos if len(i[1]) and i[0] not in string.punctuation])
-        body = {'_op_type': 'index',
+        body = {
          '_type': 'sentence',
          '_source': {
            'content': sent.rstrip('\n'),
@@ -268,7 +295,7 @@ def content_to_paragraphs(esdoc, tree, django_id):
             sentence_content = tokenize_paragraph(p)
             tags, sentences = content_to_sentences(sentence_content, place, tree, esdoc, django_id)
             out.extend(sentences)
-            body = {'_op_type': 'index',
+            body = {
              '_type': 'paragraph', 
              '_source': {
                'content': p,
@@ -292,14 +319,18 @@ def get_indexed_docs(tree, filter_query):
     return queried
 
 
-def insert_pos_record(id, esdoc, tree):
+def insert_pos_record(id, esdoc, tree, query):
     es = settings.ES_CLIENT
     body = {'url': esdoc['_source']['url'],
      'tstamp': esdoc['_source']['tstamp'],
      'content': esdoc['_source']['content']}
     es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
-    es_actions = content_to_paragraphs(esdoc, tree, id)
-    helpers.bulk(client=es, actions=es_actions)
+    if query.category == 0:
+        parag,es_out = content_to_sentences(tokenize_doc(esdoc), 0, tree, esdoc, id)
+        helpers.bulk(client=es, actions=es_out)
+    elif query.category == 1:
+        helpers.bulk(client=es, actions=content_to_paragraphs(esdoc, tree, id))
+        
 
 def create_pos_index(tree):
     es = settings.ES_CLIENT
@@ -307,28 +338,29 @@ def create_pos_index(tree):
     name = tree.doc_dest_index.name
     if not i_client.exists(name):
         pos_settings = {'mappings': {'doc': {'properties': {'content': {'type': 'text'}, 'url': {'type': 'text', 'index': 'false'}, 'tstamp': {'type': 'date', 'format': 'strict_date_optional_time||epoch_millis'}}}, 'sentence': {'_parent': {'type': 'doc'}, 'properties': {'content': {'type': 'text'}, 'tokens': {'type': 'text'}}}, 'paragraph': {'_parent': {'type': 'doc'}, 'properties': {'content': {'type': 'text'}, 'tokens': {'type': 'text'}}}}}
-        print(json.dumps(pos_settings))
         i_client.create(index=name, body=json.dumps(pos_settings))
     
 
-def process(tree, query):
-    docs = get_indexed_docs(tree, query)
+def process(tree, filter, query):
+    docs = get_indexed_docs(tree, filter)
     create_pos_index(tree)
     for esdoc in docs:
         doc = clean_doc(esdoc, tree)
         if doc is not None:
-            insert_pos_record(doc.id, esdoc, tree)
+            insert_pos_record(doc.id, esdoc, tree, query)
 
 
-def annotate(tree, category, query):
+def annotate(analysis):
+    tree = analysis.mindmap
+    query = analysis.query
     es = settings.ES_CLIENT
     i_client = IndicesClient(client=es)
     if not i_client.exists(tree.doc_dest_index.name):
         process(tree, {'names': [], 'regexs': []})
     doc_type = 'doc'
-    if category == 'S':
+    if query.category == 0:
         doc_type = 'sentence'
-    elif category == 'P':
+    elif query.category == 1:
         doc_type = 'paragraph'
     else: 
         doc_type = 'doc'
@@ -336,4 +368,5 @@ def annotate(tree, category, query):
     search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
-        anno = models.Annotation.objects.create(content=hit['_source']['content'], tree=tree, query=query, document=doc, category=category)
+        with transaction.atomic():
+            anno = models.Annotation.objects.using('explorer').create(content=hit['_source']['content'], analysis_id=analysis.id, query_id=query.id, document_id=doc.id, category=query.category)

@@ -115,6 +115,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'project.utils.context_processors.google_analytics',
+                'project.utils.context_processors.analysis_status',
+                'project.utils.context_processors.nav_current_page',
             ],
         },
     },
@@ -129,9 +131,13 @@ WSGI_APPLICATION = 'project.wsgi.application'
 DATABASES = {
     # fail if no DATABASE_URL - don't use a default value
     'default': env.db(),
+    'explorer': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'explorer.sqlite3'),
+    }
 }
 
-
+DATABASE_ROUTERS = ['mortar.routers.AnalysisRouter']
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
 
@@ -146,13 +152,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'America/New_York'
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 
@@ -328,13 +330,29 @@ LOGGING = {
             #
             # * Django enables this behavior by calling
             #   https://docs.python.org/3.5/library/logging.html#logging.captureWarnings
-        }
+        },
+        "parso": {  # These debug messages clutter the ipython console
+            "level": "WARNING",
+        },
+        "elasticsearch": {
+            # Set to DEBUG to see ElasticSearch requests
+            "level": "INFO",
+        },
+        "scrapy": {
+            # Set to DEBUG to see contents of scraped documents
+            "level": "INFO",
+        },
+        "urllib3": {
+            "level": "INFO",
+        },
     },
     "root": {
         "handlers": ["stderr"],
         "level": "DEBUG" if DEBUG else "INFO",
     }
 }
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Keep django log config in tasks
+CELERY_WORKER_REDIRECT_STDOUTS = False  # Prevents duplicate messages
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -352,3 +370,16 @@ from django.core.urlresolvers import reverse_lazy
 LOGIN_URL = reverse_lazy("login")
 LOGOUT_URL = reverse_lazy("logout")
 LOGIN_REDIRECT_URL = reverse_lazy("home")
+
+EXPLORER_CONNECTIONS = {
+    #'Postgres': 'postgres',
+    #'MySQL': 'mysql',
+    'SQLite': 'explorer',
+}
+EXPLORER_DEFAULT_CONNECTION = 'explorer'
+
+# Each web crawl needs a new worker, since twisted reactors (used by scrapy)
+# cannot be restarted.
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
+
+EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ('django_', 'auth_', 'contenttypes_', 'sessions_', 'admin_')

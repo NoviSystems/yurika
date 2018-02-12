@@ -3,7 +3,6 @@ celery
 Django<2.0
 django-mptt
 django-mptt-admin
-django-sql-explorer
 djangorestframework
 elasticsearch<6.0.0
 lxml
@@ -20,10 +19,6 @@ django-environ
 colorlog
 csvkit
 
-# Production Packages
-psycopg2
-gunicorn
-raven
-
-# OAuth Packages
-#oauth2client
+#explorer
+six==1.10.0
+unicodecsv==0.14.1

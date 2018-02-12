@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="visible-desktop container body-wrapper">
+    <div class="row">
+      <div class="col-xs-6">
+        <a href="{% url 'configure' %}" class="config-btn btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
+      </div>
+      <div class="col-xs-6 text-right">
+        <a href="{% url 'explorer_index' %}" class="explore-btn btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+      </div>
+    </div>
+    <div class="row">&emsp;</div>
+  <div class="panel {% if FINISHED %}panel-success{% else %} panel-info {% endif %}">
+    <div class="panel-heading"><h3 class="panel-title">Controls</h3></div>
+    <div id="controls" class="panel-body">
+      <div class="row">
+
+          <div class="col-xs-3" id="start-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
+            <form action="{% url 'start-analysis' analysis.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-lg btn-success" type="submit" name="start" value="Start" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
+            </form>
+          </div>
+
+          <div class="col-xs-1" id="clear-results-btn" style="display: {% if CONFIGURED and not RUNNING %}block{% else %}none{% endif %};">
+            <form action="{% url 'clear-results' analysis.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-lg btn-danger" type="submit" name="clear-results" value="Clear Results" {% if CONFIGURED and not RUNNING %}{% else %}disabled="disabled"{% endif %} />
+            </form>
+          </div>
+
+          <div class="col-xs-1" id="stop-btn" style="display: {% if CONFIGURED and not RUNNING %}none{% else %}block{% endif %};">
+            <form action="{% url 'stop-analysis' analysis.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-lg btn-primary" type="submit" name="stop" value="Stop" {% if CONFIGURED and not RUNNING %}disabled="disabled"{% else %}{% endif %} />
+            </form>
+          </div>
+
+      </div>
+      <div class="row">&emsp;</div>
+      <div class="row">
+        <div class="col-xs-12">
+          <a href="#advanced-controls" data-toggle="collapse">Advanced</a>
+          <div id="advanced-controls" class="collapse">
+            Please run these in the following order, and only one at a time.
+
+            <form action="{% url 'stop-crawler' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-danger{% if not analysis.crawler_running %} hidden{% endif %}" id="adv-crawler-stop" type="submit" name="stop" value="Stop Crawler" />
+            </form>
+
+            <form action="{% url 'start-crawler' analysis.crawler.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-success{% if analysis.crawler_running %} hidden{% endif %}" id="adv-crawler-start" type="submit" name="stop" value="Start Crawler" />
+            </form>
+
+            <form action="{% url 'stop-preprocess' analysis.mindmap.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-danger{% if not analysis.preprocess_running %} hidden{% endif %}" id="adv-preprocess-stop" type="submit" name="stop" value="Stop Preprocess" />
+            </form>
+
+            <form action="{% url 'start-preprocess' analysis.mindmap.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-success{% if analysis.preprocess_running %} hidden{% endif %}" id="adv-preprocess-start" type="submit" name="stop" value="Start Preprocess" />
+            </form>
+
+            <form action="{% url 'stop-query' analysis.query.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-danger{% if not analysis.query_running %} hidden{% endif %}" id="adv-query-stop" type="submit" name="stop" value="Stop Query" />
+            </form>
+
+            <form action="{% url 'start-query' analysis.query.pk %}" method="POST">
+              {% csrf_token %}
+              <input class="btn btn-sm btn-success{% if analysis.query_running %} hidden{% endif %}" id="adv-query-start" type="submit" name="stop" value="Start Query" />
+            </form>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="panel {% if FINISHED %}panel-success{% else %}panel-info{% endif %}">
+    <div class="panel-heading"><h3 class="panel-title">Progress</h3></div>
+    <div id="progress" class="panel-body">
+      <div class="row">
+        <div class="col-xs-12">
+          <form action="{% url 'stop-crawler' analysis.crawler.pk %}" method="POST">
+            {% csrf_token %}
+            <h4>Crawling
+              &nbsp;&nbsp;
+                <span id="crawler-stop-button-area"></span>
+            </h4>
+          </form>
+        </div>
+        <div class="col-xs-6">
+          <div class="progress">
+            <div id="crawl" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" ariavaluemax="100" style="width: 0%;">
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-6">
+          <span id="crawl-text"></span><br>
+          <span id="crawl-error-text" style="color: red;"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12">
+          <h4>Processing</h4>
+        </div>
+        <div class="col-xs-6">
+          <div class="progress">
+            <div id="process" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="50" ariavaluemax="100" style="width: 0%;">
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-6">
+          <span id="process-text"></span><br>
+          <span id="process-error-text" style="color: red;"></span>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-12">
+          <h4>Querying</h4>
+        </div>
+        <div class="col-xs-6">
+          <div class="progress">
+            <div id="query" class="progress-bar progress-bar-info" role="progressbar" aria-valuenow="0" ariavaluemax="100" style="width: 0%;">
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-6">
+          <span id="query-text"></span><br>
+          <span id="query-error-text" style="color: red;"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">&emsp;</div>
+  <div class="row">
+      <div class="col-xs-6">
+        <a href="{% url 'configure' %}" class="config-btn btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i
+class="glyphicon glyphicon-arrow-left"></i></a>
+      </div>
+      <div class="col-xs-6 text-right">
+        <a href="{% url 'explorer_index' %}" class="explore-btn btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+      </div>
+    </div>
+  <span class="row"></span>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+
+function set_bar(id, running, stat, percent) {
+    $(id).css('width', ''+percent+'%').attr('aria-valuenow', ''+percent);
+
+    // Running
+    if(stat == 0) {
+        $(id).addClass('active').addClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
+
+    // Stopped
+    } else if(stat == 2) {
+        $(id).removeClass('active').removeClass('progress-bar-striped').removeClass('progress-bar-success').addClass('progress-bar-info');
+        $(id).css('width', '0%').attr('aria-valuenow', 0);
+
+    // Finished
+    } else {
+        $(id).removeClass('active').removeClass('progress-bar-striped').addClass('progress-bar-success').removeClass('progress-bar-info');
+    }
+
+}
+
+function get_error_text(errors) {
+    if(errors.length == 1) {
+        return errors[0];
+    } else if(errors.length > 0) {
+        return '' + errors.length + ' Errors';
+    } else {
+        return '';
+    }
+}
+
+function enable_or_disable_href(navbar_li_selector, url, should_enable) {
+    li = $(navbar_li_selector);
+    a = $(navbar_li_selector + '> a')[0];
+    if(should_enable) {
+        li.removeClass('disabled');
+        a.href = url;
+    } else {
+        li.addClass('disabled');
+        a.href = '#';
+    }
+}
+
+function enable_or_disable_control(button_div_selector, should_enable) {
+    div = $(button_div_selector);
+    btn = $(button_div_selector + ' input[type="submit"]');
+    if(should_enable) {
+        div.css('display', 'block');
+        btn.prop('disabled', false)
+    } else {
+        div.css('display', 'none');
+        btn.prop('disabled', true)
+    }
+}
+
+function show_or_hide_advanced(selector_prefix, is_running) {
+    if(is_running) {
+        $(selector_prefix+'-start').addClass('hidden');
+        $(selector_prefix+'-stop').removeClass('hidden');
+    } else {
+        $(selector_prefix+'-start').removeClass('hidden');
+        $(selector_prefix+'-stop').addClass('hidden');
+    }
+}
+
+function update(d) {
+    var crawler = d['crawler'];
+    var process = d['preprocess'];
+    var query = d['query'];
+
+    console.log(d);
+
+    // Crawler
+    $('#crawl-error-text').text(get_error_text(crawler['errors']));
+    $('#crawl-text').text('' + crawler['count'] + " Documents Crawled");
+    set_bar('#crawl', crawler['running'], crawler['status'], 100)
+
+    if(crawler['status'] == 0) {
+        button_txt = '<button class="btn btn-sm btn-success" type="submit" value="submit">Finish Crawl</button>';
+    } else {
+        button_txt = '';
+    }
+    $('#crawler-stop-button-area').html(button_txt);
+
+    // Process
+    $('#process-error-text').text(get_error_text(process['errors']));
+    $('#process-text').text('' + process['n_processed'] + '/' + process['n_total'] + " Documents Processed");
+    var percent = (process['n_processed'] / process['n_total'])*100;
+    set_bar('#process', process['running'], process['status'], percent)
+
+    // Query
+    $('#query-error-text').text(get_error_text(query['errors']));
+    $('#query-text').text('' + query['count'] + " Results Found");
+    set_bar('#query', query['running'], query['status'], query['status']==2 ? 0 : 100)
+
+    // Enable/Disable "Configure"/"Explore" in navbar
+    enable_or_disable_href(
+        '#nav-configure',
+        '{% url 'configure' %}',
+        !d['any_running']
+    );
+    enable_or_disable_href(
+        '#nav-explore',
+        '{% url 'explorer_index' %}',
+        d['all_finished']
+    );
+
+    // Enable/Disable controls
+    enable_or_disable_control('#start-btn', !d['any_running']);
+    enable_or_disable_control('#clear-results-btn', !d['any_running']);
+    enable_or_disable_control('#stop-btn', d['any_running']);
+
+    // Enable/Disable Explore buttons at top/bottom of content
+    if(d['all_finished']) {
+        $('.explore-btn').addClass('btn-success')
+                         .removeClass('btn-default')
+                         .removeClass('disabled');
+    } else {
+        $('.explore-btn').removeClass('btn-success')
+                         .addClass('btn-default')
+                         .addClass('disabled');
+    }
+
+    // Enable/Disable Configure buttons at top/bottom of content
+    if(!d['any_running']) {
+        $('.config-btn').removeClass('disabled');
+    } else {
+        $('.config-btn').addClass('disabled');
+    }
+
+    // Hide/Unhide "Advanced" buttons
+    show_or_hide_advanced('#adv-crawler', d['crawler']['running']);
+    show_or_hide_advanced('#adv-preprocess', d['preprocess']['running']);
+    show_or_hide_advanced('#adv-query', d['query']['running']);
+
+}
+
+function fetch_status_update() {
+    if(document.visibilityState != "hidden") {
+        $.getJSON("{% url 'analysis-status' analysis.pk %}", function(response) {
+            update(JSON.parse(response));
+        });
+    }
+}
+
+$(document).ready(fetch_status_update);
+window.setInterval(fetch_status_update, 1000);
+
+</script>
+{% endblock %}
