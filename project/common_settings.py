@@ -16,6 +16,7 @@ import sys
 import environ
 from django.urls import reverse_lazy
 from django.contrib.messages import constants as messages, DEFAULT_TAGS
+from elasticsearch import Elasticsearch, RequestsHttpConnection
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -31,16 +32,16 @@ env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
     HOST_NAME=str,
-    GOOGLE_ANALYTICS_KEY=(str, ''),
-    GOOGLE_OPENIDCONNECT_KEY=(str, ''),
-    GOOGLE_OPENIDCONNECT_SECRET=(str, ''),
+    CELERY_ALWAYS_EAGER=str,
+    CELERY_BROKER_URL=str,
+    ELASTICSEARCH_URL=str,
     SENTRY_DSN=(str, ''),
 )
 env.read_env(path('.env'))  # parse .env into os.environ
 
 
 # Authentication
-AUTH_USER_MODEL = 'auth.User'
+AUTH_USER_MODEL = 'utils.User'
 
 LOGIN_URL = reverse_lazy('login')
 
@@ -53,7 +54,6 @@ LOGIN_REDIRECT_URL = reverse_lazy('home')
 # https://docs.djangoproject.com/en/1.11/ref/settings/#authentication-backends
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    #'oauth.authbackend.OAuthBackend',
 ]
 
 
@@ -80,14 +80,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'project.utils',
     'mptt',
     'django_mptt_admin',
     'rest_framework',
     'mortar',
 
     'explorer',
-
-    #'oauth',
 ]
 
 MIDDLEWARE = [
@@ -114,7 +113,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'project.utils.context_processors.google_analytics',
                 'project.utils.context_processors.analysis_status',
                 'project.utils.context_processors.nav_current_page',
             ],
@@ -131,10 +129,7 @@ WSGI_APPLICATION = 'project.wsgi.application'
 DATABASES = {
     # fail if no DATABASE_URL - don't use a default value
     'default': env.db(),
-    'explorer': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'explorer.sqlite3'),
-    }
+    'explorer': env.db('EXPLORER_URL'),
 }
 
 DATABASE_ROUTERS = ['mortar.routers.AnalysisRouter']
@@ -152,9 +147,13 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
+
 TIME_ZONE = 'America/New_York'
+
 USE_I18N = True
+
 USE_L10N = True
+
 USE_TZ = True
 
 
@@ -183,21 +182,89 @@ MESSAGE_TAGS = {
     messages.ERROR: 'alert-danger %s' % DEFAULT_TAGS[messages.ERROR],
 }
 
+# Each web crawl needs a new worker, since twisted reactors (used by scrapy)
+# cannot be restarted.
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
 
-# Google Analytics
-GOOGLE_ANALYTICS_KEY = env('GOOGLE_ANALYTICS_KEY')
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Keep django log config in tasks
+
+CELERY_WORKER_REDIRECT_STDOUTS = False  # Prevents duplicate messages
 
 
-# OAUTH 2
-# Copy your google oauth2 credentials into your .env file if using oauth.
-# When creating the google oauth2 credentials, use this as the callback url:
-# https://SERVER/oauth/provider/google/complete
-if env('GOOGLE_OPENIDCONNECT_KEY'):
-    GOOGLE_OPENIDCONNECT_KEY = env('GOOGLE_OPENIDCONNECT_KEY')
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.'
+    ],
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend', ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
+}
 
-    GOOGLE_OPENIDCONNECT_SECRET = env('GOOGLE_OPENIDCONNECT_SECRET')
 
-    INSTALLED_APPS.append('oauth')
+EXPLORER_CONNECTIONS = {
+    # 'Postgres': 'postgres',
+    # 'MySQL': 'mysql',
+    'SQLite': 'explorer',
+}
+
+EXPLORER_DEFAULT_CONNECTION = 'explorer'
+
+EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ('django_', 'auth_', 'contenttypes_', 'sessions_', 'admin_')
+
+
+PARTS_OF_SPEECH = (
+    ('CC', 'Coordinating Conjunction'),
+    ('CD', 'Cardinal Number'),
+    ('DT', 'Determiner'),
+    ('EX', 'Existential there'),
+    ('FW', 'Foreign Word'),
+    ('IN', 'Preposition of subordinating conjunction'),
+    ('JJ', 'Adjective'),
+    ('JJR', 'Adjective, comparitive'),
+    ('JJS', 'Adjective, superlative'),
+    ('LS', 'List item marker'),
+    ('MD', 'Modal'),
+    ('NN', 'Noun, singular or mass'),
+    ('NNS', 'Noun, plural'),
+    ('NNP', 'Proper Noun, singular'),
+    ('NNPS', 'Proper Noun, plural'),
+    ('PDT', 'Predeterminer'),
+    ('POS', 'Possessive ending'),
+    ('PRP', 'Personal pronoun'),
+    ('PRP$', 'Possessive pronoun'),
+    ('RB', 'Adverb'),
+    ('RBR', 'Adverb, comparative'),
+    ('RBS', 'Adverb, superlative'),
+    ('RP', 'Particle'),
+    ('SYM', 'Symbol'),
+    ('TO', 'to'),
+    ('UH', 'Interjection'),
+    ('VB', 'Verb, base form'),
+    ('VBD', 'Verb, past tense'),
+    ('VBG', 'Verb, gerund or present participle'),
+    ('VBN', 'Verb, past participle'),
+    ('VBP', 'Verb, non-3rd person singular present'),
+    ('VBZ', 'Verb 3rd person singular present'),
+    ('WDT', 'Wh-determiner'),
+    ('WP', 'Wh-pronoun'),
+    ('WP$', 'Possessive wh-pronoun'),
+    ('WRB', 'Wh-adverb'),
+)
+
+ES_CLIENT = Elasticsearch(
+    [env('ELASTICSEARCH_URL')],
+    connection_class=RequestsHttpConnection
+)
+
+DICTIONARIES_PATH = path('dictionaries/')
+
+# Do not crawl urls that start with one of the lines in these files.
+BLOCK_LISTS = (
+    # path('block_lists/ncsu.txt'),
+)
 
 
 # Sentry/Raven
@@ -351,35 +418,3 @@ LOGGING = {
         "level": "DEBUG" if DEBUG else "INFO",
     }
 }
-CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Keep django log config in tasks
-CELERY_WORKER_REDIRECT_STDOUTS = False  # Prevents duplicate messages
-
-REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
-    'DEFAULT_PERMISSION_CLASSES': [
-#        'rest_framework.permissions.'
-    ],
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend', ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'TEST_REQUEST_DEFAULT_FORMAT': 'json',
-}
-
-from django.core.urlresolvers import reverse_lazy
-LOGIN_URL = reverse_lazy("login")
-LOGOUT_URL = reverse_lazy("logout")
-LOGIN_REDIRECT_URL = reverse_lazy("home")
-
-EXPLORER_CONNECTIONS = {
-    #'Postgres': 'postgres',
-    #'MySQL': 'mysql',
-    'SQLite': 'explorer',
-}
-EXPLORER_DEFAULT_CONNECTION = 'explorer'
-
-# Each web crawl needs a new worker, since twisted reactors (used by scrapy)
-# cannot be restarted.
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
-
-EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ('django_', 'auth_', 'contenttypes_', 'sessions_', 'admin_')

@@ -103,14 +103,13 @@ Clone dictionaries repository from github:
 
     [mortar@yurika] git clone https://github.com/ITNG/yurika-dictionaries.git dictionaries
 
-Copy settings files:
+Copy settings file:
 
-    [mortar@yurika]$ cp project/settings.ex.py project/settings.py
     [mortar@yurika]$ cp project/develop/env .env
 
-Edit settings in `project/settings.py`:
+Edit settings in `.env`:
 
-  * Set `ES_URL` to your IP address
+  * Set `ELASTICSEARCH_URL` to your IP address
 
 Make migrations, run collect static and create Django superuser:
 
