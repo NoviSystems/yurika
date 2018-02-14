@@ -10,11 +10,13 @@ from django.utils.timezone import now
 
 DATETIME_FORMAT = '%Y%m%d_%H%M%S'
 
-class StepFail(BaseException):
-    """Exception class to signal to the "step" context manager that execution
-    has failed, but not to dump a traceback
 
+class StepFail(BaseException):
     """
+    Exception class to signal to the "step" context manager that execution
+    has failed, but not to dump a traceback
+    """
+
 
 class Command(BaseCommand):
     help = 'Build/bundle the application for deployment to production.'
@@ -56,8 +58,8 @@ class Command(BaseCommand):
         """
         Stream the output of the subprocess
         """
-        sys.stdout.write("\x1b7") # Save cursor pos
-        sys.stdout.write("\x1b[?1047h") # Set alternate screen
+        sys.stdout.write("\x1b7")  # Save cursor pos
+        sys.stdout.write("\x1b[?1047h")  # Set alternate screen
         sys.stdout.flush()
         try:
             process = Popen(args, cwd=cwd)
@@ -66,8 +68,8 @@ class Command(BaseCommand):
             if check and process.returncode != 0:
                 raise CalledProcessError(process.returncode, args)
         finally:
-            sys.stdout.write("\x1b[?1047l") # Reset to regular screen
-            sys.stdout.write("\x1b8") # Restore cursor pos
+            sys.stdout.write("\x1b[?1047l")  # Reset to regular screen
+            sys.stdout.write("\x1b8")  # Restore cursor pos
             sys.stdout.flush()
 
     def handle(self, *args, **options):
@@ -81,7 +83,7 @@ class Command(BaseCommand):
 
         # copy the project to archive directory
         with self.step('Creating build directory at {} ...'.format(path)):
-            archive = Popen(['git',  'archive', ref], stdout=PIPE)
+            archive = Popen(['git', 'archive', ref], stdout=PIPE)
             check_call(['mkdir', '-p', path])
             check_call(['tar', '-x', '-C', path], stdin=archive.stdout)
             archive.stdout.close()

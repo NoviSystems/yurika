@@ -47,6 +47,7 @@ import mortar.utils as utils
 import mortar.models as models
 import mortar.crawlers as crawler_classes
 
+
 class CrawlerErrorLogHandler(logging.Handler):
 
     def emit(self, record):
@@ -54,6 +55,7 @@ class CrawlerErrorLogHandler(logging.Handler):
             return
         analysis = models.Analysis.objects.get(pk=0)
         analysis.crawler.log_error(self.format(record))
+
 
 # Start Crawler
 @shared_task(bind=True)
@@ -122,20 +124,26 @@ def run_crawler(self, crawler_pk):
     crawler.process_id = None
     crawler.save()
 
-# Sync Dictionaries
+
 @shared_task(bind=True)
 def sync_dictionaries(self):
+    """
+    Sync Dictionaries
+    """
     utils.update_dictionaries()
 
-# Reindex and Tokenize Documents
+
 @shared_task(bind=True)
 def preprocess(self, tree_pk):
+    """
+    Reindex and Tokenize Documents
+    """
     analysis = models.Analysis.objects.get(pk=0)
     analysis.finished_at = None
     analysis.started_at = timezone.now()
     tree = models.Tree.objects.get(pk=tree_pk)
     tree.clear_errors()
-    tree.status = 0;
+    tree.status = 0
     tree.started_at = timezone.now()
     tree.process_id = self.request.id
     tree.save()
@@ -146,14 +154,17 @@ def preprocess(self, tree_pk):
         tree.log_error(e)
         raise
 
-    tree.status = 1;
+    tree.status = 1
     tree.finished_at = timezone.now()
     tree.process_id = None
     tree.save()
 
-# Run Query
+
 @shared_task(bind=True)
 def run_query(self, query_pk):
+    """
+    Run Query
+    """
     analysis = models.Analysis.objects.get(pk=0)
     query = models.Query.objects.get(pk=query_pk)
     query.clear_errors()
@@ -161,7 +172,6 @@ def run_query(self, query_pk):
     query.started_at = timezone.now()
     query.process_id = self.request.id
     query.save()
-
 
     try:
         utils.annotate(analysis)

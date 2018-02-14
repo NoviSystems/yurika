@@ -36,8 +36,10 @@ from django.contrib import admin
 from mortar import models
 from django_mptt_admin.admin import FilterableDjangoMpttAdmin
 
+
 class NodeAdmin(FilterableDjangoMpttAdmin):
     list_filter = ('tree_link', )
+
 
 admin.site.register(models.Node, NodeAdmin)
 admin.site.register(models.Tree)

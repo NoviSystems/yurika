@@ -32,8 +32,10 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+
 class AnalysisRouter(object):
     '''A router to control what the user can interact with through SQL Explorer'''
+
     def db_for_read(self, model, **hints):
         if model._meta.db_table == 'annotations':
             return 'explorer'
@@ -43,7 +45,7 @@ class AnalysisRouter(object):
         if model._meta.db_table == 'anotations':
             return 'explorer'
         return None
- 
+
     def allow_relation(self, obj1, obj2, **hints):
         if obj1._meta.db_table == 'annotations' or obj2._meta.db_table == 'annotations':
             return False

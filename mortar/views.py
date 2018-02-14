@@ -49,17 +49,23 @@ from rest_framework.response import Response
 from django.contrib.auth.mixins import LoginRequiredMixin
 from celery.task.control import revoke
 
-class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
+
+class ConfigureView(LoginRequiredMixin, generic.TemplateView):
     template_name = 'mortar/configure.html'
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
-        analysis,created = models.Analysis.objects.get_or_create(id=0)
-        source,created = models.ElasticIndex.objects.get_or_create(name="source")
-        dest,created = models.ElasticIndex.objects.get_or_create(name="dest")
-        crawler,created = models.Crawler.objects.get_or_create(name="default", category="web", index=source)
-        mindmap,created = models.Tree.objects.get_or_create(name="default", slug="default", doc_source_index=source, doc_dest_index=dest)
-        query,created = models.Query.objects.get_or_create(name="default")
+        analysis, created = models.Analysis.objects.get_or_create(id=0)
+        source, created = models.ElasticIndex.objects.get_or_create(name="source")
+        dest, created = models.ElasticIndex.objects.get_or_create(name="dest")
+        crawler, created = models.Crawler.objects.get_or_create(name="default", category="web", index=source)
+        mindmap, created = models.Tree.objects.get_or_create(
+            name="default",
+            slug="default",
+            doc_source_index=source,
+            doc_dest_index=dest,
+        )
+        query, created = models.Query.objects.get_or_create(name="default")
         analysis.crawler = crawler
         analysis.mindmap = mindmap
         analysis.query = query
@@ -71,11 +77,11 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['analysis'] = analysis
         context['crawler'] = crawler
         context['mindmap'] = mindmap
-        tree_json,flat_tree = utils.get_json_tree(mindmap.nodes.all())
+        tree_json, flat_tree = utils.get_json_tree(mindmap.nodes.all())
         context['tree_json'] = json.dumps(tree_json)
         context['tree_list'] = json.dumps(flat_tree)
         context['query'] = query
-        context['seed_list'] = [[seed.urlseed.url,seed.pk] for seed in crawler.seed_list.all()]
+        context['seed_list'] = [[seed.urlseed.url, seed.pk] for seed in crawler.seed_list.all()]
         context['dict_path'] = os.path.join(settings.BASE_DIR, settings.DICTIONARIES_PATH)
         context['dictionaries'] = models.Dictionary.objects.all()
         context['dict_list'] = utils.get_dict_list()
@@ -85,7 +91,7 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
 
     def post(self, request, *args, **kwargs):
         context = self.get_context_data(*args, **kwargs)
-        form = forms.ConfigureForm(request.POST, request.FILES)
+        # form = forms.ConfigureForm(request.POST, request.FILES)
         val = request.POST.get('save')
         if val == 'crawler' and context['crawler'].seed_list.all():
             context['analysis'].crawler_configured = True
@@ -96,13 +102,15 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['analysis'].save()
         return render(request, self.template_name, context=context)
 
+
 class ClearConfigureView(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = get_object_or_404(models.Analysis, pk=self.kwargs.get('pk'))
         analysis.clear_config()
         return HttpResponseRedirect(reverse('configure'))
 
-class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
+
+class AnalyzeView(LoginRequiredMixin, generic.TemplateView):
     template_name = 'mortar/execute.html'
 
     def get_context_data(self, *args, **kwargs):
@@ -111,13 +119,14 @@ class AnalyzeView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['analysis'] = analysis
         return context
 
+
 class AnalysisStatus(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         analysis = get_object_or_404(models.Analysis, pk=self.kwargs.get('pk'))
         crawler = analysis.crawler
         mindmap = analysis.mindmap
         query = analysis.query
-        es = settings.ES_CLIENT
+        # es = settings.ES_CLIENT
 
         annotation_count = models.Annotation.objects.using('explorer').filter(query_id=query.id).count()
         return Response(json.dumps({
@@ -145,6 +154,7 @@ class AnalysisStatus(LoginRequiredMixin, APIView):
             },
         }))
 
+
 class StartAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = get_object_or_404(models.Analysis.objects, pk=self.kwargs.get('pk'))
@@ -153,14 +163,16 @@ class StartAnalysis(LoginRequiredMixin, APIView):
 
                 # Chain together tasks, so if crawler is killed manually, the
                 # other tasks proceed after.
-                chain = tasks.run_crawler.signature((analysis.crawler.pk,), immutable=True) \
-                      | tasks.preprocess.signature((analysis.mindmap.pk,), immutable=True) \
-                      | tasks.run_query.signature((analysis.query.pk,), immutable=True)
+                chain = \
+                    tasks.run_crawler.signature((analysis.crawler.pk, ), immutable=True) \
+                    | tasks.preprocess.signature((analysis.mindmap.pk, ), immutable=True) \
+                    | tasks.run_query.signature((analysis.query.pk, ), immutable=True)
                 chain()
 
             return HttpResponseRedirect(reverse('analyze'))
         else:
             return HttpResponseRedirect(reverse('configure'))
+
 
 class StopAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -168,11 +180,13 @@ class StopAnalysis(LoginRequiredMixin, APIView):
         analysis.stop()
         return HttpResponseRedirect(reverse('analyze'))
 
+
 class ClearResults(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = get_object_or_404(models.Analysis, pk=self.kwargs.get('pk'))
         analysis.clear_results()
         return HttpResponseRedirect(reverse('analyze'))
+
 
 class StartCrawler(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -180,6 +194,7 @@ class StartCrawler(LoginRequiredMixin, APIView):
         if not crawler.process_id:
             tasks.run_crawler.delay(crawler.pk)
         return HttpResponseRedirect(reverse('analyze'))
+
 
 class StopCrawler(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -190,6 +205,7 @@ class StopCrawler(LoginRequiredMixin, APIView):
             crawler.save()
         return HttpResponseRedirect(reverse('analyze'))
 
+
 class StartPreprocess(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         mindmap = get_object_or_404(models.Tree, pk=self.kwargs.get('pk'))
@@ -197,14 +213,16 @@ class StartPreprocess(LoginRequiredMixin, APIView):
             tasks.preprocess.delay(mindmap.pk)
         return HttpResponseRedirect(reverse('analyze'))
 
+
 class StopPreprocess(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         mindmap = get_object_or_404(models.Tree, pk=self.kwargs.get('pk'))
         if mindmap.process_id:
             revoke(mindmap.process_id)
-            mindmap.process_id=None
+            mindmap.process_id = None
             mindmap.save()
         return HttpResponseRedirect(reverse('analyze'))
+
 
 class StartQuery(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -213,14 +231,16 @@ class StartQuery(LoginRequiredMixin, APIView):
             tasks.run_query.delay(query.pk)
         return HttpResponseRedirect(reverse('analyze'))
 
+
 class StopQuery(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         query = get_object_or_404(models.Query, pk=self.kwargs.get('pk'))
         if query.process_id:
             revoke(query.process_id)
-            query.process_id=None
+            query.process_id = None
             query.save()
         return HttpResponseRedirect(reverse('analyze'))
+
 
 class UploadMindMapApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
@@ -230,6 +250,7 @@ class UploadMindMapApi(LoginRequiredMixin, APIView):
             utils.associate_tree(mindmap)
         return HttpResponseRedirect(reverse('configure'))
 
+
 class EditNodeApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         node = get_object_or_404(models.Node, pk=self.kwargs.get('pk'))
@@ -237,6 +258,7 @@ class EditNodeApi(LoginRequiredMixin, APIView):
         node.regex = request.POST.get('regex')
         node.save()
         return HttpResponseRedirect(reverse('configure'))
+
 
 class DeleteNodeApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -248,6 +270,7 @@ class DeleteNodeApi(LoginRequiredMixin, APIView):
             analysis.save()
         return HttpResponseRedirect(reverse('configure'))
 
+
 class AddSeedsApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         crawler = get_object_or_404(models.Crawler, pk=self.kwargs.get('pk'))
@@ -258,6 +281,7 @@ class AddSeedsApi(LoginRequiredMixin, APIView):
                 crawler.seed_list.add(useed)
         return HttpResponseRedirect(reverse('configure'))
 
+
 class EditSeedApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         seed = get_object_or_404(models.URLSeed, pk=self.kwargs.get('pk'))
@@ -265,31 +289,39 @@ class EditSeedApi(LoginRequiredMixin, APIView):
         seed.save()
         return HttpResponseRedirect(reverse('configure'))
 
+
 class DeleteSeedApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         seed = get_object_or_404(models.URLSeed, pk=self.kwargs.get('pk'))
         seed.delete()
         return HttpResponseRedirect(reverse('configure'))
 
+
 class AddDictionaryApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         name = request.POST.get('dict_name')
         words = request.POST.get('words').split('\n')
-        clean = [word.replace("&#13;",'').replace('&#10;', '').strip() for word in words]
+        clean = [word.replace("&#13;", '').replace('&#10;', '').strip() for word in words]
         d_words = '\n'.join(clean)
-        new_dict = models.Dictionary.objects.create(name=name, filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]), words=d_words)
+        new_dict = models.Dictionary.objects.create(
+            name=name,
+            words=d_words,
+            filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]),
+        )
         new_dict.save()
         return HttpResponseRedirect(reverse('configure'))
+
 
 class EditDictionaryApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         dic = get_object_or_404(models.Dictionary, pk=self.kwargs.get('pk'))
 
         words = request.POST.get('words').split('\n')
-        clean = [word.replace("&#13;",'').replace('&#10;', '').strip() for word in words]
+        clean = [word.replace("&#13;", '').replace('&#10;', '').strip() for word in words]
         dic.words = '\n'.join(clean)
         dic.save()
         return HttpResponseRedirect(reverse('configure'))
+
 
 class DeleteDictionaryApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
@@ -301,6 +333,7 @@ class DeleteDictionaryApi(LoginRequiredMixin, APIView):
             analysis.save()
         return HttpResponseRedirect(reverse('configure'))
 
+
 class UpdateQueryApi(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         type_list = ['regex', 'dictionary', 'part_of_speech']
@@ -309,7 +342,7 @@ class UpdateQueryApi(LoginRequiredMixin, APIView):
         query.category = request.POST.get('category')
         types = request.POST.getlist('part_type')
         oplist = request.POST.getlist('op')
-        parts = []
+        # parts = []
         part_list = request.POST.getlist(type_list[int(types[0])])
         if len(types) == 1 and len(part_list):
             if part_list[0]:
@@ -323,9 +356,9 @@ class UpdateQueryApi(LoginRequiredMixin, APIView):
             regs = request.POST.getlist('regex')
             pos = request.POST.getlist('part_of_speech')
             string = ''
-            for count in range(0,len(types)):
+            for count in range(0, len(types)):
                 if count > 0:
-                    op = oplist[count-1]
+                    op = oplist[count - 1]
                     string = '(' + string
                 else:
                     op = oplist[count]
@@ -354,20 +387,23 @@ class UpdateQueryApi(LoginRequiredMixin, APIView):
             analysis.save()
         return HttpResponseRedirect(reverse('configure'))
 
+
 class DictionaryUpdateView(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         tasks.sync_dictionaries.delay()
         return HttpResponseRedirect(reverse('configure'))
 
-class Home(django.views.generic.TemplateView):
+
+class Home(generic.TemplateView):
     template_name = 'home.html'
 
     def get(self, request, *args, **kwargs):
-        analysis,created = models.Analysis.objects.get_or_create(pk=0)
+        analysis, created = models.Analysis.objects.get_or_create(pk=0)
         if not analysis.all_configured:
             return HttpResponseRedirect(reverse('configure'))
         else:
             return HttpResponseRedirect(reverse('analyze'))
+
 
 configure = ConfigureView.as_view()
 clear_config = ClearConfigureView.as_view()

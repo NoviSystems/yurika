@@ -21,9 +21,6 @@ from mortar import urls
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
-    # Uncomment for oauth support
-    #url(r'^oauth/', include("oauth.urls")),
-
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     # Auth urls
     url(r'^accounts/login$', django.contrib.auth.views.login,
@@ -42,9 +39,7 @@ urlpatterns = [
         django.contrib.auth.views.password_change_done,
         {'template_name': 'password_change_done.html'}),
 
-#    url(r"^explorer/", include("explorer.urls")),
-
-    url(r'^explorer/',include("explorer.urls")),
+    url(r'^explorer/', include('explorer.urls')),
 
     url(r'', include(urls)),
 ]
