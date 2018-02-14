@@ -11,19 +11,23 @@
 </style>
 
 <div class="visible-desktop container body-wrapper">
-    <div class="row">
-      <div class="col-xs-10 text-right">
-        <form action="{% url 'clear-config' analysis.pk %}" method="POST">
-          {% csrf_token %}
-          <button class="btn btn-sm btn-default btn-danger">Clear Config</button>
-        </form>
-      </div>
-      <div class="col-xs-2 text-right">
-        <a href="{% url 'analyze' %}" class="btn btn-xs {% if CONFIGURED %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
-      </div>
+
+  <div class="row">
+    <div class="col-xs-10 text-right">
+      <form action="{% url 'clear-config' analysis.pk %}" method="POST">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-default btn-danger">Clear Config</button>
+      </form>
     </div>
-    <div class="row">&emsp;</div>
+    <div class="col-xs-2 text-right">
+      <a href="{% url 'analyze' %}" class="btn btn-xs {% if CONFIGURED %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
+    </div>
+  </div>
+
+  {# Crawler #}
+  <div class="row">&emsp;</div>
   <div class="panel {% if analysis.crawler_configured %}panel-success{% else %} panel-info {% endif %}">
+
     <div class="panel-heading" data-toggle="collapse" data-target="#crawler"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.crawler_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>1. Crawler</span>
       {% if analysis.crawler_configured %}
         <i class="glyphicon glyphicon-ok"></i>
@@ -32,6 +36,8 @@
       {% endif %}
     </h3></div>
     <div id="crawler" class="panel-body collapse {% if not analysis.crawler_configured %}in{% endif %}">
+
+      {# Add Seeds #}
       <form action="{% url 'add-seeds' crawler.pk %}" method="POST">
         <div class="row">
           <div class="col-xs-12"><p>Add some URLs to crawl!</p></div>
@@ -48,6 +54,8 @@
           </div>
         </div>
       </form>
+
+      {# Seed List #}
       <div class="row"><div class="col-xs-6"><p>Your added URLs:</p></div></div>
       {% if seed_list %}
       <div class="row">
@@ -64,6 +72,8 @@
         </div>
       </div>
       {% endif %}
+
+      {# Save Button #}
       <div class="row">
         <div class="col-xs-4"></div>
         <div class="col-xs-2 text-right">
@@ -73,8 +83,11 @@
           </form>
         </div>
       </div>
+
     </div>
-  </div>
+  </div> {# End Crawler #}
+
+  {# MindMap #}
   <div class="panel {% if analysis.mindmap_configured %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading" data-toggle="collapse" data-target="#mindmap"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.mindmap_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>2. MindMap</span>
       {% if analysis.mindmap_configured %}
@@ -84,6 +97,8 @@
       {% endif %}
     </h3></div>
     <div id="mindmap" class="panel-body collapse {% if not analysis.mindmap_configured %}in{% endif %}">
+
+      {# Import MindMap #}
       <form action="{% url 'upload-mindmap' mindmap.pk %}" method="POST" enctype="multipart/form-data">
         <div class="row">
           <div class="col-xs-12"><p>Import a MindMap (.mm) file to create rules from Regular Expressions.</p></div>
@@ -100,6 +115,8 @@
           </div>
         </div>
       </form>
+
+      {# Show MindMap #}
       <div class="row">
         <div class="col-xs-6"><p>Your uploaded MindMap:</p></div>
       </div>
@@ -109,6 +126,8 @@
         </div>
         {% endif %}
       </div>
+
+      {# Save MindMap #}
       <div class="row">
         <div class="col-xs-4"></div>
         <div class="col-xs-2 text-right">
@@ -122,8 +141,11 @@
           </form>
         </div>
       </div>
+
     </div>
-  </div>
+  </div> {# End MindMap #}
+
+  {# Dictionaries #}
   <div class="panel {% if analysis.dicts_configured %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading" data-toggle="collapse" data-target="#dictionaries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.dicts_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>3. Dictionaries</span>
       {% if analysis.dicts_configured %}
@@ -133,6 +155,8 @@
       {% endif %}
     </h3></div>
     <div id="dictionaries" class="panel-body collapse {% if not analysis.dicts_configured %}in{% endif %}">
+
+      {# Add Dictionaries #}
       <form action="{% url 'add-dict' %}" method="POST">
         <div class="row">
           <div class="col-xs-12">
@@ -155,6 +179,8 @@
           </div>
         </div>
       </form>
+
+      {# List Dictionaries #}
       <div class="row"><div class="col-xs-12"><p>Your dictionaries:</p></div></div>
       <div id="dicts" class="row">
         <div class="col-xs-6">
@@ -169,6 +195,8 @@
           </div>
         </div>
       </div>
+
+      {# Submit #}
       <div class="row">
         <div class="col-xs-4"></div>
         <div class="col-xs-2 text-right">
@@ -182,8 +210,11 @@
           </form>
         </div>
       </div>
+
     </div>
-  </div>
+  </div> {# End Dictionaries #}
+
+  {# Query #}
   <div class="panel {% if analysis.query_configured %}panel-success{% else %}panel-info{% endif %}">
     <div class="panel-heading" data-toggle="collapse" data-target="#queries"><h3 class="panel-title"><i id="dropdown" class="glyphicon {% if analysis.query_configured %}glyphicon-chevron-right{% else %}glyphicon-chevron-up{% endif %}"></i> <span>4. Query</span> {% if analysis.query_configured %}
         <i class="glyphicon glyphicon-ok"></i>
@@ -192,14 +223,18 @@
       {% endif %}
     </h3></div>
     <div id="queries" class="panel-body collapse {% if not analysis.query_configured %}in{% endif %}">
+
       <div class="row">
         <div class="col-xs-12">
           <p>{{ query.string }}</p>
           <p>Build your query to search crawled documents.</p>
         </div>
       </div>
+
       <form id="query_form" action="{% url 'edit-query' query.pk %}" method="POST">
-      {% csrf_token %}
+        {% csrf_token %}
+
+        {# Edit Query #}
         <div id="query_parts">
           <div id="query_1" class="row">
             <div class="col-xs-4">
@@ -210,12 +245,16 @@
             </div>
           </div>
         </div>
+
+        {# Add Part #}
         <div class="row">&emsp;</div>
         <div class="row">
           <div id="query_buttons" class="col-xs-4 text-center" role="group">
             <input type="button" id="add_query" value="+" class="btn btn-sm btn-primary" onclick="javascript: add_query_part();" />
           </div>
         </div>
+
+        {# Select Granularity #}
         <div class="row">&emsp;</div>
           <div class="row">
             <div class="col-xs-4">
@@ -224,6 +263,8 @@
             </div>
           </div>
         <div class="row">&emsp;</div>
+
+        {# Submit #}
         <div class="row">
           <div class="col-xs-4 text-right">
             <form action="" method="POST">
@@ -232,9 +273,11 @@
             </form>
           </div>
         </div>
+
       </form>
-      </div>
     </div>
+  </div> {# End Query #}
+
   <div class="row">&emsp;</div>
   <div class="row">
     <div class="col-xs-12 text-right">
@@ -250,9 +293,12 @@
     <a href="{% url 'analyze' %}" class="btn btn-xs {% if CONFIGURED %}btn-success{% else %}btn-default disabled{% endif %}">2. Execute <i class="glyphicon glyphicon-arrow-right"></i></a>
     </div>
   </div>
+
   <span class="row"></span>
 </div>
 {% endblock %}
+
+
 {% block scripts %}
 <script>
 var count = 1;
