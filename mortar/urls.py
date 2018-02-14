@@ -14,7 +14,15 @@
 # 
 
 from django.conf.urls import url
+from django.http import Http404
+
 from . import views
+
+def not_found(request):
+    # Used for entries which are only referenced in js to build longer URLs
+    # (since you can't use {% url '...' %} in js)
+    raise Http404()
+
 urlpatterns = [
  url('^configure/$', views.configure, name='configure'),
  url('^configure/clear/(?P<pk>[\\d]+)/$', views.clear_config, name='clear-config'),
@@ -32,19 +40,19 @@ urlpatterns = [
  url('^dictionaries/update/$', views.update_dictionaries, name='update-dicts'),
  url('^nodes/upload/(?P<pk>[\\d]+)/$', views.upload_mindmap, name="upload-mindmap"),
  url('^nodes/edit/(?P<pk>[\\d]+)/$', views.edit_node, name="edit-node-pk"),
- url('^nodes/edit/$', views.edit_node, name="edit-node"),
- url('^nodes/delete/$', views.delete_node, name="delete-node"),
+ url('^nodes/edit/$', not_found, name="edit-node"),
+ url('^nodes/delete/$', not_found, name="delete-node"),
  url('^nodes/delete/(?P<pk>[\\d]+)/$', views.delete_node, name="delete-node-pk"),
  url('^seeds/add/(?P<pk>[\\d]+)/$', views.add_seeds, name="add-seeds"),
  url('^seeds/edit/(?P<pk>[\\d]+)/$', views.edit_seed, name="edit-seed-pk"),
- url('^seeds/edit/$', views.edit_seed, name="edit-seed"),
+ url('^seeds/edit/$', not_found, name="edit-seed"),
  url('^seeds/delete/(?P<pk>[\\d]+)/$', views.delete_seed, name="delete-seed-pk"),
- url('^seeds/delete/$', views.delete_seed, name="delete-seed"),
+ url('^seeds/delete/$', not_found, name="delete-seed"),
  url('^dicts/add/$', views.add_dict, name="add-dict"),
  url('^dicts/edit/(?P<pk>[\\d]+)/$', views.edit_dict, name="edit-dict-pk"),
- url('^dicts/edit/$', views.edit_dict, name="edit-dict"),
+ url('^dicts/edit/$', not_found, name="edit-dict"),
  url('^dicts/delete/(?P<pk>[\\d]+)/$', views.delete_dict, name="delete-dict-pk"),
- url('^dicts/delete/$', views.delete_dict, name="delete-dict"),
+ url('^dicts/delete/$', not_found, name="delete-dict"),
  url('^queries/edit/(?P<pk>[\\d]+)/$', views.update_query, name="edit-query"),
  url('^$', views.home, name='home')
 ]
