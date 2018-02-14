@@ -1,5 +1,6 @@
 from django.test import TestCase
-from mortar.dictionary_utils import token_chain, token_chains
+
+from mortar.dictionary_utils import token_chains
 
 
 class TokenTermTests(TestCase):

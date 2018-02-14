@@ -31,13 +31,13 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+import re
 
 from django import forms
 from django.conf import settings
 from django.db.models import Q
-from django.utils.text import slugify
-import mortar.models as models
-import re
+
+from mortar import models
 
 
 class ConfigureForm(forms.Form):

@@ -13,10 +13,13 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import os
 import sys
-import environ
+
+from django.contrib.messages import DEFAULT_TAGS
+from django.contrib.messages import constants as messages
 from django.urls import reverse_lazy
-from django.contrib.messages import constants as messages, DEFAULT_TAGS
 from elasticsearch import Elasticsearch, RequestsHttpConnection
+from environ import Env
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,7 +31,7 @@ def path(value):
 
 
 # Read in environment variables. Default values should be secure.
-env = environ.Env(
+env = Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
     HOST_NAME=str,

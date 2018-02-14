@@ -31,32 +31,28 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
-import time
-import os
-from datetime import datetime
-import argparse, json
-import re
-
+import json
 import logging
-log = logging.getLogger(__name__)
+import os
+import re
+import time
+from datetime import datetime
 
-from django.utils import timezone
-from django.conf import settings
-
-from bs4 import BeautifulSoup
-from elasticsearch import Elasticsearch, RequestsHttpConnection
-from elasticsearch.client import IndicesClient
 import scrapy
-from scrapy.crawler import CrawlerProcess
-from scrapy.linkextractors import LinkExtractor
-from scrapy.spiders import Rule, CrawlSpider
-from scrapy.http import Request
+from bs4 import BeautifulSoup
+from django.conf import settings
+from django.utils import timezone
+from elasticsearch.client import IndicesClient
 from scrapy.exceptions import NotConfigured
-from scrapy.utils.httpobj import urlparse_cached
+from scrapy.http import Request
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
 from w3lib.url import safe_url_string
 
 from mortar import models
+
+
+log = logging.getLogger(__name__)
 
 
 def remove_prefix(s, prefix):

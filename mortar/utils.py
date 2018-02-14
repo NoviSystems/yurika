@@ -31,19 +31,21 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
+import json
 import os
-import json, string
+import string
 from datetime import datetime
-import nltk
-from elasticsearch import helpers
-from elasticsearch.client import IndicesClient
 from xml.etree import ElementTree as etree
-from pyparsing import nestedExpr
+
+import nltk
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-import mortar.models as models
+from elasticsearch import helpers
+from elasticsearch.client import IndicesClient
+from pyparsing import nestedExpr
+
+from mortar import models
 
 
 def get_json_tree(queryset, max_level=None):

@@ -31,21 +31,15 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
-
 import logging
 
 from celery import shared_task
-from django.db.transaction import atomic
-from scrapy.crawler import CrawlerProcess
 from django.conf import settings
 from django.utils import timezone
-
+from scrapy.crawler import CrawlerProcess
 from twisted.python import log as twisted_log
 
-import mortar.utils as utils
-import mortar.models as models
-import mortar.crawlers as crawler_classes
+from mortar import crawlers, models, utils
 
 
 class CrawlerErrorLogHandler(logging.Handler):
@@ -108,7 +102,7 @@ def run_crawler(self, crawler_pk):
 
     try:
         process.crawl(
-            crawler_classes.WebCrawler,
+            crawlers.WebCrawler,
             start_urls=seeds,
             name=name,
             index=index,

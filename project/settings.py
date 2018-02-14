@@ -9,6 +9,7 @@ the './deploy' directory.
 
 from .common_settings import *  # flake8: noqa
 
+
 # Directory to hold user-uploaded files.
 # Set your to a directory that does not already exist.
 MEDIA_ROOT = path('files')

@@ -31,23 +31,21 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
-
-import django.views.generic
-import mortar.models as models
-import mortar.forms as forms
-import mortar.utils as utils
-import mortar.tasks as tasks
-import os
 import json
-from django.shortcuts import render, get_object_or_404
+import os
+
+from celery.task.control import revoke
+from django.conf import settings
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils.text import slugify
-from django.conf import settings
-from django.http import HttpResponseRedirect
-from rest_framework.views import APIView
+from django.views import generic
 from rest_framework.response import Response
-from django.contrib.auth.mixins import LoginRequiredMixin
-from celery.task.control import revoke
+from rest_framework.views import APIView
+
+from mortar import forms, models, tasks, utils
 
 
 class ConfigureView(LoginRequiredMixin, generic.TemplateView):

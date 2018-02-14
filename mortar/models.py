@@ -33,12 +33,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import elasticsearch
 from celery.task.control import revoke
-from django.db import models
 from django.conf import settings
-from django.utils import timezone
 from django.core.validators import RegexValidator
+from django.db import models
+from django.db.models import options
+from django.utils import timezone
 from mptt.models import MPTTModel, TreeForeignKey
-import django.db.models.options as options
+
+
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
 

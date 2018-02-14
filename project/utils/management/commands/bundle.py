@@ -3,10 +3,11 @@
 import os
 import sys
 from contextlib import contextmanager
-from subprocess import check_call, Popen, PIPE, CalledProcessError
+from subprocess import PIPE, CalledProcessError, Popen, check_call
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.timezone import now
+
 
 DATETIME_FORMAT = '%Y%m%d_%H%M%S'
 

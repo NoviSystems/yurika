@@ -33,8 +33,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 from django.contrib import admin
-from mortar import models
 from django_mptt_admin.admin import FilterableDjangoMpttAdmin
+
+from mortar import models
 
 
 class NodeAdmin(FilterableDjangoMpttAdmin):
