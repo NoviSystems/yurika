@@ -69,6 +69,7 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         context['dictionaries'] = models.Dictionary.objects.all()
         context['dict_list'] = utils.get_dict_list()
         context['form'] = forms.ConfigureForm()
+        context['has_system_dicts'] = os.path.isdir(settings.DICTIONARIES_PATH)
         return context
 
     def post(self, request, *args, **kwargs):
