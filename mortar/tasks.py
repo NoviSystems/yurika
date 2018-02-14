@@ -41,7 +41,6 @@ class CrawlerErrorLogHandler(logging.Handler):
 def run_crawler(self, crawler_pk):
     analysis = models.Analysis.objects.get(pk=0)
     crawler = models.Crawler.objects.get(pk=crawler_pk)
-    elastic_url = settings.ES_URL
 
     crawler.clear_errors()
 
@@ -91,7 +90,6 @@ def run_crawler(self, crawler_pk):
             crawler_classes.WebCrawler,
             start_urls=seeds,
             name=name,
-            elastic_url=elastic_url,
             index=index,
             index_mapping=crawler._meta.index_mapping
         )

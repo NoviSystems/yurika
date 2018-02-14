@@ -143,7 +143,7 @@ class WebCrawler(CrawlSpider):
         self.name = kwargs.get('name')
         self.index_name = kwargs.get('index')
         self.start_urls = kwargs.get('start_urls')
-        self.client = Elasticsearch([kwargs.get('elastic_url')], connection_class=RequestsHttpConnection)
+        self.client = settings.ES_CLIENT
         self._compile_rules()
 
         index_mapping = kwargs.get('index_mapping')

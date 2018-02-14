@@ -9,5 +9,9 @@ the './deploy' directory.
 
 from .common_settings import *
 
-# Set your MEDIA_ROOT to a directory that does not already exist.
+# Directory to hold user-uploaded files.
+# Set your to a directory that does not already exist.
 MEDIA_ROOT = path('files')
+
+# Static files are collected here.
+STATIC_ROOT = path('static_root')
