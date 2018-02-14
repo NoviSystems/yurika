@@ -54,10 +54,6 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         analysis.query = query
         if not crawler.seed_list.all():
             analysis.crawler_configured = False
-        if not mindmap.nodes.all():
-            analysis.mindmap_configured = False
-        if not models.Dictionary.objects.all():
-            analysis.dicts_configured = False
         if not query.parts.all():
             analysis.query_configured = False
         analysis.save()
@@ -81,9 +77,9 @@ class ConfigureView(LoginRequiredMixin, django.views.generic.TemplateView):
         val = request.POST.get('save')
         if val == 'crawler' and context['crawler'].seed_list.all():
             context['analysis'].crawler_configured = True
-        elif val == 'mindmap' and context['mindmap'].nodes.all():
+        elif val == 'mindmap':
             context['analysis'].mindmap_configured = True
-        elif val == 'dicts' and context['dictionaries']:
+        elif val == 'dicts':
             context['analysis'].dicts_configured = True
         context['analysis'].save()
         return render(request, self.template_name, context=context)
@@ -234,6 +230,10 @@ class DeleteNodeApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         node = models.Node.objects.get(pk=self.kwargs.get('pk'))
         node.delete()
+        if not models.Node.objects.all():
+            analysis, created = models.Analysis.objects.get_or_create(id=0)
+            analysis.mindmap_configured = False
+            analysis.save()
         return HttpResponseRedirect(reverse('configure'))
 
 class AddSeedsApi(LoginRequiredMixin, APIView):
@@ -283,6 +283,10 @@ class DeleteDictionaryApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         dic = models.Dictionary.objects.get(pk=self.kwargs.get('pk'))
         dic.delete()
+        if not models.Dictionary.objects.all():
+            analysis, created = models.Analysis.objects.get_or_create(id=0)
+            analysis.dicts_configured = False
+            analysis.save()
         return HttpResponseRedirect(reverse('configure'))
 
 class UpdateQueryApi(LoginRequiredMixin, APIView):
