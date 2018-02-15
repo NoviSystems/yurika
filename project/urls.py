@@ -13,16 +13,15 @@ Including another URLconf
     2. Import the include() function: from django.conf.urls import url, include
     3. Add a URL to urlpatterns:  url(r'^blog/', include(blog_urls))
 """
-from django.conf.urls import url, include
-from django.contrib import admin
 import django.contrib.auth.views
+from django.conf.urls import include, url
+from django.contrib import admin
+
 from mortar import urls
+
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-
-    # Uncomment for oauth support
-    #url(r'^oauth/', include("oauth.urls")),
 
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     # Auth urls
@@ -42,9 +41,7 @@ urlpatterns = [
         django.contrib.auth.views.password_change_done,
         {'template_name': 'password_change_done.html'}),
 
-#    url(r"^explorer/", include("explorer.urls")),
-
-    url(r'^explorer/',include("explorer.urls")),
+    url(r'^explorer/', include('explorer.urls')),
 
     url(r'', include(urls)),
 ]

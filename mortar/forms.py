@@ -1,42 +1,63 @@
-# Copyright (c) 2018, North Carolina State University
-# 
-#All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-# 
-# 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-# 
-# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-# 
-# 3. The names "North Carolina State University", "NCSU" and any trade‐name, personal name, trademark, trade device, service mark, symbol, image, icon, or any abbreviation, contraction or simulation thereof owned by North Carolina State University must not be used to endorse or promoteproducts derived from this software without prior written permission. 
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+"""
+BSD 3-Clause License
+
+Copyright (c) 2018, North Carolina State University
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. The names "North Carolina State University", "NCSU" and any trade‐name,
+   personal name, trademark, trade device, service mark, symbol, image, icon,
+   or any abbreviation, contraction or simulation thereof owned by North
+   Carolina State University must not be used to endorse or promoteproducts
+   derived from this software without prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+import re
 
 from django import forms
 from django.conf import settings
 from django.db.models import Q
-from django.utils.text import slugify
-import mortar.models as models
-import re
+
+from mortar import models
+
 
 class ConfigureForm(forms.Form):
     seed_list = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'URLs (one per line)'}), required=False)
     file = forms.FileField(label="Import MindMap", required=False)
     part_type = forms.ChoiceField(choices=((0, 'MindMap Term'), (1, 'Dictionary'), (2, 'Part of Speech')))
-    regex = forms.ModelChoiceField(queryset=models.Node.objects.filter(tree_link__slug='default').distinct(), required=False)
+    regex = forms.ModelChoiceField(queryset=models.Node.objects.filter(tree_link__slug='default').distinct(), required=False)  # noqa: E501
     part_of_speech = forms.ChoiceField(choices=settings.PARTS_OF_SPEECH)
     dictionary = forms.ModelChoiceField(queryset=models.Dictionary.objects.all(), required=False)
     op = forms.ChoiceField(choices=((0, 'OR'), (1, 'AND')), label="Operation")
 
     category = forms.ChoiceField(choices=((0, 'Sentence'), (1, 'Paragraph'), (2, 'Document')), label='Type')
-    dict_name = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'placeholder': 'Dictionary Name'}), label="Name", required=False)
-    words = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'Words or Phrases (one per line)'}), label="Words", required=False)
+    dict_name = forms.CharField(max_length=50, label='Name', required=False, widget=forms.TextInput(attrs={'placeholder': 'Dictionary Name'}))  # noqa: E501
+    words = forms.CharField(label="Words", required=False, widget=forms.Textarea(attrs={'placeholder': 'Words or Phrases (one per line)'}))  # noqa: E501
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs['class'] = 'form-control'
+
 
 class BSModelForm(forms.ModelForm):
 
@@ -45,12 +66,14 @@ class BSModelForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-control'
 
+
 class QueryForm(forms.Form):
     category = forms.ChoiceField(choices=(('S', 'Sentence'), ('P', 'Paragraph'), ('D', 'Document')), label='Type')
-    
+
+
 class CrawlerForm(BSModelForm):
-    index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False, label="Document Index")
-    new_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
+    index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(crawlers__isnull=False).distinct(), required=False, label="Document Index")  # noqa: E501
+    new_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))  # noqa: E501
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,15 +96,15 @@ class CrawlerForm(BSModelForm):
     class Meta:
         model = models.Crawler
         fields = ['name', 'category', 'index']
-        labels = {'name': 'Name','category': 'Crawler Type','index': 'Elastic Index'}
+        labels = {'name': 'Name', 'category': 'Crawler Type', 'index': 'Elastic Index'}
 
 
 class TreeForm(BSModelForm):
     file = forms.FileField(label='Import', required=False)
-    doc_source = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')
-    doc_dest = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')
-    new_source_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
-    new_dest_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
+    doc_source = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')  # noqa: E501
+    doc_dest = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')  # noqa: E501
+    new_source_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))  # noqa: E501
+    new_dest_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))  # noqa: E501
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -93,7 +116,7 @@ class TreeForm(BSModelForm):
 
     def clean(self):
         data = super(TreeForm, self).clean()
-        if not data['new_source_index'] and not data['doc_source'] or not data['new_dest_index'] and not data['doc_dest']:
+        if not data['new_source_index'] and not data['doc_source'] or not data['new_dest_index'] and not data['doc_dest']:  # noqa: E501
             raise forms.ValidationError('Must choose index or create new one')
         else:
             if not data['doc_source'] and data['new_source_index']:
@@ -108,6 +131,7 @@ class TreeForm(BSModelForm):
         model = models.Tree
         fields = ['name']
 
+
 class DictionaryForm(BSModelForm):
     words = forms.CharField(widget=forms.Textarea)
 
@@ -117,10 +141,10 @@ class DictionaryForm(BSModelForm):
 
 
 class TreeEditForm(BSModelForm):
-    doc_source_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')
-    doc_dest_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')
-    new_source_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
-    new_dest_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class':'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))
+    doc_source_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.all(), required=False, label='Source Index')  # noqa: E501
+    doc_dest_index = forms.ModelChoiceField(queryset=models.ElasticIndex.objects.filter(Q(doc_sources__isnull=False) | Q(doc_dests__isnull=False)).distinct(), required=False, label='Destination Index')  # noqa: E501
+    new_source_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))  # noqa: E501
+    new_dest_index = forms.CharField(max_length=20, required=False, widget=forms.TextInput(attrs={'class': 'form-control', 'autocomplete': 'off', 'pattern': '[0-9a-zA-Z]+', 'title': 'Alphanumeric characters only'}))  # noqa: E501
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -137,7 +161,7 @@ class TreeEditForm(BSModelForm):
             if len(slugs) > 0:
                 raise forms.ValidationError('That slug is already taken.')
 
-        if not data['new_source_index'] and not data['doc_source_index'] or not data['new_dest_index'] and not data['doc_dest_index']:
+        if not data['new_source_index'] and not data['doc_source_index'] or not data['new_dest_index'] and not data['doc_dest_index']:  # noqa: E501
             raise forms.ValidationError('Must choose index or create new one')
         else:
             if not data['doc_source_index'] and data['new_source_index']:
@@ -148,11 +172,10 @@ class TreeEditForm(BSModelForm):
                 data['doc_dest_index'] = new_ei
         print(data)
         return data
-  
+
     class Meta:
         model = models.Tree
         fields = ['name', 'slug', 'doc_source_index', 'doc_dest_index']
-
 
 
 class MindMapImportForm(forms.Form):
@@ -189,7 +212,7 @@ class DictionaryPartForm(BSModelForm):
     class Meta:
         model = models.DictionaryPart
         fields = ['dictionary', 'op']
-        labels = {'dictionary': 'Dictionary','op': 'Operation'}
+        labels = {'dictionary': 'Dictionary', 'op': 'Operation'}
 
 
 class RegexPartForm(BSModelForm):
@@ -197,7 +220,7 @@ class RegexPartForm(BSModelForm):
     class Meta:
         model = models.RegexPart
         fields = ['regex', 'op']
-        labels = {'regex': 'Regular Expression','op': 'Operation'}
+        labels = {'regex': 'Regular Expression', 'op': 'Operation'}
 
 
 class SubQueryPartForm(BSModelForm):
@@ -205,7 +228,7 @@ class SubQueryPartForm(BSModelForm):
     class Meta:
         model = models.SubQueryPart
         fields = ['subquery', 'op']
-        labels = {'subquery': 'Combined Query','op': 'Operation'}
+        labels = {'subquery': 'Combined Query', 'op': 'Operation'}
 
 
 class PartOfSpeechPartForm(BSModelForm):
@@ -213,7 +236,7 @@ class PartOfSpeechPartForm(BSModelForm):
     class Meta:
         model = models.PartOfSpeechPart
         fields = ['part_of_speech', 'op']
-        labels = {'part_of_speech': 'Part of Speech','op': 'Operation'}
+        labels = {'part_of_speech': 'Part of Speech', 'op': 'Operation'}
 
 
 class QuerySelectForm(forms.Form):

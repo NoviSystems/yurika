@@ -1,32 +1,46 @@
-# Copyright (c) 2018, North Carolina State University
-# 
-#All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-# 
-# 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-# 
-# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-# 
-# 3. The names "North Carolina State University", "NCSU" and any trade‐name, personal name, trademark, trade device, service mark, symbol, image, icon, or any abbreviation, contraction or simulation thereof owned by North Carolina State University must not be used to endorse or promoteproducts derived from this software without prior written permission. 
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+"""
+BSD 3-Clause License
 
+Copyright (c) 2018, North Carolina State University
+All rights reserved.
 
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. The names "North Carolina State University", "NCSU" and any trade‐name,
+   personal name, trademark, trade device, service mark, symbol, image, icon,
+   or any abbreviation, contraction or simulation thereof owned by North
+   Carolina State University must not be used to endorse or promoteproducts
+   derived from this software without prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
 import logging
 
 from celery import shared_task
-from django.db.transaction import atomic
-from scrapy.crawler import CrawlerProcess
 from django.conf import settings
 from django.utils import timezone
-
+from scrapy.crawler import CrawlerProcess
 from twisted.python import log as twisted_log
 
-import mortar.utils as utils
-import mortar.models as models
-import mortar.crawlers as crawler_classes
+from mortar import crawlers, models, utils
+
 
 class CrawlerErrorLogHandler(logging.Handler):
 
@@ -35,6 +49,7 @@ class CrawlerErrorLogHandler(logging.Handler):
             return
         analysis = models.Analysis.objects.get(pk=0)
         analysis.crawler.log_error(self.format(record))
+
 
 # Start Crawler
 @shared_task(bind=True)
@@ -87,7 +102,7 @@ def run_crawler(self, crawler_pk):
 
     try:
         process.crawl(
-            crawler_classes.WebCrawler,
+            crawlers.WebCrawler,
             start_urls=seeds,
             name=name,
             index=index,
@@ -103,20 +118,26 @@ def run_crawler(self, crawler_pk):
     crawler.process_id = None
     crawler.save()
 
-# Sync Dictionaries
+
 @shared_task(bind=True)
 def sync_dictionaries(self):
+    """
+    Sync Dictionaries
+    """
     utils.update_dictionaries()
 
-# Reindex and Tokenize Documents
+
 @shared_task(bind=True)
 def preprocess(self, tree_pk):
+    """
+    Reindex and Tokenize Documents
+    """
     analysis = models.Analysis.objects.get(pk=0)
     analysis.finished_at = None
     analysis.started_at = timezone.now()
     tree = models.Tree.objects.get(pk=tree_pk)
     tree.clear_errors()
-    tree.status = 0;
+    tree.status = 0
     tree.started_at = timezone.now()
     tree.process_id = self.request.id
     tree.save()
@@ -127,14 +148,17 @@ def preprocess(self, tree_pk):
         tree.log_error(e)
         raise
 
-    tree.status = 1;
+    tree.status = 1
     tree.finished_at = timezone.now()
     tree.process_id = None
     tree.save()
 
-# Run Query
+
 @shared_task(bind=True)
 def run_query(self, query_pk):
+    """
+    Run Query
+    """
     analysis = models.Analysis.objects.get(pk=0)
     query = models.Query.objects.get(pk=query_pk)
     query.clear_errors()
@@ -142,7 +166,6 @@ def run_query(self, query_pk):
     query.started_at = timezone.now()
     query.process_id = self.request.id
     query.save()
-
 
     try:
         utils.annotate(analysis)
