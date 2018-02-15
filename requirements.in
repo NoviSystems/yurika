@@ -1,0 +1,33 @@
+Django<2.0
+django-environ
+django-mptt
+django-mptt-admin
+djangorestframework
+
+beautifulsoup4
+celery
+colorlog
+csvkit
+elasticsearch<6.0.0
+lxml
+nltk
+numpy
+psutil
+pyparsing
+redis
+requests
+Scrapy
+sqlparse
+Twisted
+
+# production
+psycopg2
+gunicorn
+raven
+
+# explorer
+six==1.10.0
+unicodecsv==0.14.1
+
+# To compile the requirements.txt
+pip-tools

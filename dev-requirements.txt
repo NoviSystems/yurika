@@ -1,0 +1,6 @@
+# testing
+tox
+tox-venv
+
+# To compile the requirements.txt
+pip-tools

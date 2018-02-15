@@ -215,13 +215,6 @@ mode:
     DATABASE_URL=psql://mortar:ratrom@127.0.0.1:5432/mortar
     DEBUG=false
 
-Install Python requirements:
-
-    [user@yurika]$ sudo -iu mortar
-    [mortar@yurika]$ cd /opt/yurika/
-    [mortar@yurika]$ source .venv/bin/activate
-    [mortar@yurika]$ pip install -r requirements_production.txt
-
 Create database schema and create Django superuser:
 
     [mortar@yurika]$ python manage.py migrate
