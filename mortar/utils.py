@@ -175,10 +175,11 @@ def create_query_part(qtype, qid, query, op=None):
 
 
 def update_dictionaries():
-    '''es = settings.ES_CLIENT
+    es = settings.ES_CLIENT
+    es_actions = []
     i_client = IndicesClient(client=es)
     if not i_client.exists('dictionaries'):
-        i_client.create('dictionaries')'''
+        i_client.create('dictionaries')
     # chunk_size = 2048
     # es_actions = []
     dict_path = settings.DICTIONARIES_PATH
@@ -193,14 +194,14 @@ def update_dictionaries():
                     )
                     d.words = dictfile.read()
                     d.save()
-                    '''es_actions.append({'_op_type': 'index', '_type': 'dictionary',
+                    es_actions.append({'_op_type': 'index', '_type': 'dictionary', '_id': d.id,
                         '_source': {
                             'name': d.name,
-                            'words': [w for w in d.words.all()]
+                            'words': d.words.split("\n")
                         },
-                      '_index': tree.doc_dest_index.name
+                      '_index': 'dictionaries'
                     })
-    helpers.bulk(client=es, actions=es_actions)'''
+    helpers.bulk(client=es, actions=es_actions)
 
 
 # TODO
@@ -218,12 +219,14 @@ def associate_tree(tree):
 
 
 def make_dict_query(dictionary):
-    out = []
-    for word in dictionary.words.split('\n'):
-        if len(word):
-            out.append({'match': {'content': word.strip()}})
-
-    return {'bool': {'should': out}}
+    return {"terms": {
+               "content": {
+                   "index": "dictionaries",
+                   "type": "dictionary",
+                   "id": dictionary.id,
+                   "path": "words"
+               }
+           }}
 
 
 def make_regex_query(regex):

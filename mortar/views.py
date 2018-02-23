@@ -307,6 +307,9 @@ class AddDictionaryApi(LoginRequiredMixin, APIView):
             filepath=os.sep.join([settings.DICTIONARIES_PATH, slugify(name) + ".txt"]),
         )
         new_dict.save()
+        es = settings.ES_CLIENT
+        es.indices.create(index='dictionaries', ignore=400)
+        es.create(index="dictionaries", doc_type="dictionary", id=new_dict.id, body={'name': new_dict.name, 'words': new_dict.words.split("\n")})
         return HttpResponseRedirect(reverse('configure'))
 
 
@@ -318,6 +321,9 @@ class EditDictionaryApi(LoginRequiredMixin, APIView):
         clean = [word.replace("&#13;", '').replace('&#10;', '').strip() for word in words]
         dic.words = '\n'.join(clean)
         dic.save()
+        es = settings.ES_CLIENT
+        es.indices.create(index="dictionaries", ignore=400)
+        es.update(index="dictionaries", doc_type="dictionary", id=dic.id, body={'doc': {'name': dic.name, 'words': dic.words.split("\n")}})
         return HttpResponseRedirect(reverse('configure'))
 
 
