@@ -335,6 +335,9 @@ class DeleteDictionaryApi(LoginRequiredMixin, APIView):
             analysis, created = models.Analysis.objects.get_or_create(id=0)
             analysis.dicts_configured = False
             analysis.save()
+        es = settings.ES_CLIENT
+        es.indices.create(index="dictionaries", ignore=400)
+        es.delete(index="dictionaries", doc_type="dictionary", id=dic.id)
         return HttpResponseRedirect(reverse('configure'))
 
 
