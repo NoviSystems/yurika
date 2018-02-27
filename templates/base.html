@@ -5,21 +5,23 @@
     <meta charset="UTF-8">
     <title>{% block title %}Yurika{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">
     {% block header %}{% endblock %}
 
     <style>
-      .navbar-inverse .navbar-nav>li>a {
+      .navbar-primary {
+        border-radius: 0;
+      }
+      .navbar-primary .navbar-nav>li>a {
         color: #ffffff;
       }
-      .navbar-inverse .navbar-nav>.disabled>a {
+      .navbar-primary .navbar-nav>.disabled>a {
         color: #9d9d9d;
       }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-inverse">
+<nav class="navbar navbar-primary navbar-inverse">
     <div class="container">
         <div class="navbar-header">
 
