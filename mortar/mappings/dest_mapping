@@ -7,10 +7,7 @@
          "keyword_analyzer" : {
             "tokenizer":"keyword",
 			      "filter":["lowercase",        "minimal_english_stemmer"],
-			      "type" : "custom",
-			      "char_filter": [
-              "html_strip"
-            ]
+			      "type" : "custom"
          }
       },
       "filter" : {
