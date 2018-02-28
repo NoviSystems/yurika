@@ -38,7 +38,7 @@ from celery.task.control import revoke
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.text import slugify
 from django.views import generic
@@ -63,14 +63,13 @@ class ConfigureView(LoginRequiredMixin, generic.TemplateView):
             doc_source_index=source,
             doc_dest_index=dest,
         )
-        query, created = models.Query.objects.get_or_create(name="default")
+        query, created = models.Query.objects.get_or_create(name="default", category=0)
         analysis.crawler = crawler
         analysis.mindmap = mindmap
         analysis.query = query
         if not crawler.seed_list.all():
             analysis.crawler_configured = False
-        if not query.parts.all():
-            analysis.query_configured = False
+        analysis.query_configured = query.parts.exists()
         analysis.save()
         context['analysis'] = analysis
         context['crawler'] = crawler
@@ -98,7 +97,8 @@ class ConfigureView(LoginRequiredMixin, generic.TemplateView):
         elif val == 'dicts':
             context['analysis'].dicts_configured = True
         context['analysis'].save()
-        return render(request, self.template_name, context=context)
+
+        return redirect(reverse('configure'))
 
 
 class ClearConfigureView(LoginRequiredMixin, APIView):
@@ -330,6 +330,7 @@ class EditDictionaryApi(LoginRequiredMixin, APIView):
 class DeleteDictionaryApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         dic = get_object_or_404(models.Dictionary, pk=self.kwargs.get('pk'))
+        dic_id = dic.id
         dic.delete()
         if not models.Dictionary.objects.all():
             analysis, created = models.Analysis.objects.get_or_create(id=0)
@@ -337,61 +338,7 @@ class DeleteDictionaryApi(LoginRequiredMixin, APIView):
             analysis.save()
         es = settings.ES_CLIENT
         es.indices.create(index="dictionaries", ignore=400)
-        es.delete(index="dictionaries", doc_type="dictionary", id=dic.id)
-        return HttpResponseRedirect(reverse('configure'))
-
-
-class UpdateQueryApi(LoginRequiredMixin, APIView):
-    def post(self, request, *args, **kwargs):
-        type_list = ['regex', 'dictionary', 'part_of_speech']
-        query = get_object_or_404(models.Query, pk=self.kwargs.get('pk'))
-        query.parts.all().delete()
-        query.category = request.POST.get('category')
-        types = request.POST.getlist('part_type')
-        oplist = request.POST.getlist('op')
-        # parts = []
-        part_list = request.POST.getlist(type_list[int(types[0])])
-        if len(types) == 1 and len(part_list):
-            if part_list[0]:
-                querypart = utils.create_query_part(type_list[int(types[0])], part_list[0], query, op=None)
-                string = type_list[int(types[0])] + ': ' + querypart.name
-                query.string = string
-                query.elastic_json = utils.create_query_from_part(type_list[int(types[0])], querypart)
-                query.save()
-        else:
-            dicts = request.POST.getlist('dictionary')
-            regs = request.POST.getlist('regex')
-            pos = request.POST.getlist('part_of_speech')
-            string = ''
-            for count in range(0, len(types)):
-                if count > 0:
-                    op = oplist[count - 1]
-                    string = '(' + string
-                else:
-                    op = oplist[count]
-                part_type = int(types[count])
-                part_list = regs
-                if part_type == 1:
-                    part_list = dicts
-                if part_type == 2:
-                    part_list = pos
-                part_id = part_list.pop(0)
-                querypart = utils.create_query_part(type_list[part_type], part_id, query, op=op)
-                opname = 'AND' if op else 'OR'
-                if count == 0:
-                    string += type_list[part_type] + '.' + part_id + ' ' + opname + ' '
-                elif count == 1:
-                    string += type_list[part_type] + '.' + part_id + ') '
-                else:
-                    string += opname + ' ' + type_list[part_type] + '.' + part_id + ')'
-            string += ')'
-            query.string = string
-            query.elastic_json = utils.create_query_from_string(string)
-            query.save()
-        if query.parts.all():
-            analysis = get_object_or_404(models.Analysis, pk=0)
-            analysis.query_configured = True
-            analysis.save()
+        es.delete(index="dictionaries", doc_type="dictionary", id=dic_id)
         return HttpResponseRedirect(reverse('configure'))
 
 
@@ -433,7 +380,6 @@ edit_dict = EditDictionaryApi.as_view()
 delete_dict = DeleteDictionaryApi.as_view()
 add_dict = AddDictionaryApi.as_view()
 add_seeds = AddSeedsApi.as_view()
-update_query = UpdateQueryApi.as_view()
 upload_mindmap = UploadMindMapApi.as_view()
 update_dictionaries = DictionaryUpdateView.as_view()
 home = Home.as_view()

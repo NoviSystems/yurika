@@ -1,0 +1,140 @@
+
+{% load staticfiles %}
+
+{% block header %}
+<style>
+.btn-input {
+    display: block;
+}
+p.remove-button {
+    margin: 0;
+}
+p.remove-button a {
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+{% verbatim %}
+<form id="query-form">
+    <div class="row">
+        <!-- Select Granularity -->
+        <div class="col-xs-3">
+            <div class="form-group">
+                <label for="granularity">Search granularity:</label>
+                <select id="granularity" class="form-control input-sm" v-model="granularity">
+                    <option v-for="choice in choices.granularity" :value="choice.value">
+                        {{ choice.text }}
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Add Query Part -->
+        <div class="col-xs-3">
+            <div class="form-group pull-right">
+                <label>&nbsp;</label>
+                <button class="btn btn-sm btn-default btn-input" @click.prevent="addPart">
+                    <span class="text-primary">
+                        Add Query Part&emsp;<span class="glyphicon glyphicon-plus"></span>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Query -->
+    <div class="row">
+        <div class="col-xs-6">
+            <div v-for="(_, idx) in parts">
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <p class="remove-button text-right">
+                            <a class="text-danger" @click="removePart(idx)">
+                                <span class="glyphicon glyphicon-remove-circle"></span>
+                            </a>
+                        </p>
+                        <querypart-input v-model="parts[idx]" :id="idx"></querypart-input>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit -->
+    <div class="row">
+        <div class="col-xs-6">
+            <button class="btn btn-sm btn-primary pull-right"
+                    @click.prevent="saveQuery">
+                Save Query
+            </button>
+        </div>
+    </div>
+</form>
+{% endverbatim %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/vue.js' %}"></script>
+{% include 'mortar/configure/querypart.html' %}
+<script>
+const GRANULARITY = [{% for value, text in query.CATEGORY %}
+    {value: {{ value }}, text: '{{ text }}'},{% endfor %}
+];
+
+const query = fetch('/api/queries/current/')
+.then(response => response.json());
+
+new Vue({
+    el: '#query-form',
+    components: {
+        'querypart-input': QueryPartInput
+    },
+
+    data() {
+        return {
+            parts: undefined,
+            granularity: undefined,
+            choices: {
+                granularity: GRANULARITY,
+            },
+        };
+    },
+
+    created() {
+        query.then(query => {
+            // default to single, empty object
+            this.parts = query.parts.length ? query.parts : [{}];
+
+            // defaults to 'sentence'
+            this.granularity = query.category
+                ? query.category
+                : this.choices.granularity[0].value;
+        });
+    },
+
+    methods: {
+        addPart() {
+            this.parts.push({});
+        },
+        removePart(idx) {
+            this.parts.splice(idx, 1);
+        },
+        saveQuery() {
+            fetch('/api/queries/current/', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    category: this.granularity,
+                    parts: this.parts,
+                }),
+                headers: {'content-type': 'application/json'},
+            })
+            .then(() => window.location.reload(true));
+        },
+    },
+})
+</script>
+{% endblock %}

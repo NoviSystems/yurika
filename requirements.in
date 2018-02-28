@@ -2,6 +2,7 @@ Django<2.0
 django-environ
 django-mptt
 django-mptt-admin
+django-model-utils
 djangorestframework
 
 beautifulsoup4

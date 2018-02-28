@@ -73,6 +73,5 @@ urlpatterns = [
     url('^dicts/edit/$', not_found, name="edit-dict"),
     url('^dicts/delete/(?P<pk>[\\d]+)/$', views.delete_dict, name="delete-dict-pk"),
     url('^dicts/delete/$', not_found, name="delete-dict"),
-    url('^queries/edit/(?P<pk>[\\d]+)/$', views.update_query, name="edit-query"),
-    url('^$', views.home, name='home')
+    url('^$', views.home, name='home'),
 ]

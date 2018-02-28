@@ -226,55 +226,12 @@
 
       <div class="row">
         <div class="col-xs-12">
-          <p>{{ query.string }}</p>
           <p>Build your query to search crawled documents.</p>
         </div>
       </div>
 
-      <form id="query_form" action="{% url 'edit-query' query.pk %}" method="POST">
-        {% csrf_token %}
+      {% include 'mortar/configure/query.html' %}
 
-        {# Edit Query #}
-        <div id="query_parts">
-          <div id="query_1" class="row">
-            <div class="col-xs-4">
-              {{ form.part_type }}
-              <div id="query_part_1">
-                {{ form.regex }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {# Add Part #}
-        <div class="row">&emsp;</div>
-        <div class="row">
-          <div id="query_buttons" class="col-xs-4 text-center" role="group">
-            <input type="button" id="add_query" value="+" class="btn btn-sm btn-primary" onclick="javascript: add_query_part();" />
-          </div>
-        </div>
-
-        {# Select Granularity #}
-        <div class="row">&emsp;</div>
-          <div class="row">
-            <div class="col-xs-4">
-              <p>Choose your search granularity.</p>
-              {{ form.category }}
-            </div>
-          </div>
-        <div class="row">&emsp;</div>
-
-        {# Submit #}
-        <div class="row">
-          <div class="col-xs-4 text-right">
-            <form action="" method="POST">
-              {% csrf_token %}
-              <button class="btn btn-sm btn-success" type="submit" name="save" value="crawler">Save Query</button>
-            </form>
-          </div>
-        </div>
-
-      </form>
     </div>
   </div> {# End Query #}
 
@@ -301,49 +258,6 @@
 
 {% block scripts %}
 <script>
-var count = 1;
-function add_query_part() {
-  var parts = document.getElementById('query_parts');
-  if(parts) {
-    count++;
-    var part_div = `<div id="query_` + count + `" class="row"><div class="col-xs-4"><div class="row">&emsp;</div>{{ form.op }} <div class="row">&emsp;</div> {{ form.part_type }}<div id="query_part_` + count + `">{{ form.regex }}</div></div></div>`;
-    parts.insertAdjacentHTML("beforeend", part_div);
-  }
-  if(count > 1) {
-    var sub_button = document.getElementById('subtract_query');
-    if(!sub_button) {
-      var buttons = document.getElementById('query_buttons');
-      var sub_button = `<input type="button" id="subtract_query" value="-" class="btn btn-sm btn-danger" onclick="javascript: subtract_query_part();" />`
-      buttons.insertAdjacentHTML("beforeend", sub_button);
-    }
-  }
-}
-
-function subtract_query_part() {
-  var query = document.getElementById('query_' + count);
-  if(query && count > 1) {
-    query.parentNode.removeChild(query);
-    count--;
-  }
-  if(count == 1) {
-     var sub_button = document.getElementById('subtract_query');
-     sub_button.parentNode.removeChild(sub_button);
-  }
-}
-
-function update_query_part(form_num, val) {
-  var part_div = document.getElementById('query_part_' + form_num);
-  if(val == 0) {
-    part_div.innerHTML = `{{ form.regex }}`;
-  }
-  else if(val == 1) {
-    part_div.innerHTML = `{{ form.dictionary }}`;
-  }
-  else {
-    part_div.innerHTML = `{{ form.part_of_speech }}`;
-  }
-}
-
 function make_tree(tree) {
     tree_html = `<div class="list-group list-group-root">`;
     for (var i = 0; i < tree.length; i++) {

@@ -31,6 +31,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+from itertools import groupby
+
 import elasticsearch
 from celery.task.control import revoke
 from django.conf import settings
@@ -38,6 +40,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.db.models import options
 from django.utils import timezone
+from model_utils import Choices, managers
 from mptt.models import MPTTModel, TreeForeignKey
 
 
@@ -353,13 +356,19 @@ class Annotation(models.Model):
 
 
 class Query(models.Model):
+    CATEGORY = Choices(
+        (0, 'sentence', 'Sentence'),
+        (1, 'paragraph', 'Paragraph'),
+        (2, 'document', 'Document'),
+    )
     name = models.CharField(max_length=50, blank=True)
-    string = models.TextField(blank=True)
+    category = models.IntegerField(choices=CATEGORY)
+
+    # TODO: separate into a QueryRun model
     elastic_json = models.TextField(blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     process_id = models.CharField(max_length=50, null=True, blank=True)
-    category = models.IntegerField(choices=((0, 'Sentence'), (1, 'Paragraph'), (2, 'Document')), null=True, blank=True)
 
     @property
     def status(self):
@@ -386,30 +395,119 @@ class Query(models.Model):
     class Meta:
         verbose_name_plural = 'Queries'
 
+    def json(self):
+        """
+        Return a json structure that represents an Elasticsearch bool query. Its
+        query parts are grouped by their `occurance` in the query.
+        """
+        return {'bool': {
+            occurance: [part.json() for part in parts]
+            for occurance, parts
+            in groupby(self.parts.select_subclasses(), lambda o: o.occurance)
+        }}
+
 
 class QueryPart(models.Model):
-    query = models.ForeignKey('Query', related_name='parts')
-    op = models.IntegerField(choices=((1, 'AND'), (0, 'OR')))
-    name = models.CharField(max_length=50)
+    OCCURANCE = Choices(
+        # value, display value
+        ('must', 'Must occur'),
+        ('should', 'Should occur'),
+        ('must_not', 'Must not occur'),
+    )
 
-    def __str__(self):
-        return self.name
+    query = models.ForeignKey('Query', related_name='parts')
+    occurance = models.CharField(max_length=8, choices=OCCURANCE)
+
+    objects = managers.InheritanceManager()
+
+    class Meta:
+        ordering = ['pk']
+
+    def json(self):
+        """
+        Return a json structure that represents an Elasticsearch query clause.
+
+        Note that the `occurance` is used to group json clauses, and should not
+        be present in this output.
+        """
+        raise NotImplementedError
 
 
 class DictionaryPart(QueryPart):
-    dictionary = models.ForeignKey('Dictionary', related_name='query_parts')
+    dictionary = models.ForeignKey('Dictionary', related_name='+')
+
+    def json(self):
+        return {
+            'terms': {
+                'content': {
+                    'index': 'dictionaries',
+                    'type': 'dictionary',
+                    'id': self.dictionary_id,
+                    'path': 'words',
+                }
+            }
+        }
 
 
-class RegexPart(QueryPart):
-    regex = models.ForeignKey('Node', related_name='query_parts')
+class NodePart(QueryPart):
+    node = models.ForeignKey('Node', related_name='+')
+
+    def json(self):
+        content = self.node.regex if self.node.regex else self.node.name
+
+        return {'regexp': {'content': content}}
 
 
 class SubQueryPart(QueryPart):
-    subquery = models.ForeignKey('Query', related_name='query_parts')
+    subquery = models.ForeignKey('Query', related_name='+')
+
+    def json(self):
+        return self.subquery.json()
 
 
 class PartOfSpeechPart(QueryPart):
-    part_of_speech = models.CharField(max_length=4, choices=settings.PARTS_OF_SPEECH)
+    PARTS_OF_SPEECH = Choices(
+        ('CC', 'Coordinating Conjunction'),
+        ('CD', 'Cardinal Number'),
+        ('DT', 'Determiner'),
+        ('EX', 'Existential there'),
+        ('FW', 'Foreign Word'),
+        ('IN', 'Preposition of subordinating conjunction'),
+        ('JJ', 'Adjective'),
+        ('JJR', 'Adjective, comparitive'),
+        ('JJS', 'Adjective, superlative'),
+        ('LS', 'List item marker'),
+        ('MD', 'Modal'),
+        ('NN', 'Noun, singular or mass'),
+        ('NNS', 'Noun, plural'),
+        ('NNP', 'Proper Noun, singular'),
+        ('NNPS', 'Proper Noun, plural'),
+        ('PDT', 'Predeterminer'),
+        ('POS', 'Possessive ending'),
+        ('PRP', 'Personal pronoun'),
+        ('PRP$', 'Possessive pronoun'),
+        ('RB', 'Adverb'),
+        ('RBR', 'Adverb, comparative'),
+        ('RBS', 'Adverb, superlative'),
+        ('RP', 'Particle'),
+        ('SYM', 'Symbol'),
+        ('TO', 'to'),
+        ('UH', 'Interjection'),
+        ('VB', 'Verb, base form'),
+        ('VBD', 'Verb, past tense'),
+        ('VBG', 'Verb, gerund or present participle'),
+        ('VBN', 'Verb, past participle'),
+        ('VBP', 'Verb, non-3rd person singular present'),
+        ('VBZ', 'Verb 3rd person singular present'),
+        ('WDT', 'Wh-determiner'),
+        ('WP', 'Wh-pronoun'),
+        ('WP$', 'Possessive wh-pronoun'),
+        ('WRB', 'Wh-adverb'),
+    )
+    part_of_speech = models.CharField(max_length=4, choices=PARTS_OF_SPEECH)
+
+    def json(self):
+        return {'match': {'tokens': '|' + self.part_of_speech}}
 
 
 class ExecuteError(models.Model):

@@ -17,8 +17,6 @@ import django.contrib.auth.views
 from django.conf.urls import include, url
 from django.contrib import admin
 
-from mortar import urls
-
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
@@ -42,6 +40,6 @@ urlpatterns = [
         {'template_name': 'password_change_done.html'}),
 
     url(r'^explorer/', include('explorer.urls')),
-
-    url(r'', include(urls)),
+    url(r'^api/', include('mortar.api.urls')),
+    url(r'', include('mortar.urls')),
 ]

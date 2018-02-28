@@ -1,0 +1,340 @@
+{% comment %}
+Templates and Vues for building query parts.
+
+Note that the duplication here is somewhat necessary. While the various query
+parts currently share an identical structure, generalizing them isn't beneficial
+since the forms may be updated to contain different and/or additional inputs.
+{% endcomment %}
+
+{% verbatim %}
+<!-- DictionaryPart input -->
+<script type="text/x-template" id="dictionarypart-input">
+<div class="form-group">
+    <label :for="'dictionary-'+id">Dictionary:</label>
+    <select :id="'dictionary-'+id" class="form-control input-sm"
+            @input="update({dictionary: $event.target.value})">
+        <option v-for="choice in choices.dictionary"
+                :selected="choice.value == dictionary"
+                :value="choice.value">
+            {{ choice.text }}
+        </option>
+    </select>
+</div>
+</script>
+
+<!-- Node Part input -->
+<script type="text/x-template" id="nodepart-input">
+<div class="form-group">
+    <label :for="'node-'+id">MindMap term:</label>
+    <select :id="'node-'+id" class="form-control input-sm"
+            @input="update({node: $event.target.value})">
+        <option v-for="choice in choices.node"
+                :selected="choice.value == node"
+                :value="choice.value">
+            {{ choice.text }}
+        </option>
+    </select>
+</div>
+</script>
+
+<!-- PartOfSpeechPart input -->
+<script type="text/x-template" id="partofspeechpart-input">
+<div class="form-group">
+    <label :for="'partofspeech-'+id">Part of speech:</label>
+    <select :id="'partofspeech-'+id" class="form-control input-sm"
+            @input="update({part_of_speech: $event.target.value})">
+        <option v-for="choice in choices.part_of_speech"
+                :selected="choice.value == part_of_speech"
+                :value="choice.value">
+            {{ choice.text }}
+        </option>
+    </select>
+</div>
+</script>
+
+<!-- QueryPart form -->
+<script type="text/x-template" id="querypart-input">
+<div>
+    <div class="row">
+        <div class="col-xs-4">
+            <div class="form-group">
+                <label :for="occuranceId">Term occurance:</label>
+                <select :id="occuranceId" class="form-control input-sm"
+                        @input="update({occurance: $event.target.value})">
+                    <option v-for="choice in choices.occurance"
+                            :selected="choice.value === occurance"
+                            :value="choice.value">
+                        {{ choice.text }}
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-xs-4">
+            <div class="form-group">
+                <label :for="typeId">Query type:</label>
+                <select :id="typeId" class="form-control input-sm"
+                        @input="update({type: $event.target.value})">
+                    <option v-for="choice in choices.type"
+                            :selected="choice.value === type"
+                            :value="choice.value">
+                        {{ choice.text }}
+                    </option>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-xs-4">
+            <component :is="component"
+                       :id="id"
+                       :value="typeData"
+                       @input="updateTypeData">
+            </component>
+        </div>
+    </div>
+</div>
+</script>
+
+<script>
+const choicesData = fetch('/api/queries/choices')
+.then(response => response.json())
+.then(data => {
+    const {type, occurance, dictionary, node, part_of_speech} = data;
+    return {
+        type: type.map(asChoiceObject),
+        occurance: occurance.map(asChoiceObject),
+        dictionary: dictionary.map(asChoiceObject),
+        node: node.map(asChoiceObject),
+        part_of_speech: part_of_speech.map(asChoiceObject),
+    };
+});
+
+function asChoiceObject(pair) {
+    // [1, 2] => {value: 1, text: 2}
+    [value, text] = pair;
+    return {value, text};
+}
+
+const DictionaryPartInput = Vue.extend({
+    template: '#dictionarypart-input',
+    props: ['id', 'value'],
+
+    data() {
+        return {
+            dictionary: undefined,
+            choices: {dictionary: undefined},
+        };
+    },
+
+    created() {
+        choicesData.then(choices => {
+            this.choices.dictionary = choices.dictionary;
+
+            // set default values, propagate upstream to form
+            if (!this.dictionary) {
+                this.dictionary = this.choices.dictionary[0].value;
+                this.update({dictionary: this.dictionary});
+            }
+        });
+    },
+
+    watch: {
+        value: {
+            immediate: true,
+            handler(value) {
+                const {dictionary} = value;
+                this.dictionary = dictionary;
+            },
+        },
+    },
+
+    methods: {
+        update(update) {
+            this.$emit('input', update);
+        },
+    },
+});
+
+const NodePartInput = Vue.extend({
+    template: '#nodepart-input',
+    props: ['id', 'value'],
+
+    data() {
+        return {
+            node: undefined,
+            choices: {node: undefined},
+        };
+    },
+
+    created() {
+        choicesData.then(choices => {
+            this.choices.node = choices.node;
+
+            // set default values, propagate upstream to form
+            if (!this.node) {
+                this.node = this.choices.node[0].value;
+                this.update({node: this.node});
+            }
+        });
+    },
+
+    watch: {
+        value: {
+            immediate: true,
+            handler(value) {
+                const {node} = value;
+                this.node = node;
+            },
+        },
+    },
+
+    methods: {
+        update(update) {
+            this.$emit('input', update);
+        },
+    },
+});
+
+const PartOfSpeechPartInput = Vue.extend({
+    template: '#partofspeechpart-input',
+    props: ['id', 'value'],
+
+    data() {
+        return {
+            part_of_speech: undefined,
+            choices: {part_of_speech: undefined},
+        };
+    },
+
+    created() {
+        choicesData.then(choices => {
+            this.choices.part_of_speech = choices.part_of_speech;
+
+            // set default values, propagate upstream to form
+            if (!this.part_of_speech) {
+                this.part_of_speech = this.choices.part_of_speech[0].value;
+                this.update({part_of_speech: this.part_of_speech});
+            }
+        });
+    },
+
+    watch: {
+        value: {
+            immediate: true,
+            handler(value) {
+                const {part_of_speech} = value;
+                this.part_of_speech = part_of_speech;
+            },
+        },
+    },
+
+    methods: {
+        update(update) {
+            this.$emit('input', update);
+        },
+    },
+});
+
+
+const QueryPartInput = Vue.extend({
+    template: '#querypart-input',
+    components: {
+        'dictionarypart-input': DictionaryPartInput,
+        'nodepart-input': NodePartInput,
+        'partofspeechpart-input': PartOfSpeechPartInput,
+    },
+
+    props: ['id', 'value'],
+
+    data() {
+        return {
+            type: undefined,
+            occurance: undefined,
+            typeData: undefined,
+            choices: {type: undefined, occurance: undefined},
+        };
+    },
+
+    created() {
+        // dynamically set choices from an API request/promise.
+        choicesData.then(choices => {
+            this.choices = {
+                type: choices.type,
+                occurance: choices.occurance,
+            };
+
+            // set default values, propagate upstream to form
+            const defaults = {};
+            if (!this.type) {
+                this.type = this.choices.type[0].value;
+                defaults.type = this.type;
+            }
+            if (!this.occurance) {
+                this.occurance = this.choices.occurance[0].value;
+                defaults.occurance = this.occurance;
+            }
+            if (defaults) {
+                this.update(defaults);
+            }
+        });
+    },
+
+    watch: {
+        value: {
+            // The handler must operate in immediate mode in order for the bound
+            // data to be destructured/set before the dynamic defaults are set.
+            immediate: true,
+            handler(value) {
+                const {type, occurance, ...typeData} = value;
+                this.type = type;
+                this.occurance = occurance;
+                this.typeData = typeData;
+            },
+        },
+    },
+
+    computed: {
+        typeId() {
+            return `type-${this.id}`;
+        },
+        occuranceId() {
+            return `occurance-${this.id}`;
+        },
+        component() {
+            const componentLookup = {
+                'dictionary part': 'dictionarypart-input',
+                'node part': 'nodepart-input',
+                'part of speech part': 'partofspeechpart-input',
+            };
+            return componentLookup[this.type];
+        },
+    },
+
+    methods: {
+        update(update) {
+            const current = {
+                type: this.type,
+                occurance: this.occurance,
+                ...this.typeData,
+            };
+
+            // emit updated inputs
+            this.$emit('input', {...current, ...update});
+        },
+
+        updateTypeData(update) {
+            // type data needs to be handled separately, so that the previous
+            // data isn't merged with the new data. eg, a node part that has
+            // been replaced with a dictionary part.
+            const current = {
+                type: this.type,
+                occurance: this.occurance,
+            };
+
+            // emit updated inputs
+            this.$emit('input', {...current, ...update});
+        },
+    },
+})
+</script>
+{% endverbatim %}

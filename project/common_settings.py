@@ -200,7 +200,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.'
     ],
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend', ),
+    # 'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend', ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
@@ -217,45 +217,6 @@ EXPLORER_DEFAULT_CONNECTION = 'explorer'
 
 EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ('django_', 'auth_', 'contenttypes_', 'sessions_', 'admin_')
 
-
-PARTS_OF_SPEECH = (
-    ('CC', 'Coordinating Conjunction'),
-    ('CD', 'Cardinal Number'),
-    ('DT', 'Determiner'),
-    ('EX', 'Existential there'),
-    ('FW', 'Foreign Word'),
-    ('IN', 'Preposition of subordinating conjunction'),
-    ('JJ', 'Adjective'),
-    ('JJR', 'Adjective, comparitive'),
-    ('JJS', 'Adjective, superlative'),
-    ('LS', 'List item marker'),
-    ('MD', 'Modal'),
-    ('NN', 'Noun, singular or mass'),
-    ('NNS', 'Noun, plural'),
-    ('NNP', 'Proper Noun, singular'),
-    ('NNPS', 'Proper Noun, plural'),
-    ('PDT', 'Predeterminer'),
-    ('POS', 'Possessive ending'),
-    ('PRP', 'Personal pronoun'),
-    ('PRP$', 'Possessive pronoun'),
-    ('RB', 'Adverb'),
-    ('RBR', 'Adverb, comparative'),
-    ('RBS', 'Adverb, superlative'),
-    ('RP', 'Particle'),
-    ('SYM', 'Symbol'),
-    ('TO', 'to'),
-    ('UH', 'Interjection'),
-    ('VB', 'Verb, base form'),
-    ('VBD', 'Verb, past tense'),
-    ('VBG', 'Verb, gerund or present participle'),
-    ('VBN', 'Verb, past participle'),
-    ('VBP', 'Verb, non-3rd person singular present'),
-    ('VBZ', 'Verb 3rd person singular present'),
-    ('WDT', 'Wh-determiner'),
-    ('WP', 'Wh-pronoun'),
-    ('WP$', 'Possessive wh-pronoun'),
-    ('WRB', 'Wh-adverb'),
-)
 
 ES_CLIENT = Elasticsearch(
     [env('ELASTICSEARCH_URL')],
