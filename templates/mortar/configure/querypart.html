@@ -52,6 +52,21 @@ since the forms may be updated to contain different and/or additional inputs.
 </div>
 </script>
 
+<!-- RegexPart input -->
+<script type="text/x-template" id="regexpart-input">
+<div class="form-group">
+    <label :for="'regex-'+id">Regex:</label>
+    <input :id="'regex-'+id" class="form-control input-sm"
+           :value="regex"
+           @input="update({regex: $event.target.value})" />
+    <small class="help-block">
+        <a href="https://www.elastic.co/guide/en/elasticsearch/reference/5.6/query-dsl-regexp-query.html#regexp-syntax">
+            Elasicsearch syntax
+        </a>
+    </small>
+</div>
+</script>
+
 <!-- QueryPart form -->
 <script type="text/x-template" id="querypart-input">
 <div>
@@ -235,6 +250,33 @@ const PartOfSpeechPartInput = Vue.extend({
     },
 });
 
+const RegexPartInput = Vue.extend({
+    template: '#regexpart-input',
+    props: ['id', 'value'],
+
+    data() {
+        return {
+            regex: undefined,
+        };
+    },
+
+    watch: {
+        value: {
+            immediate: true,
+            handler(value) {
+                const {regex} = value;
+                this.regex = regex;
+            },
+        },
+    },
+
+    methods: {
+        update(update) {
+            this.$emit('input', update);
+        },
+    },
+});
+
 
 const QueryPartInput = Vue.extend({
     template: '#querypart-input',
@@ -242,11 +284,13 @@ const QueryPartInput = Vue.extend({
         'dictionarypart-input': DictionaryPartInput,
         'nodepart-input': NodePartInput,
         'partofspeechpart-input': PartOfSpeechPartInput,
+        'regexpart-input': RegexPartInput,
     },
     componentLookup: {
         'dictionary part': 'dictionarypart-input',
         'node part': 'nodepart-input',
         'part of speech part': 'partofspeechpart-input',
+        'regex part': 'regexpart-input',
     },
 
     props: ['id', 'value'],

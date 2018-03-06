@@ -51,6 +51,7 @@ class QueryViewSet(PutOnlyUpdateModelMixin,
             types.append(('node part', 'MindMap term'))
         types += [
             ('part of speech part', 'Part of speech'),
+            ('regex part', 'Regex'),
         ]
 
         return Response({

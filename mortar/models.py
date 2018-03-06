@@ -510,6 +510,13 @@ class PartOfSpeechPart(QueryPart):
         return {'match': {'tokens': '|' + self.part_of_speech}}
 
 
+class RegexPart(QueryPart):
+    regex = models.CharField(max_length=64)
+
+    def json(self):
+        return {'regexp': {'content': self.regex}}
+
+
 class ExecuteError(models.Model):
     STEP_CHOICES = (
         (0, "Crawling"),
