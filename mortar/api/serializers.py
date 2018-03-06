@@ -35,7 +35,7 @@ class RegexPartSerializer(serializers.ModelSerializer):
     type = utils.CheckedTypeField()
 
     class Meta:
-        model = models.PartOfSpeechPart
+        model = models.RegexPart
         fields = ['type', 'occurance', 'regex']
 
 
