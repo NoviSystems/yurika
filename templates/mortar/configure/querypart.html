@@ -243,6 +243,11 @@ const QueryPartInput = Vue.extend({
         'nodepart-input': NodePartInput,
         'partofspeechpart-input': PartOfSpeechPartInput,
     },
+    componentLookup: {
+        'dictionary part': 'dictionarypart-input',
+        'node part': 'nodepart-input',
+        'part of speech part': 'partofspeechpart-input',
+    },
 
     props: ['id', 'value'],
 
@@ -301,12 +306,7 @@ const QueryPartInput = Vue.extend({
             return `occurance-${this.id}`;
         },
         component() {
-            const componentLookup = {
-                'dictionary part': 'dictionarypart-input',
-                'node part': 'nodepart-input',
-                'part of speech part': 'partofspeechpart-input',
-            };
-            return componentLookup[this.type];
+            return this.$options.componentLookup[this.type];
         },
     },
 
