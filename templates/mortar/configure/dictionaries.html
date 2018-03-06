@@ -1,0 +1,107 @@
+{% extends 'mortar/configure/base.html' %}
+
+{% block config %}
+<p class="lead">Add dictionaries to create rules for many terms at once.</p>
+
+<hr>
+
+<!-- Add Dictionaries -->
+<form action="{% url 'add-dict' %}" method="POST">
+    <div class="row">
+        <div class="col-xs-12">
+            <p>Add dictionaries to create rules for many terms at once.</p>
+            {% if has_system_dicts %}
+                <p><a href="{% url 'update-dicts' %}">Load System Dictionaries</a> : reads in all dictionaries from {{ dict_path }} (may take a while)</p>
+            {% endif %}
+        </div>
+        {% csrf_token %}
+        <div class="col-xs-8">
+            {{ form.dict_name }}
+            {{ form.words }}
+        </div>
+    </div>
+    <div class="row">&emsp;</div>
+    <div class="row">
+        <div class="col-xs-8 text-right">
+            <button class="btn btn-sm btn-default" type="submit" name="new_dict" value="submit">
+                <span class="text-primary">Add</span>
+            </button>
+        </div>
+    </div>
+</form>
+
+<hr>
+
+<!-- List Dictionaries -->
+<div class="row">
+    <div class="col-xs-12"><p>Your dictionaries:</p></div>
+</div>
+<div id="dicts" class="row">
+    <div class="col-xs-8">
+        <div class="list-group list-group-root">
+            {% for dict in dictionaries %}
+            <div class="list-group-item">
+                {{ dict.name }} &emsp;
+                <a href="#" id="dict-{{dict.pk}}" class="glyphicon glyphicon-pencil"></a>
+                <a href="{% url 'delete-dict-pk' dict.pk %}" class="glyphicon glyphicon-trash"></a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Submit -->
+<div class="row">
+    <div class="col-xs-8 text-right">
+      <form action="" method="POST">
+        {% csrf_token %}
+        {% if analysis.dicts_configured %}
+            <button class="btn btn-sm btn-primary" type="submit" name="save" value="dicts">Next step</button>
+        {% else %}
+            <button class="btn btn-sm btn-warning" type="submit" name="save" value="dicts">Skip Dictionaries</button>
+        {% endif %}
+      </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+function edit_dict_form(pk, item, edit) {
+    if(edit) {
+        var name = $(item).text().trim();
+        var dicts = JSON.parse("{{ dict_list | escapejs }}");
+        var words = dicts[pk];
+        var form = `
+            <p>${name}</p>
+            <form action="{% url 'edit-dict' %}${pk}/" method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-xs-9"><textarea id="dict-words" name="words" class="form-control">${words}</textarea></div>
+                    <div class="col-xs-3">
+                        <button class="btn btn-sm btn-link" type="submit" name="dictionary" value="submit">
+                            <i class="glyphicon glyphicon-ok"></i>
+                        </button>
+                        <a href="#dict-${pk}" class="btn btn-sm" id="dict-${pk}">
+                            <i class="glyphicon glyphicon-remove"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        `;
+        $(item).html(form);
+    } else {
+        var name = $(item).parent().parent().parent().find('p').text().trim();
+        var div = `${name}&emsp;<a href="#" id="dict-${pk}" class="glyphicon glyphicon-pencil"></a><a href="{% url 'delete-dict' %}${pk}" class="glyphicon glyphicon-trash"></a>`;
+        $(item).parent().parent().parent().html(div);
+    }
+}
+
+$(document).ready(function() {
+    $('body').on('click', 'a[id^="dict-"]', function() {
+        edit_dict_form($(this).prop('id').slice(5), $(this).closest('div'), $(this).hasClass("glyphicon-pencil"));
+    });
+});
+</script>
+{% endblock %}

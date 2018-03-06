@@ -1,0 +1,101 @@
+{% extends 'mortar/configure/base.html' %}
+
+{% block header %}
+<style>
+.glyphicon-sm {
+    font-size: 12px;
+}
+.list-group-item:first-child .btn-list-group {
+    border-top-left-radius: 4px;
+}
+.list-group-item:last-child .btn-list-group {
+    border-bottom-left-radius: 4px;
+}
+
+.btn-list-group {
+    display: inline-block;
+    margin: -12px 16px -11px -16px;
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-image: none;
+    border: 1px solid transparent;
+}
+.btn-list-group:hover {
+    text-decoration: none;
+}
+.btn-list-group.btn-default {
+    border: 1px solid #adadad;
+}
+.btn-list-group.btn-danger {
+    border: 1px solid #ac2925;
+}
+
+</style>
+{% endblock %}
+
+{% block config %}
+<p class="lead">Add URLs to crawl.</p>
+
+<hr>
+
+<!-- Seed form -->
+<form action="{% url 'add-seeds' crawler.pk %}" method="POST">
+    <div class="row">
+        {% csrf_token %}
+        <div class="col-xs-12">
+            {{ form.seed_list }}
+        </div>
+    </div>
+
+    <br>
+
+    <div class="row">
+        <div class="col-xs-12 text-right">
+            <button class="btn btn-sm btn-default" type="submit">
+                <span class="text-primary">Add URLs</span>
+            </button>
+        </div>
+    </div>
+</form>
+
+<hr>
+
+<!-- Seed List -->
+<div class="row"><div class="col-xs-6"><p>Added URLs:</p></div></div>
+{% if seed_list %}
+<div class="row">
+    <div class="col-xs-12">
+        <ul class="list-group">
+        {% for url, pk in seed_list %}
+            <li class="list-group-item">
+                <a href="{% url 'delete-seed-pk' pk %}" class="btn-list-group btn-default">
+                    <span class="glyphicon glyphicon-sm glyphicon-trash text-danger"></span>
+                </a>
+                <a href="{{ url }}">{{ url }}</a>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
+{# Save Button #}
+{% if seed_list %}
+<div class="row">
+    <div class="col-xs-12 text-right">
+        <a class="btn btn-sm btn-primary" href="{{ mindmap_url }}">
+            Next step
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

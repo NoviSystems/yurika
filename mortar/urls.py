@@ -44,8 +44,12 @@ def not_found(request):
 
 
 urlpatterns = [
-    url(r'^configure/$', views.configure, name='configure'),
-    url(r'^configure/clear/(?P<pk>[\d]+)/$', views.clear_config, name='clear-config'),
+    url(r'^configure/$', views.ConfigureView.as_view(), name='configure'),
+    url(r'^configure/crawler/$', views.ConfigureCrawlerView.as_view(), name='configure-crawler'),
+    url(r'^configure/mindmap/$', views.ConfigureMindMapView.as_view(), name='configure-mindmap'),
+    url(r'^configure/dictionaries/$', views.ConfigureDictionariesView.as_view(), name='configure-dictionaries'),
+    url(r'^configure/query/$', views.ConfigureQueryView.as_view(), name='configure-query'),
+
     url(r'^execute/$', views.analyze, name='analyze'),
     url(r'^execute/start/(?P<pk>[\d]+)/$', views.start_analysis, name="start-analysis"),
     url(r'^execute/stop/(?P<pk>[\d]+)/$', views.stop_analysis, name="stop-analysis"),

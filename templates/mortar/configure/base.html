@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% load utils %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xs-12 col-md-11 text-right">
+        <a href="{% url 'analyze' %}" class="btn btn-xs btn-default{% if not CONFIGURED %} disabled{% endif %}">
+            <b>2.</b> Execute <i class="glyphicon glyphicon-menu-right"></i>
+        </a>
+    </div>
+</div>
+
+<br>
+
+<div class="row">
+    <div class="col-xs-3">
+        <ul class="list-group">
+            {% url 'configure-crawler' as crawler_url %}
+            {% url 'configure-mindmap' as mindmap_url %}
+            {% url 'configure-dictionaries' as dictionaries_url %}
+            {% url 'configure-query' as query_url %}
+            <a class="list-group-item {% isactive crawler_url %}{% if analysis.crawler_configured %} list-group-item-success{% else %} list-group-item-warning{% endif %}" href="{{ crawler_url }}">
+                <b>1.</b>&emsp;Crawler <span class="glyphicon glyphicon-{% if analysis.crawler_configured %}ok{% else %}exclamation-sign{% endif %}"></span>
+            </a>
+            <a class="list-group-item {% isactive mindmap_url %}{% if analysis.mindmap_configured %} list-group-item-success{% else %} list-group-item-warning{% endif %}" href="{{ mindmap_url }}">
+                <b>2.</b>&emsp;MindMap <span class="glyphicon glyphicon-{% if analysis.mindmap_configured %}ok{% else %}exclamation-sign{% endif %}"></span>
+            </a>
+            <a class="list-group-item {% isactive dictionaries_url %}{% if analysis.dicts_configured %} list-group-item-success{% else %} list-group-item-warning{% endif %}" href="{{ dictionaries_url }}">
+                <b>3.</b>&emsp;Dictionaries <span class="glyphicon glyphicon-{% if analysis.dicts_configured %}ok{% else %}exclamation-sign{% endif %}"></span>
+            </a>
+            <a class="list-group-item {% isactive query_url %}{% if analysis.query_configured %} list-group-item-success{% else %} list-group-item-warning{% endif %}" href="{{ query_url }}">
+                <b>4.</b>&emsp;Query <span class="glyphicon glyphicon-{% if analysis.query_configured %}ok{% else %}exclamation-sign{% endif %}"></span>
+            </a>
+        </ul>
+
+        {% if CONFIGURED %}
+        <a class="btn btn-block btn-primary" href="{% url 'analyze' %}"><b>Execute</b></a>
+        {% else %}
+        <button class="btn btn-block btn-default disabled"><b>Execute</b></li>
+        {% endif %}
+    </div>
+    <div class="col-xs-9 col-md-8">
+        {% block config %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

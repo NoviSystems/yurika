@@ -1,0 +1,182 @@
+{% extends 'mortar/configure/base.html' %}
+
+
+{% block config %}
+<p class="lead">Import a MindMap.</p>
+
+<hr>
+<!-- Import MindMap -->
+<form action="{% url 'upload-mindmap' mindmap.pk %}" method="POST" enctype="multipart/form-data">
+    <div class="row">
+        <div class="col-xs-12"><p>Import a MindMap (.mm) file to create rules from Regular Expressions.</p></div>
+        {% csrf_token %}
+        <div class="col-xs-4">
+            {{ form.file }}
+        </div>
+        <div class="col-xs-4 text-right">
+            <button class="btn btn-sm btn-default" type="submit" name="mindmap" value="submit">
+                <span class="text-primary">Upload</span>
+            </button>
+        </div>
+    </div>
+</form>
+
+<hr>
+
+<!-- Show MindMap -->
+<div class="row">
+    <div class="col-xs-8"><p>Your uploaded MindMap:</p></div>
+</div>
+<div class="row">
+    {% if mindmap.nodes.exists %}
+    <div id="tree" class="col-xs-8"></div>
+    {% endif %}
+</div>
+
+<!-- Save MindMap -->
+<div class="row">
+    <div class="col-xs-8 text-right">
+      <form action="" method="POST">
+        {% csrf_token %}
+        {% if analysis.mindmap_configured %}
+            <button class="btn btn-sm btn-primary" type="submit" name="save" value="mindmap">Next step</button>
+        {% else %}
+            <button class="btn btn-sm btn-warning" type="submit" name="save" value="mindmap">Skip MindMap</button>
+        {% endif %}
+      </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function make_tree(tree) {
+    let children = '';
+    for (var i = 0; i < tree.length; i++) {
+        children += unroll(tree[i]);
+    }
+    return `<div class="list-group list-group-root">${children}</div>`;
+}
+
+function unroll(node) {
+    let label = node.label;
+    if(node.regex) {
+        label = `${label} : ${node.regex}`;
+    }
+
+    if (node.hasOwnProperty('children') && node['children'].length) {
+        let children = '';
+        for (var child in node['children']) {
+            children += unroll(node['children'][child]);
+        }
+
+        return `
+            <div class="list-group-item">
+                <a href="#n-${node.id}" data-toggle="collapse" class="root">
+                    <i id="dropdown" class="glyphicon glyphicon-plus"></i>
+                    ${label}
+                </a>
+                &ensp;
+                <a href="#" id="node-${node.id}" class="glyphicon glyphicon-pencil"></a>
+                <a href="{% url 'delete-node' %}${node.id}" class="glyphicon glyphicon-trash"></a>
+            </div>
+            <div id="n-${node.id}" class="list-group collapse">
+                ${children}
+            </div>
+        `;
+    }
+    else {
+        return `
+            <div class="list-group-item">
+                <a href="#n-${node.id}" data-toggle="collapse">${label}</a>
+                &ensp;
+                <a href="#" id="node-${node.id}" class="glyphicon glyphicon-pencil"></a>
+                <a href="{% url 'delete-node' %}${node.id}" class="glyphicon glyphicon-trash"></a>
+            </div>
+        `;
+    }
+}
+
+function edit_node_form(pk, item, edit) {
+    if (edit) {
+        var text = $(item).children(":first").text().split(' : ');
+        var name = text[0];
+        var regex = text[1];
+        if (!regex) {
+            regex = '';
+        }
+        var form = `
+            <form action="{% url 'edit-node' %}${pk}/" method="POST">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-xs-9">
+                        <div class="col-xs-6">Name: <input type="text" id="node-name" name="name" value="${name}" class="form-control" /></div>
+                        <div class="col-xs-6">Regex: <input type="text" id="node-regex" name="regex" value="${regex}" class="form-control" /></div>
+                    </div>
+                    <div class="col-xs-3">
+                        <button class="btn btn-sm btn-link" type="submit" name="mindmap" value="submit">
+                            <i class="glyphicon glyphicon-ok"></i>
+                        </button>
+                        <a href="#node-${pk}" class="btn btn-sm" id="node-${pk}">
+                            <i class="glyphicon glyphicon-remove"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        `;
+        $(item).html(form);
+    } else {
+        var nodes = eval("{{ tree_list | escapejs }}");
+        var name = ""; var regex = ""; var children = false;
+        for (var i=0; i<nodes.length; i++) {
+            if (nodes[i].id == pk) {
+                name = nodes[i].label;
+                regex = nodes[i].regex;
+                children = nodes[i].hasOwnProperty('children') && nodes[i]['children'].length;
+                break;
+            }
+        }
+
+        let label = name;
+        if(regex) {
+            label = `${label} : ${regex}`;
+        }
+
+        if(children) {
+            var div = `
+                <a href="#n-${pk}" data-toggle="collapse" class="root">
+                    <i id="dropdown" class="glyphicon glyphicon-plus"></i>`;
+        }
+        else {
+            var div = `
+                <a href="#n-${pk}" data-toggle="collapse">`;
+        }
+        div += `
+                ${label}
+            </a>
+            &ensp;
+            <a href="#" id="node-${pk}" class="glyphicon glyphicon-pencil"></a>
+            <a href="{% url 'delete-node' %}${pk}" class="glyphicon glyphicon-trash"></a>
+        `;
+        $(item).parent().parent().html(div);
+    }
+}
+
+$(document).ready(function() {
+    //display tree
+    var tree = JSON.parse("{{ tree_json | escapejs }}");
+    $('#tree').append(make_tree(tree));
+
+    //collapsible tree
+    $('.root').on('click', function() {
+      $('#dropdown', this)
+        .toggleClass('glyphicon-plus')
+        .toggleClass('glyphicon-minus');
+    });
+
+    $('body').on('click', 'a[id^="node-"]', function() {
+      edit_node_form($(this).prop('id').slice(5), $(this).closest('div'), $(this).hasClass("glyphicon-pencil"));
+    });
+});
+</script>
+{% endblock %}

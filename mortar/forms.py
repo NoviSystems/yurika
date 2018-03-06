@@ -44,9 +44,14 @@ class BootstrapForm(forms.Form):
             field.widget.attrs['class'] = 'form-control'
 
 
-class ConfigureForm(BootstrapForm):
+class CrawlerForm(BootstrapForm):
     seed_list = forms.CharField(widget=forms.Textarea(attrs={'placeholder': 'URLs (one per line)'}), required=False)
+
+
+class MindMapForm(BootstrapForm):
     file = forms.FileField(label="Import MindMap", required=False)
 
+
+class DictionaryForm(BootstrapForm):
     dict_name = forms.CharField(max_length=50, label='Name', required=False, widget=forms.TextInput(attrs={'placeholder': 'Dictionary Name'}))  # noqa: E501
     words = forms.CharField(label="Words", required=False, widget=forms.Textarea(attrs={'placeholder': 'Words or Phrases (one per line)'}))  # noqa: E501
