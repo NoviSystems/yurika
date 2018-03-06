@@ -39,6 +39,8 @@ class BootstrapForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
+            if isinstance(field, forms.FileField):
+                continue
             field.widget.attrs['class'] = 'form-control'
 
 
