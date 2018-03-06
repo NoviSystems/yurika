@@ -1,3 +1,4 @@
+{% extends 'mortar/configure/base.html' %}
 
 {% load staticfiles %}
 
@@ -12,19 +13,23 @@ p.remove-button {
 p.remove-button a {
     cursor: pointer;
 }
+#granularity {
+    margin-left: 8px;
+    width: 180px;
+}
 </style>
 {% endblock %}
 
-{% block content %}
-
-
+{% block config %}
 {% verbatim %}
+<p class="lead">Build your query to search crawled documents.</p>
+<hr>
 <form id="query-form">
     <div class="row">
         <!-- Select Granularity -->
-        <div class="col-xs-3">
+        <div class="col-xs-8 form-inline">
             <div class="form-group">
-                <label for="granularity">Search granularity:</label>
+                <label for="granularity" class="control-label">Search granularity:</label>
                 <select id="granularity" class="form-control input-sm" v-model="granularity">
                     <option v-for="choice in choices.granularity" :value="choice.value">
                         {{ choice.text }}
@@ -34,9 +39,8 @@ p.remove-button a {
         </div>
 
         <!-- Add Query Part -->
-        <div class="col-xs-3">
+        <div class="col-xs-4">
             <div class="form-group pull-right">
-                <label>&nbsp;</label>
                 <button class="btn btn-sm btn-default btn-input" @click.prevent="addPart">
                     <span class="text-primary">
                         Add Query Part&emsp;<span class="glyphicon glyphicon-plus"></span>
@@ -48,7 +52,7 @@ p.remove-button a {
 
     <!-- Edit Query -->
     <div class="row">
-        <div class="col-xs-6">
+        <div class="col-xs-12">
             <div v-for="(_, idx) in parts">
                 <div class="panel panel-default">
                     <div class="panel-body">
@@ -66,7 +70,7 @@ p.remove-button a {
 
     <!-- Submit -->
     <div class="row">
-        <div class="col-xs-6">
+        <div class="col-xs-12">
             <button class="btn btn-sm btn-primary pull-right"
                     @click.prevent="saveQuery">
                 Save Query

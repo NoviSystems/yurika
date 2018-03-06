@@ -37,9 +37,9 @@ import os
 from celery.task.control import revoke
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 from django.views import generic
 from rest_framework.response import Response
@@ -48,64 +48,140 @@ from rest_framework.views import APIView
 from mortar import forms, models, tasks, utils
 
 
-class ConfigureView(LoginRequiredMixin, generic.TemplateView):
-    template_name = 'mortar/configure.html'
+class ConfigureBaseView(LoginRequiredMixin, generic.TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
-        analysis, created = models.Analysis.objects.get_or_create(id=0)
-        source, created = models.ElasticIndex.objects.get_or_create(name="source")
-        dest, created = models.ElasticIndex.objects.get_or_create(name="dest")
-        crawler, created = models.Crawler.objects.get_or_create(name="default", category="web", index=source)
-        mindmap, created = models.Tree.objects.get_or_create(
+
+        analysis = self.analysis
+        analysis.crawler = self.crawler
+        analysis.mindmap = self.mindmap
+        analysis.query = self.query
+
+        analysis.crawler_configured = self.crawler.seed_list.exists()
+        analysis.query_configured = self.query.parts.exists()
+        analysis.save()
+
+        context['analysis'] = analysis
+
+        return context
+
+    @cached_property
+    def analysis(self):
+        return models.Analysis.objects.get_or_create(id=0)[0]
+
+    @cached_property
+    def source(self):
+        return models.ElasticIndex.objects.get_or_create(name='source')[0]
+
+    @cached_property
+    def dest(self):
+        return models.ElasticIndex.objects.get_or_create(name='dest')[0]
+
+    @cached_property
+    def crawler(self):
+        return models.Crawler.objects.get_or_create(
+            name='default',
+            category='web',
+            index=self.source,
+        )[0]
+
+    @cached_property
+    def mindmap(self):
+        return models.Tree.objects.get_or_create(
             name="default",
             slug="default",
-            doc_source_index=source,
-            doc_dest_index=dest,
-        )
-        query, created = models.Query.objects.get_or_create(name="default", category=0)
-        analysis.crawler = crawler
-        analysis.mindmap = mindmap
-        analysis.query = query
-        if not crawler.seed_list.all():
-            analysis.crawler_configured = False
-        analysis.query_configured = query.parts.exists()
-        analysis.save()
-        context['analysis'] = analysis
-        context['crawler'] = crawler
-        context['mindmap'] = mindmap
-        tree_json, flat_tree = utils.get_json_tree(mindmap.nodes.all())
-        context['tree_json'] = json.dumps(tree_json)
-        context['tree_list'] = json.dumps(flat_tree)
-        context['query'] = query
-        context['seed_list'] = [[seed.urlseed.url, seed.pk] for seed in crawler.seed_list.all()]
-        context['dict_path'] = os.path.join(settings.BASE_DIR, settings.DICTIONARIES_PATH)
-        context['dictionaries'] = models.Dictionary.objects.all()
-        context['dict_list'] = utils.get_dict_list()
-        context['form'] = forms.ConfigureForm()
-        context['has_system_dicts'] = os.path.isdir(settings.DICTIONARIES_PATH)
+            doc_source_index=self.source,
+            doc_dest_index=self.dest,
+        )[0]
+
+    @cached_property
+    def query(self):
+        return models.Query.objects.get_or_create(name='default', category=0)[0]
+
+
+class ConfigureView(ConfigureBaseView):
+
+    def dispatch(self, request, *args, **kwargs):
+        if self.analysis.query_configured:
+            return redirect(reverse('configure-query'))
+        if self.analysis.dicts_configured:
+            return redirect(reverse('configure-query'))
+        if self.analysis.mindmap_configured:
+            return redirect(reverse('configure-dictionaries'))
+        if self.analysis.crawler_configured:
+            return redirect(reverse('configure-mindmap'))
+        return redirect(reverse('configure-crawler'))
+
+
+class ConfigureCrawlerView(ConfigureBaseView):
+    template_name = 'mortar/configure/crawler.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'crawler': self.crawler,
+            'seed_list': [
+                [seed.urlseed.url, seed.pk]
+                for seed in self.crawler.seed_list.all()
+            ],
+            'form': forms.CrawlerForm(),
+        })
+        return context
+
+
+class ConfigureMindMapView(ConfigureBaseView):
+    template_name = 'mortar/configure/mindmap.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        tree_json, flat_tree = utils.get_json_tree(self.mindmap.nodes.all())
+        context.update({
+            'mindmap': self.mindmap,
+            'tree_json': json.dumps(tree_json),
+            'tree_list': json.dumps(flat_tree),
+            'form': forms.MindMapForm(),
+        })
         return context
 
     def post(self, request, *args, **kwargs):
-        context = self.get_context_data(*args, **kwargs)
-        # form = forms.ConfigureForm(request.POST, request.FILES)
-        val = request.POST.get('save')
-        if val == 'crawler' and context['crawler'].seed_list.all():
-            context['analysis'].crawler_configured = True
-        elif val == 'mindmap':
-            context['analysis'].mindmap_configured = True
-        elif val == 'dicts':
-            context['analysis'].dicts_configured = True
-        context['analysis'].save()
+        self.analysis.mindmap_configured = True
+        self.analysis.save()
 
-        return redirect(reverse('configure'))
+        return redirect(reverse('configure-dictionaries'))
 
 
-class ClearConfigureView(LoginRequiredMixin, APIView):
+class ConfigureDictionariesView(ConfigureBaseView):
+    template_name = 'mortar/configure/dictionaries.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'dict_path': os.path.join(settings.BASE_DIR, settings.DICTIONARIES_PATH),
+            'dictionaries': models.Dictionary.objects.all(),
+            'dict_list': utils.get_dict_list(),
+            'has_system_dicts': os.path.isdir(settings.DICTIONARIES_PATH),
+            'form': forms.DictionaryForm(),
+        })
+        return context
+
     def post(self, request, *args, **kwargs):
-        analysis = get_object_or_404(models.Analysis, pk=self.kwargs.get('pk'))
-        analysis.clear_config()
-        return HttpResponseRedirect(reverse('configure'))
+        self.analysis.dicts_configured = True
+        self.analysis.save()
+
+        return redirect(reverse('configure-query'))
+
+
+class ConfigureQueryView(ConfigureBaseView):
+    template_name = 'mortar/configure/query.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'query': self.query,
+        })
+        return context
 
 
 class AnalyzeView(LoginRequiredMixin, generic.TemplateView):
@@ -167,23 +243,23 @@ class StartAnalysis(LoginRequiredMixin, APIView):
                     | tasks.run_query.signature((analysis.query.pk, ), immutable=True)
                 chain()
 
-            return HttpResponseRedirect(reverse('analyze'))
+            return redirect('analyze')
         else:
-            return HttpResponseRedirect(reverse('configure'))
+            return redirect('configure')
 
 
 class StopAnalysis(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = get_object_or_404(models.Analysis, pk=self.kwargs.get('pk'))
         analysis.stop()
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class ClearResults(LoginRequiredMixin, APIView):
     def post(self, request, *args, **kwargs):
         analysis = get_object_or_404(models.Analysis, pk=self.kwargs.get('pk'))
         analysis.clear_results()
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class StartCrawler(LoginRequiredMixin, APIView):
@@ -191,7 +267,7 @@ class StartCrawler(LoginRequiredMixin, APIView):
         crawler = get_object_or_404(models.Crawler, pk=self.kwargs.get('pk'))
         if not crawler.process_id:
             tasks.run_crawler.delay(crawler.pk)
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class StopCrawler(LoginRequiredMixin, APIView):
@@ -201,7 +277,7 @@ class StopCrawler(LoginRequiredMixin, APIView):
             revoke(crawler.process_id, terminate=True)
             crawler.process_id = None
             crawler.save()
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class StartPreprocess(LoginRequiredMixin, APIView):
@@ -209,7 +285,7 @@ class StartPreprocess(LoginRequiredMixin, APIView):
         mindmap = get_object_or_404(models.Tree, pk=self.kwargs.get('pk'))
         if not mindmap.process_id:
             tasks.preprocess.delay(mindmap.pk)
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class StopPreprocess(LoginRequiredMixin, APIView):
@@ -219,7 +295,7 @@ class StopPreprocess(LoginRequiredMixin, APIView):
             revoke(mindmap.process_id)
             mindmap.process_id = None
             mindmap.save()
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class StartQuery(LoginRequiredMixin, APIView):
@@ -227,7 +303,7 @@ class StartQuery(LoginRequiredMixin, APIView):
         query = get_object_or_404(models.Query, pk=self.kwargs.get('pk'))
         if not query.process_id:
             tasks.run_query.delay(query.pk)
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class StopQuery(LoginRequiredMixin, APIView):
@@ -237,7 +313,7 @@ class StopQuery(LoginRequiredMixin, APIView):
             revoke(query.process_id)
             query.process_id = None
             query.save()
-        return HttpResponseRedirect(reverse('analyze'))
+        return redirect('analyze')
 
 
 class UploadMindMapApi(LoginRequiredMixin, APIView):
@@ -246,7 +322,7 @@ class UploadMindMapApi(LoginRequiredMixin, APIView):
         if request.FILES.get('file'):
             utils.read_mindmap(mindmap, request.FILES['file'].read())
             utils.associate_tree(mindmap)
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-mindmap')
 
 
 class EditNodeApi(LoginRequiredMixin, APIView):
@@ -255,7 +331,7 @@ class EditNodeApi(LoginRequiredMixin, APIView):
         node.name = request.POST.get('name')
         node.regex = request.POST.get('regex')
         node.save()
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-mindmap')
 
 
 class DeleteNodeApi(LoginRequiredMixin, APIView):
@@ -266,7 +342,7 @@ class DeleteNodeApi(LoginRequiredMixin, APIView):
             analysis = get_object_or_404(models.Analysis, id=0)
             analysis.mindmap_configured = False
             analysis.save()
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-mindmap')
 
 
 class AddSeedsApi(LoginRequiredMixin, APIView):
@@ -277,7 +353,7 @@ class AddSeedsApi(LoginRequiredMixin, APIView):
             if len(seed):
                 useed, created = models.URLSeed.objects.get_or_create(url=seed.strip())
                 crawler.seed_list.add(useed)
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-crawler')
 
 
 class EditSeedApi(LoginRequiredMixin, APIView):
@@ -285,14 +361,14 @@ class EditSeedApi(LoginRequiredMixin, APIView):
         seed = get_object_or_404(models.URLSeed, pk=self.kwargs.get('pk'))
         seed.url = request.POST.get('url')
         seed.save()
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-crawler')
 
 
 class DeleteSeedApi(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         seed = get_object_or_404(models.URLSeed, pk=self.kwargs.get('pk'))
         seed.delete()
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-crawler')
 
 
 class AddDictionaryApi(LoginRequiredMixin, APIView):
@@ -310,7 +386,7 @@ class AddDictionaryApi(LoginRequiredMixin, APIView):
         es = settings.ES_CLIENT
         es.indices.create(index='dictionaries', ignore=400)
         es.create(index="dictionaries", doc_type="dictionary", id=new_dict.id, body={'name': new_dict.name, 'words': new_dict.words.split("\n")})
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-dictionaries')
 
 
 class EditDictionaryApi(LoginRequiredMixin, APIView):
@@ -324,7 +400,7 @@ class EditDictionaryApi(LoginRequiredMixin, APIView):
         es = settings.ES_CLIENT
         es.indices.create(index="dictionaries", ignore=400)
         es.update(index="dictionaries", doc_type="dictionary", id=dic.id, body={'doc': {'name': dic.name, 'words': dic.words.split("\n")}})
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-dictionaries')
 
 
 class DeleteDictionaryApi(LoginRequiredMixin, APIView):
@@ -339,13 +415,13 @@ class DeleteDictionaryApi(LoginRequiredMixin, APIView):
         es = settings.ES_CLIENT
         es.indices.create(index="dictionaries", ignore=400)
         es.delete(index="dictionaries", doc_type="dictionary", id=dic_id)
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-dictionaries')
 
 
 class DictionaryUpdateView(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         tasks.sync_dictionaries.delay()
-        return HttpResponseRedirect(reverse('configure'))
+        return redirect('configure-dictionaries')
 
 
 class Home(generic.TemplateView):
@@ -354,13 +430,11 @@ class Home(generic.TemplateView):
     def get(self, request, *args, **kwargs):
         analysis, created = models.Analysis.objects.get_or_create(pk=0)
         if not analysis.all_configured:
-            return HttpResponseRedirect(reverse('configure'))
+            return redirect('configure')
         else:
-            return HttpResponseRedirect(reverse('analyze'))
+            return redirect('analyze')
 
 
-configure = ConfigureView.as_view()
-clear_config = ClearConfigureView.as_view()
 analyze = AnalyzeView.as_view()
 start_analysis = StartAnalysis.as_view()
 stop_analysis = StopAnalysis.as_view()

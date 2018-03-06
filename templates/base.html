@@ -1,4 +1,5 @@
 {% load staticfiles %}
+{% load utils %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,15 +41,18 @@
           <div class="collapse navbar-collapse" id="nav-links">
             <ul class="nav navbar-nav">
 
-              <li class="{% if nav_active == 'configure' %}active{% endif %} {% if RUNNING %}disabled{% endif %}" id="nav-configure">
+              {% url 'configure' as configure %}
+              {% url 'analyze' as execute %}
+              {% url 'explorer_index' as explorer %}
+              <li class="{% isactive configure %} {% if RUNNING %}disabled{% endif %}" id="nav-configure">
                 <a href="{% if not RUNNING %}{% url 'configure' %}{% endif %}">1. Configure</a>
               </li>
 
-              <li class="{% if nav_active == 'execute' %}active{% endif %} {% if not CONFIGURED %}disabled{% endif %}" id="nav-execute">
+              <li class="{% isactive execute %} {% if not CONFIGURED %}disabled{% endif %}" id="nav-execute">
                 <a href="{% if CONFIGURED %}{% url 'analyze' %}{% endif %}">2. Execute</a>
               </li>
 
-              <li class="{% if nav_active == 'explorer' %}active{% endif %} {% if not FINISHED %}disabled{% endif %}" id="nav-explore">
+              <li class="{% isactive explorer %} {% if not FINISHED %}disabled{% endif %}" id="nav-explore">
                 <a href="{% if FINISHED %}{% url 'explorer_index' %}{% endif %}">3. Explore</a>
               </li>
 

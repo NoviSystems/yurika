@@ -13,16 +13,3 @@ def analysis_status(request):
         except Exception:
             return {'CONFIGURED': False, 'RUNNING': False, 'FINISHED': False}
     return {'CONFIGURED': False, 'RUNNING': False, 'FINISHED': False}
-
-
-def nav_current_page(request):
-    nav = {
-        '/configure': 'configure',
-        '/execute': 'execute',
-        '/explorer': 'explorer',
-    }
-    url = request.get_full_path()
-    for nav_url, name in nav.items():
-        if url.startswith(nav_url):
-            return {'nav_active': name}
-    return {}

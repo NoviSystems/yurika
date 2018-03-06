@@ -22,13 +22,18 @@ class QueryViewSet(PutOnlyUpdateModelMixin,
     queryset = models.Query.objects.all()
     serializer_class = serializers.QuerySerializer
 
+    def get_analysis(self):
+        return models.Analysis.objects.get_or_create(id=0)[0]
+
     def get_object(self):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup = self.kwargs.get(lookup_url_kwarg, None)
 
         if lookup == 'current':
             # return get_object_or_404(models.Profile, owner__user=self.request.user)
-            return models.Query.objects.get_or_create(name='default')[0]
+            return models.Query.objects.get_or_create(
+                analyses=self.get_analysis(),
+                name='default')[0]
         return super(QueryViewSet, self).get_object()
 
     @list_route()

@@ -3,10 +3,10 @@
 <div class="visible-desktop container body-wrapper">
     <div class="row">
       <div class="col-xs-6">
-        <a href="{% url 'configure' %}" class="config-btn btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}">1. Configure <i class="glyphicon glyphicon-arrow-left"></i></a>
+        <a href="{% url 'configure' %}" class="config-btn btn btn-xs btn-default {% if RUNNING %}disabled{% endif %}"><i class="glyphicon glyphicon-menu-left"></i> 1. Configure</a>
       </div>
       <div class="col-xs-6 text-right">
-        <a href="{% url 'explorer_index' %}" class="explore-btn btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-arrow-right"></i></a>
+        <a href="{% url 'explorer_index' %}" class="explore-btn btn btn-xs {% if FINISHED %}btn-success{% else %}btn-default disabled{% endif %}">3. Explore <i class="glyphicon glyphicon-menu-right"></i></a>
       </div>
     </div>
     <div class="row">&emsp;</div>
