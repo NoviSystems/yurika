@@ -31,6 +31,14 @@ class PartOfSpeechPartSerializer(serializers.ModelSerializer):
         fields = ['type', 'occurance', 'part_of_speech']
 
 
+class RegexPartSerializer(serializers.ModelSerializer):
+    type = utils.CheckedTypeField()
+
+    class Meta:
+        model = models.RegexPart
+        fields = ['type', 'occurance', 'regex']
+
+
 class QueryPartSerializer(utils.PolymorphicModelSerializer):
 
     class Meta:
@@ -39,6 +47,7 @@ class QueryPartSerializer(utils.PolymorphicModelSerializer):
             (models.DictionaryPart, DictionaryPartSerializer),
             (models.NodePart, NodePartSerializer),
             (models.PartOfSpeechPart, PartOfSpeechPartSerializer),
+            (models.RegexPart, RegexPartSerializer),
         ])
         fields = ['type']
         list_serializer_class = utils.PolymorphicListSerializer
