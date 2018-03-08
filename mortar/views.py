@@ -38,7 +38,7 @@ from celery.task.control import revoke
 from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 from django.views import generic
@@ -46,6 +46,33 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mortar import forms, models, tasks, utils
+
+
+class SelectAnalysisView(LoginRequiredMixin, generic.FormView):
+    template_name = 'mortar/analyses.html'
+    form_class = forms.SelectAnalysisForm
+    success_url = reverse_lazy('configure')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['analyses'] = models.Analysis.objects.all()
+
+        return context
+
+    def get_initial(self):
+        pk = self.request.session.get('analysis')
+        try:
+            analysis = models.Analysis.objects.get(pk=pk)
+        except models.Analysis.DoesNotExist:
+            analysis = None
+
+        return {'analysis': analysis}
+
+    def form_valid(self, form):
+        pk = form.cleaned_data['analysis'].pk
+        self.request.session['analysis'] = pk
+
+        return super().form_valid(form)
 
 
 class AnalysisMixin(LoginRequiredMixin):

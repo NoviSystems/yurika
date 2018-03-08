@@ -44,6 +44,8 @@ def not_found(request):
 
 
 urlpatterns = [
+    url(r'^analysis/$', views.SelectAnalysisView.as_view(), name='select-analysis'),
+
     url(r'^configure/$', views.ConfigureView.as_view(), name='configure'),
     url(r'^configure/crawler/$', views.ConfigureCrawlerView.as_view(), name='configure-crawler'),
     url(r'^configure/mindmap/$', views.ConfigureMindMapView.as_view(), name='configure-mindmap'),

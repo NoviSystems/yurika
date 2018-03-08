@@ -33,6 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 from django import forms
 
+from mortar import models
+
 
 class BootstrapForm(forms.Form):
 
@@ -42,6 +44,10 @@ class BootstrapForm(forms.Form):
             if isinstance(field, forms.FileField):
                 continue
             field.widget.attrs['class'] = 'form-control'
+
+
+class SelectAnalysisForm(BootstrapForm):
+    analysis = forms.ModelChoiceField(queryset=models.Analysis.objects.all())
 
 
 class CrawlerForm(BootstrapForm):

@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<style>
+.panel {
+    margin-top: 4vh;
+}
+
+.modal.fade .modal-dialog {
+    margin-top: 10vh;
+}
+
+.table.table-borderless td,
+.table.table-borderless th {
+    border: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-xs-12 col-sm-4 col-sm-offset-4">
+        <div class="panel panel-default" id="analysis-management">
+            <div class="panel-heading">
+                <h1 class="panel-title">Select Analysis</h1>
+            </div>
+
+            <!-- Deletion modal -->
+            <div class="modal fade" ref="deletionModal" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content modal-danger">
+                        <div class="modal-header">
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                            <h4 class="modal-title">Confirm Deletion</h4>
+                        </div>
+                        <div class="modal-body">
+                            {% verbatim %}
+                            <table class="table table-borderless">
+                                <tr>
+                                    <th>Warning!</th>
+                                    <td>
+                                        Deleting the "{{ deletion.name }}" analysis will cause you to lose all
+                                        associated configuration data, crawled documents, and annotated results.
+                                    </td>
+                                </tr>
+                            </table>
+                            <p class="text-center">Are you sure you want to do this?</p>
+                            {% endverbatim %}
+                        </div>
+                        <div class="modal-footer">
+                            <form @submit.prevent="deleteAnalysis()">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Analysis form -->
+            <div class="panel-body well">
+                <form method="POST" ref="creationForm" @submit.prevent="createAnalysis()">
+                    {% csrf_token %}
+                    <div class="input-group input-group-sm">
+                        <input class="form-control input-block"
+                               placeholder="Name"
+                               maxlength="64"
+                               required
+                               v-model="name">
+                        <span class="input-group-btn">
+                            <button class="btn btn-primary"
+                                    type="submit">
+                                New Analysis
+                            </button>
+                        </span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Analysis management -->
+            {% if analyses %}
+            <table class="table table-bordered">
+                {% with form.analysis.value as initial %}
+                {% for analysis in analyses %}
+                <tr>
+                    <td class="col-xs-12">
+                        &emsp;{{ analysis.name }}
+                        {% if initial == analysis.pk %}
+                        <b>(selected)</b>
+                        {% endif %}
+                    </td>
+                    <td class="btn btn-table">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <button name="analysis" value="{{ analysis.pk }}">
+                                <span class="text-primary">Select</span>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="btn btn-table">
+                        <button @click.prevent="confirmDeletion({{ analysis.pk }}, '{{ analysis.name }}')">
+                            <span class="glyphicon glyphicon-trash text-danger"></span>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endwith %}
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if not analyses %}
+<div class="row">
+    <div class="col-xs-12 col-sm-6 col-sm-offset-3">
+        <br>
+        <p class="lead text-center">
+            It looks like no analyses have been created yet. To get started,
+            enter a name above and press "New Analysis".
+        </p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+new Vue({
+    el: '#analysis-management',
+
+    data() {
+        return {
+            name: '',
+            deletion: {
+                id: undefined,
+                name: '',
+            },
+        };
+    },
+
+    methods: {
+        createAnalysis() {
+            fetch('/api/analyses/', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: this.name,
+                }),
+                headers: {'content-type': 'application/json'},
+            })
+            .then(() => window.location.reload(true));;
+        },
+
+        confirmDeletion(id, name) {
+            this.deletion = {id, name}
+
+            $(this.$refs.deletionModal).modal('show');
+        },
+
+        deleteAnalysis() {
+            fetch(`/api/analyses/${this.deletion.id}`, {
+                method: 'DELETE',
+                headers: {'content-type': 'application/json'},
+            })
+            .then(() => window.location.reload(true));
+        },
+    },
+})
+</script>
+{% endblock %}

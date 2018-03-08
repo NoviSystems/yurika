@@ -30,19 +30,23 @@
           <div class="collapse navbar-collapse" id="nav-links">
             <ul class="nav navbar-nav">
 
+              {% url 'select-analysis' as analysis_url %}
               {% url 'configure' as configure_url %}
               {% url 'analyze' as execute_url %}
               {% url 'explorer_index' as explorer_url %}
+              <li class="{% isactive analysis_url %} {% if RUNNING %}disabled{% endif %}">
+                <a href="{% if not RUNNING %}{{ analysis_url }}{% endif %}">1. Analysis</a>
+              </li>
               <li class="{% isactive configure_url %} {% if RUNNING %}disabled{% endif %}">
-                <a href="{% if not RUNNING %}{{ configure_url }}{% endif %}">1. Configure</a>
+                <a href="{% if not RUNNING %}{{ configure_url }}{% endif %}">2. Configure</a>
               </li>
 
               <li class="{% isactive execute_url %} {% if not CONFIGURED %}disabled{% endif %}">
-                <a href="{% if CONFIGURED %}{{ analyze_url }}{% endif %}">2. Execute</a>
+                <a href="{% if CONFIGURED %}{{ analyze_url }}{% endif %}">3. Execute</a>
               </li>
 
               <li class="{% isactive explorer_url %} {% if not FINISHED %}disabled{% endif %}">
-                <a href="{% if FINISHED %}{{ explorer_url }}{% endif %}">3. Explore</a>
+                <a href="{% if FINISHED %}{{ explorer_url }}{% endif %}">4. Explore</a>
               </li>
 
             </ul>
