@@ -1,0 +1,73 @@
+/**
+ * Style extensions to the default bootstrap components
+ */
+
+/* Panel and well integration */
+.panel-body.well {
+    border: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    margin-bottom: 0;
+}
+.panel-body.well:not(:last-child) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+
+/* Modal colors - based off of "active" button colors */
+.modal-content.modal-danger .modal-header {
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-color: #ac2925;
+    background-color: #c9302c;
+    color: #fff;
+}
+
+
+/* Embedded buttons for tables */
+.table .btn-table {
+    display: table-cell;
+}
+.table .btn-table:hover {
+    background-color: #e6e6e6;
+}
+
+.table .btn-table button {
+    padding: 8px 14px;
+    margin: -8px;
+    border: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.42857143;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+    -ms-touch-action: manipulation;
+        touch-action: manipulation;
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+    background: transparent;
+}
+
+.table tr:not(:last-of-type) .btn-table {
+    border-radius: 0;
+}
+.table tr:last-of-type .btn-table:not(:last-of-type) {
+    border-radius: 0;
+}
+.table tr:last-of-type .btn-table:last-of-type {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.table .btn-table .glyphicon {
+    /* Ensure glyphicon content is squared at 20px x 20px */
+    padding: 0 3px;
+
+    /* Counteract .btn-table width padding */
+    margin: 0 -6px;
+}
