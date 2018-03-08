@@ -7,6 +7,12 @@ from mortar import models
 from project.utils import serializers as utils
 
 
+class AnalysisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.Analysis
+        fields = ['id', 'name']
+
+
 class DictionaryPartSerializer(serializers.ModelSerializer):
     type = utils.CheckedTypeField()
 

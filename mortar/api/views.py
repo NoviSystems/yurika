@@ -6,6 +6,11 @@ from . import serializers
 from .. import models
 
 
+class AnalysisViewSet(viewsets.ModelViewSet):
+    queryset = models.Analysis.objects.all()
+    serializer_class = serializers.AnalysisSerializer
+
+
 class PutOnlyUpdateModelMixin(object):
     update = mixins.UpdateModelMixin.update
 

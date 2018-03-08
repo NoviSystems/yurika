@@ -48,6 +48,7 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
 
 class Analysis(models.Model):
+    name = models.CharField(max_length=64)
     crawler = models.ForeignKey('Crawler', related_name="analyses", null=True, blank=True)
     mindmap = models.ForeignKey('Tree', related_name="analyses", null=True, blank=True)
     query = models.ForeignKey('Query', related_name="analyses", null=True, blank=True)
