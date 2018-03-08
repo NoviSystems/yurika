@@ -48,7 +48,23 @@ from rest_framework.views import APIView
 from mortar import forms, models, tasks, utils
 
 
-class ConfigureBaseView(LoginRequiredMixin, generic.TemplateView):
+class AnalysisMixin(LoginRequiredMixin):
+
+    def dispatch(self, *args, **kwargs):
+        if self.analysis is None:
+            return redirect('select-analysis')
+        return super().dispatch(*args, **kwargs)
+
+    @cached_property
+    def analysis(self):
+        pk = self.request.session.get('analysis')
+        try:
+            return models.Analysis.objects.get(pk=pk)
+        except models.Analysis.DoesNotExist:
+            return None
+
+
+class ConfigureBaseView(AnalysisMixin, generic.TemplateView):
 
     def get_context_data(self, *args, **kwargs):
         context = super().get_context_data(*args, **kwargs)
@@ -65,10 +81,6 @@ class ConfigureBaseView(LoginRequiredMixin, generic.TemplateView):
         context['analysis'] = analysis
 
         return context
-
-    @cached_property
-    def analysis(self):
-        return models.Analysis.objects.get_or_create(id=0)[0]
 
     @cached_property
     def source(self):
@@ -103,9 +115,12 @@ class ConfigureBaseView(LoginRequiredMixin, generic.TemplateView):
         )[0]
 
 
-class ConfigureView(ConfigureBaseView):
+class ConfigureView(AnalysisMixin, generic.View):
 
     def dispatch(self, request, *args, **kwargs):
+        if self.analysis is None:
+            return redirect('select-analysis')
+
         if self.analysis.query_configured:
             return redirect(reverse('configure-query'))
         if self.analysis.dicts_configured:
