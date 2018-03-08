@@ -148,14 +148,14 @@ class ConfigureView(AnalysisMixin, generic.View):
         if self.analysis is None:
             return redirect('select-analysis')
 
-        if self.analysis.query_configured:
-            return redirect(reverse('configure-query'))
-        if self.analysis.dicts_configured:
-            return redirect(reverse('configure-query'))
-        if self.analysis.mindmap_configured:
-            return redirect(reverse('configure-dictionaries'))
-        if self.analysis.crawler_configured:
+        if not self.analysis.crawler_configured:
+            return redirect(reverse('configure-crawler'))
+        if not self.analysis.mindmap_configured:
             return redirect(reverse('configure-mindmap'))
+        if not self.analysis.dicts_configured:
+            return redirect(reverse('configure-dictionaries'))
+        if not self.analysis.query_configured:
+            return redirect(reverse('configure-query'))
         return redirect(reverse('configure-crawler'))
 
 
