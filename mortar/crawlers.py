@@ -169,7 +169,6 @@ class WebCrawler(CrawlSpider):
         self.client = settings.ES_CLIENT
         self._compile_rules()
 
-        # index_mapping = kwargs.get('index_mapping')
         i_client = IndicesClient(self.client)
         if not i_client.exists(self.index_name):
             i_client.create(index=self.index_name)

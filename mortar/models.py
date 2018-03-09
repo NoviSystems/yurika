@@ -38,13 +38,9 @@ from celery.task.control import revoke
 from django.conf import settings
 from django.core.validators import RegexValidator
 from django.db import models
-from django.db.models import options
 from django.utils import timezone
 from model_utils import Choices, managers
 from mptt.models import MPTTModel, TreeForeignKey
-
-
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
 
 
 class Analysis(models.Model):
@@ -200,22 +196,6 @@ class Crawler(models.Model):
     def __str__(self):
         return 'Crawler: %s' % self.name
 
-    class Meta:
-        index_mapping = {
-            'settings': {
-                'mappings': {
-                    'doc': {
-                        'properties': {
-                            'title': {'type': 'text'},
-                            'content': {'type': 'text'},
-                            'tstamp': {'type': 'date', 'format': 'yyyy-MM-dd HH:mm'},
-                            'url': {'type': 'text'},
-                        }
-                    }
-                }
-            }
-        }
-
 
 class Seed(models.Model):
     class Meta:
@@ -288,9 +268,6 @@ class Tree(models.Model):
     def __str__(self):
         return 'Tree: %s' % self.name
 
-    class Meta:
-        index_mapping = {}
-
 
 class Node(MPTTModel):
     name = models.CharField(max_length=50)
@@ -353,7 +330,6 @@ class Annotation(models.Model):
 
     class Meta:
         db_table = "annotations"
-        index_mapping = {}
 
 
 class Query(models.Model):

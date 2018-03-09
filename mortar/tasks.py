@@ -106,7 +106,6 @@ def run_crawler(self, crawler_pk):
             start_urls=seeds,
             name=name,
             index=index,
-            index_mapping=crawler._meta.index_mapping
         )
         process.start()
     except Exception as e:
