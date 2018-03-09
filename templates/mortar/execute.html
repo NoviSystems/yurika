@@ -246,12 +246,12 @@ function update(d) {
 
     // Enable/Disable "Configure"/"Explore" in navbar
     enable_or_disable_href(
-        '#nav-configure',
+        'li:contains(1. Configure)',
         '{% url 'configure' %}',
         !d['any_running']
     );
     enable_or_disable_href(
-        '#nav-explore',
+        'li:contains(3. Explore)',
         '{% url 'explorer_index' %}',
         d['all_finished']
     );

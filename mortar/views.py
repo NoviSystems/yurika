@@ -97,7 +97,10 @@ class ConfigureBaseView(LoginRequiredMixin, generic.TemplateView):
 
     @cached_property
     def query(self):
-        return models.Query.objects.get_or_create(name='default', category=0)[0]
+        return models.Query.objects.get_or_create(
+            name='default',
+            defaults={'category': 0}
+        )[0]
 
 
 class ConfigureView(ConfigureBaseView):
