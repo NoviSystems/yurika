@@ -1,0 +1,14 @@
+/**
+ * Site-wide styles specific to the Yurika project
+ */
+
+ /* Custom primary navbar */
+.navbar-primary {
+    border-radius: 0;
+}
+.navbar-primary .navbar-nav>li>a {
+    color: #ffffff;
+}
+.navbar-primary .navbar-nav>.disabled>a {
+    color: #9d9d9d;
+}

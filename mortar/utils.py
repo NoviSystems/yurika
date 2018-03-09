@@ -194,12 +194,15 @@ def update_dictionaries():
                     )
                     d.words = dictfile.read()
                     d.save()
-                    es_actions.append({'_op_type': 'index', '_type': 'dictionary', '_id': d.id,
+                    es_actions.append({
+                        '_op_type': 'index',
+                        '_type': 'dictionary',
+                        '_id': d.id,
                         '_source': {
                             'name': d.name,
                             'words': d.words.split("\n")
                         },
-                      '_index': 'dictionaries'
+                        '_index': 'dictionaries',
                     })
     helpers.bulk(client=es, actions=es_actions)
 
@@ -219,14 +222,16 @@ def associate_tree(tree):
 
 
 def make_dict_query(dictionary):
-    return {"terms": {
-               "content": {
-                   "index": "dictionaries",
-                   "type": "dictionary",
-                   "id": dictionary.id,
-                   "path": "words"
-               }
-           }}
+    return {
+        "terms": {
+            "content": {
+                "index": "dictionaries",
+                "type": "dictionary",
+                "id": dictionary.id,
+                "path": "words"
+            }
+        }
+    }
 
 
 def make_regex_query(regex):

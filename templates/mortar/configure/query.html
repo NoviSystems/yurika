@@ -82,7 +82,6 @@ p.remove-button a {
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'js/vue.js' %}"></script>
 {% include 'mortar/configure/querypart.html' %}
 <script>
 const GRANULARITY = [{% for value, text in query.CATEGORY %}

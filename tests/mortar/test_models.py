@@ -8,7 +8,9 @@ class QueryTests(TestCase):
         occurance = models.PartOfSpeechPart.OCCURANCE
         parts = models.PartOfSpeechPart.PARTS_OF_SPEECH
 
-        q = models.Query.objects.create()
+        q = models.Query.objects.create(
+            category=models.Query.CATEGORY.sentence,
+        )
 
         models.PartOfSpeechPart.objects.create(
             query=q,

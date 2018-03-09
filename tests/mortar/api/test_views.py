@@ -5,7 +5,13 @@ from rest_framework.test import APITestCase
 
 from mortar import models
 
+
 User = get_user_model()
+
+
+CATEGORY = models.Query.CATEGORY
+OCCURANCE = models.QueryPart.OCCURANCE
+PARTS_OF_SPEECH = models.PartOfSpeechPart.PARTS_OF_SPEECH
 
 
 class QueryViewSetTests(APITestCase):
@@ -50,21 +56,18 @@ class QueryViewSetTests(APITestCase):
         self.assertEqual(models.QueryPart.objects.count(), 2)
 
     def test_update(self):
-        occurance = models.PartOfSpeechPart.OCCURANCE
-        parts = models.PartOfSpeechPart.PARTS_OF_SPEECH
-
         # setup existing query
-        query = models.Query.objects.create()
+        query = models.Query.objects.create(category=CATEGORY.sentence)
 
         models.DictionaryPart.objects.create(
             query=query,
-            occurance=occurance.should,
+            occurance=OCCURANCE.should,
             dictionary_id=1,
         )
         models.PartOfSpeechPart.objects.create(
             query=query,
-            occurance=occurance.must_not,
-            part_of_speech=parts.CC,
+            occurance=OCCURANCE.must_not,
+            part_of_speech=PARTS_OF_SPEECH.CC,
         )
 
         # sanity check against existing data

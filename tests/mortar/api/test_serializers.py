@@ -4,19 +4,21 @@ from mortar import models
 from mortar.api import serializers
 
 
+CATEGORY = models.Query.CATEGORY
+OCCURANCE = models.QueryPart.OCCURANCE
+PARTS_OF_SPEECH = models.PartOfSpeechPart.PARTS_OF_SPEECH
+
+
 class QueryPartSerializerTests(TestCase):
     # Indirectly tests the polymorphic serializer class.
 
     @classmethod
     def setUpTestData(cls):
-        occurance = models.PartOfSpeechPart.OCCURANCE
-        parts = models.PartOfSpeechPart.PARTS_OF_SPEECH
-
-        cls.q = models.Query.objects.create()
+        cls.q = models.Query.objects.create(category=CATEGORY.sentence)
 
         cls.dicionary_part = models.DictionaryPart.objects.create(
             query=cls.q,
-            occurance=occurance.should,
+            occurance=OCCURANCE.should,
             dictionary=models.Dictionary.objects.create(
                 name='',
                 words='abcd\nefgh\nijkl\n',
@@ -24,8 +26,8 @@ class QueryPartSerializerTests(TestCase):
         )
         cls.pos_part = models.PartOfSpeechPart.objects.create(
             query=cls.q,
-            occurance=occurance.must_not,
-            part_of_speech=parts.CC,
+            occurance=OCCURANCE.must_not,
+            part_of_speech=PARTS_OF_SPEECH.CC,
         )
 
     def test_representation(self):
@@ -83,7 +85,8 @@ class QueryPartSerializerTests(TestCase):
         self.assertEqual(serializer.errors, {
             'type': [
                 "Invalid type. Expected one of ['dictionary part', 'node "
-                "part', 'part of speech part'], but got 'query part'."
+                "part', 'part of speech part', 'regex part'], but got 'query "
+                "part'."
             ],
         })
 
@@ -152,14 +155,11 @@ class QueryPartListSerializerTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        occurance = models.PartOfSpeechPart.OCCURANCE
-        parts = models.PartOfSpeechPart.PARTS_OF_SPEECH
-
-        cls.q = models.Query.objects.create()
+        cls.q = models.Query.objects.create(category=CATEGORY.sentence)
 
         cls.dicionary_part = models.DictionaryPart.objects.create(
             query=cls.q,
-            occurance=occurance.should,
+            occurance=OCCURANCE.should,
             dictionary=models.Dictionary.objects.create(
                 name='',
                 words='abcd\nefgh\nijkl\n',
@@ -167,8 +167,8 @@ class QueryPartListSerializerTests(TestCase):
         )
         cls.pos_part = models.PartOfSpeechPart.objects.create(
             query=cls.q,
-            occurance=occurance.must_not,
-            part_of_speech=parts.CC,
+            occurance=OCCURANCE.must_not,
+            part_of_speech=PARTS_OF_SPEECH.CC,
         )
 
     def test_representation(self):
@@ -249,15 +249,11 @@ class QuerySerializerTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        category = models.Query.CATEGORY
-        occurance = models.PartOfSpeechPart.OCCURANCE
-        parts = models.PartOfSpeechPart.PARTS_OF_SPEECH
-
-        cls.q = models.Query.objects.create(category=category.sentence)
+        cls.q = models.Query.objects.create(category=CATEGORY.sentence)
 
         cls.dicionary_part = models.DictionaryPart.objects.create(
             query=cls.q,
-            occurance=occurance.should,
+            occurance=OCCURANCE.should,
             dictionary=models.Dictionary.objects.create(
                 name='',
                 words='abcd\nefgh\nijkl\n',
@@ -265,8 +261,8 @@ class QuerySerializerTests(TestCase):
         )
         cls.pos_part = models.PartOfSpeechPart.objects.create(
             query=cls.q,
-            occurance=occurance.must_not,
-            part_of_speech=parts.CC,
+            occurance=OCCURANCE.must_not,
+            part_of_speech=PARTS_OF_SPEECH.CC,
         )
 
     def test_representation(self):

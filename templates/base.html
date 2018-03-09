@@ -6,19 +6,8 @@
     <meta charset="UTF-8">
     <title>{% block title %}Yurika{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/yurika.css' %}">
     {% block header %}{% endblock %}
-
-    <style>
-      .navbar-primary {
-        border-radius: 0;
-      }
-      .navbar-primary .navbar-nav>li>a {
-        color: #ffffff;
-      }
-      .navbar-primary .navbar-nav>.disabled>a {
-        color: #9d9d9d;
-      }
-    </style>
 </head>
 <body>
 
@@ -41,19 +30,19 @@
           <div class="collapse navbar-collapse" id="nav-links">
             <ul class="nav navbar-nav">
 
-              {% url 'configure' as configure %}
-              {% url 'analyze' as execute %}
-              {% url 'explorer_index' as explorer %}
-              <li class="{% isactive configure %} {% if RUNNING %}disabled{% endif %}" id="nav-configure">
-                <a href="{% if not RUNNING %}{% url 'configure' %}{% endif %}">1. Configure</a>
+              {% url 'configure' as configure_url %}
+              {% url 'analyze' as execute_url %}
+              {% url 'explorer_index' as explorer_url %}
+              <li class="{% isactive configure_url %} {% if RUNNING %}disabled{% endif %}">
+                <a href="{% if not RUNNING %}{{ configure_url }}{% endif %}">1. Configure</a>
               </li>
 
-              <li class="{% isactive execute %} {% if not CONFIGURED %}disabled{% endif %}" id="nav-execute">
-                <a href="{% if CONFIGURED %}{% url 'analyze' %}{% endif %}">2. Execute</a>
+              <li class="{% isactive execute_url %} {% if not CONFIGURED %}disabled{% endif %}">
+                <a href="{% if CONFIGURED %}{{ analyze_url }}{% endif %}">2. Execute</a>
               </li>
 
-              <li class="{% isactive explorer %} {% if not FINISHED %}disabled{% endif %}" id="nav-explore">
-                <a href="{% if FINISHED %}{% url 'explorer_index' %}{% endif %}">3. Explore</a>
+              <li class="{% isactive explorer_url %} {% if not FINISHED %}disabled{% endif %}">
+                <a href="{% if FINISHED %}{{ explorer_url }}{% endif %}">3. Explore</a>
               </li>
 
             </ul>
@@ -90,6 +79,7 @@
 
 <script src="{% static 'js/jquery.min.js' %}"></script>
 <script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/vue.js' %}"></script>
 {% block scripts %}{% endblock %}
 
 </body>

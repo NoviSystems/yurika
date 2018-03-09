@@ -22,7 +22,7 @@ sqlparse
 Twisted
 
 # production
-psycopg2
+psycopg2-binary
 gunicorn
 raven
 

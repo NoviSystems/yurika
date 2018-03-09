@@ -385,7 +385,7 @@ class AddDictionaryApi(LoginRequiredMixin, APIView):
         new_dict.save()
         es = settings.ES_CLIENT
         es.indices.create(index='dictionaries', ignore=400)
-        es.create(index="dictionaries", doc_type="dictionary", id=new_dict.id, body={'name': new_dict.name, 'words': new_dict.words.split("\n")})
+        es.create(index="dictionaries", doc_type="dictionary", id=new_dict.id, body={'name': new_dict.name, 'words': new_dict.words.split("\n")})  # noqa
         return redirect('configure-dictionaries')
 
 
@@ -399,7 +399,7 @@ class EditDictionaryApi(LoginRequiredMixin, APIView):
         dic.save()
         es = settings.ES_CLIENT
         es.indices.create(index="dictionaries", ignore=400)
-        es.update(index="dictionaries", doc_type="dictionary", id=dic.id, body={'doc': {'name': dic.name, 'words': dic.words.split("\n")}})
+        es.update(index="dictionaries", doc_type="dictionary", id=dic.id, body={'doc': {'name': dic.name, 'words': dic.words.split("\n")}})  # noqa
         return redirect('configure-dictionaries')
 
 
