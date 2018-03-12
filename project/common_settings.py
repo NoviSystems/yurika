@@ -88,6 +88,7 @@ INSTALLED_APPS = [
     'django_mptt_admin',
     'rest_framework',
     'mortar',
+    'pestle',
 
     'explorer',
 ]
@@ -376,6 +377,9 @@ LOGGING = {
             "level": "INFO",
         },
         "mortar": {
+            "level": "DEBUG" if DEBUG else "INFO",
+        },
+        "pestle": {
             "level": "DEBUG" if DEBUG else "INFO",
         },
     },
