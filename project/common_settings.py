@@ -375,9 +375,12 @@ LOGGING = {
         "urllib3": {
             "level": "INFO",
         },
+        "mortar": {
+            "level": "DEBUG" if DEBUG else "INFO",
+        },
     },
     "root": {
         "handlers": ["stderr"],
-        "level": "DEBUG" if DEBUG else "INFO",
+        "level": "WARNING",
     }
 }
