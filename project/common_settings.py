@@ -39,6 +39,7 @@ env = Env(
     CELERY_BROKER_URL=str,
     ELASTICSEARCH_URL=str,
     SENTRY_DSN=(str, ''),
+    BLOCK_LISTS=(list, []),
 )
 env.read_env(path('.env'))  # parse .env into os.environ
 
@@ -224,10 +225,7 @@ ES_CLIENT = Elasticsearch(
 
 DICTIONARIES_PATH = path('dictionaries/')
 
-# Do not crawl urls that start with one of the lines in these files.
-BLOCK_LISTS = (
-    # path('block_lists/ncsu.txt'),
-)
+BLOCK_LISTS = list(path(p.strip()) for p in env('BLOCK_LISTS'))
 
 
 # Sentry/Raven
