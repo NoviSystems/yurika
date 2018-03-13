@@ -83,6 +83,13 @@ def run_crawler(self, crawler_pk):
             "mortar.crawlers.BlockUrlMiddleware": 900,
         },
         'ROBOTSTXT_OBEY': True,
+
+        # Crawl Breadth-first
+        # See: https://doc.scrapy.org/en/latest/faq.html#does-scrapy-crawl-in-breadth-first-or-depth-first-order
+        'DEPTH_PRIORITY': 1,
+        'SCHEDULER_DISK_QUEUE': 'scrapy.squeues.PickleFifoDiskQueue',
+        'SCHEDULER_MEMORY_QUEUE': 'scrapy.squeues.FifoMemoryQueue',
+
     }, install_root_handler=False)
 
     # Scrapy messes with logging. Undo that.
