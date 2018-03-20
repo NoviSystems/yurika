@@ -7,6 +7,22 @@ from mortar import models
 from project.utils import serializers as utils
 
 
+class NestedDocumentSourceSerializer(utils.PolymorphicModelSerializer):
+    status = models.CharField(source='task.status', read_only=True)
+
+    class Meta:
+        model = models.DocumentSource
+        fields = ['id', 'type', 'name', 'status']
+
+
+class DocumentSetSerializer(serializers.ModelSerializer):
+    sources = NestedDocumentSourceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = models.DocumentSet
+        fields = ['id', 'name', 'created_at', 'document_count', 'sources']
+
+
 class AnalysisSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Analysis

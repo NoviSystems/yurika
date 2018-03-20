@@ -34,13 +34,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from itertools import groupby
 
 import elasticsearch
+import shortuuid
 from celery.task.control import revoke
 from django.conf import settings
-from django.core.validators import RegexValidator
 from django.db import models
 from django.utils import timezone
 from model_utils import Choices, managers
 from mptt.models import MPTTModel, TreeForeignKey
+
+from pestle.models import Task
 
 
 class Analysis(models.Model):
@@ -161,93 +163,44 @@ class Analysis(models.Model):
         self.delete()
 
 
-class Crawler(models.Model):
-    name = models.CharField(max_length=50)
-    category = models.CharField(max_length=3, choices=(('txt', 'File System Crawler'),
-                                                       ('web', 'Web Crawler')))
-    index = models.ForeignKey('ElasticIndex', related_name='crawlers')
-    seed_list = models.ManyToManyField('Seed', blank=True, related_name='crawlers')
-    started_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-    status = models.IntegerField(default=2, choices=((0, 'Running'), (1, 'Finished'), (2, 'Stopped')))
-    process_id = models.CharField(max_length=50, null=True, blank=True)
-
-    def clear_errors(self):
-        self.errors.delete()
-
-    def log_error(self, error, error_type=None):
-        ExecuteError.log_error(self.analyses.first(), 0, error, error_type)
+class DocumentSet(models.Model):
+    name = models.CharField(max_length=30)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    source_index = models.CharField(max_length=22, unique=True, editable=False, default=shortuuid.uuid,
+                                    help_text="Elasticsearch index name for source documents.")
+    dest_index = models.CharField(max_length=22, unique=True, editable=False, default=shortuuid.uuid,
+                                  help_text="Elasticsearch index name for preprocessed documents.")
 
     @property
-    def errors(self):
-        return ExecuteError.objects.filter(step=0, analysis=self.analyses.first())
-
-    @property
-    def count(self):
+    def document_count(self):
         es = settings.ES_CLIENT
         try:
-            return es.count(index=self.index.name).get('count')
+            return es.count(index=self.source_index).get('count')
         except elasticsearch.exceptions.NotFoundError as e:
             if e.error == 'index_not_found_exception':
                 return 0  # ElasticSeach index not created yet
             else:
                 raise
 
-    def __str__(self):
-        return 'Crawler: %s' % self.name
+    def clone(self):
+        # TODO: clone the document set
+        # clone the sources (which provide their own clone methods)
+        # clone the indexes in elasticsearch
+        pass
 
 
-class Seed(models.Model):
-    class Meta:
-        verbose_name = 'Seed'
-
-
-class URLSeed(Seed):
-    url = models.URLField()
-
-    def __str__(self):
-        return 'URL: %s' % self.url
-
-
-class FileSeed(Seed):
-    path = models.FilePathField()
-
-    def __str__(self):
-        return 'Path: %s' % self.path
-
-
-class ElasticIndex(models.Model):
-    alphanumeric = RegexValidator(r'^[0-9a-zA-Z]*$', 'Only alphanumeric characters are allowed')
-    name = models.CharField(max_length=20, unique=True, validators=[alphanumeric])
-
-    def __str__(self):
-        return self.name
-
-
-class Tree(models.Model):
-    name = models.CharField(max_length=50)
-    slug = models.SlugField(unique=True)
-    doc_source_index = models.ForeignKey('ElasticIndex', related_name='doc_sources')
-    doc_dest_index = models.ForeignKey('ElasticIndex', related_name='doc_dests')
-    started_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-    process_id = models.CharField(max_length=50, null=True, blank=True)
-
-    def clear_errors(self):
-        self.errors.delete()
-
-    def log_error(self, error, error_type=None):
-        ExecuteError.log_error(self.analyses.first(), 1, error, error_type)
+class Preprocess(Task):
+    document_set = models.OneToOneField(DocumentSet, on_delete=models.CASCADE)
 
     @property
-    def errors(self):
-        return ExecuteError.objects.filter(step=1, analysis=self.analyses.first())
+    def task_path(self):
+        return 'mortar.tasks.preprocess'
 
     @property
     def n_processed(self):
         es = settings.ES_CLIENT
         try:
-            return es.count(index=self.doc_dest_index.name, doc_type="doc").get('count')
+            return es.count(index=self.document_set.dest_index, doc_type='doc').get('count')
         except elasticsearch.exceptions.NotFoundError as e:
             if e.error == 'index_not_found_exception':
                 return 0  # ElasticSeach index not created yet
@@ -258,12 +211,72 @@ class Tree(models.Model):
     def n_total(self):
         es = settings.ES_CLIENT
         try:
-            return es.count(index=self.doc_source_index.name).get('count')
+            return es.count(index=self.document_set.source_index).get('count')
         except elasticsearch.exceptions.NotFoundError as e:
             if e.error == 'index_not_found_exception':
                 return 0  # ElasticSeach index not created yet
             else:
                 raise
+
+
+class DocumentSource(models.Model):
+    name = models.CharField(max_length=50)
+    document_set = models.ForeignKey(DocumentSet, on_delete=models.CASCADE)
+
+    objects = managers.InheritanceManager()
+
+    def clone(self):
+        # TODO: clones the config.
+        # self.pk = None
+        # self.save()
+        # ???
+        pass
+
+
+class Crawler(DocumentSource):
+    # TODO: add crawler options
+    # - depth-first vs breadth-first search
+    # - max depth
+    # - ...
+    # - only crawl this domain flag
+    # - self-terminate flag
+
+    def __str__(self):
+        return 'Crawler: %s' % self.pk
+
+
+class CrawlerTask(Task):
+    crawler = models.OneToOneField(Crawler, on_delete=models.CASCADE, related_name='task')
+
+    @property
+    def task_path(self):
+        return 'mortar.tasks.run_crawler'
+
+    def abort(self, *, clean=True):
+        """
+        Either abort the crawler cleanly, or not. A clean abort will allow
+        subsequent celery tasks to complete, while an unclean abort will kill
+        the remainder of the task chain.
+
+        A clean abort is useful when you want to end crawling, but then start
+        subsequent tasks (like preprocessing). The caveat is that a clean abort
+        takes a few seconds for Scrapy to shutdown the crawler and exit, while
+        an unclean abort is immediate.
+        """
+        super().abort(signal='SIGTERM' if clean else 'SIGABRT')
+
+
+class URLSeed(models.Model):
+    crawler = models.ForeignKey(Crawler, on_delete=models.CASCADE)
+    url = models.URLField()
+
+    def __str__(self):
+        return 'URL: %s' % self.url
+
+
+class Tree(models.Model):
+    name = models.CharField(max_length=50)
+    slug = models.SlugField(unique=True)
 
     def __str__(self):
         return 'Tree: %s' % self.name
@@ -274,7 +287,6 @@ class Node(MPTTModel):
     regex = models.CharField(max_length=255, null=True, blank=True)
     parent = TreeForeignKey('self', null=True, blank=True, related_name='children', db_index=True)
     tree_link = models.ForeignKey('Tree', related_name='nodes')
-    dictionary = models.ForeignKey('Dictionary', null=True, blank=True, related_name='nodes')
 
     @property
     def full_path_name(self):
@@ -308,14 +320,13 @@ class Dictionary(models.Model):
         verbose_name_plural = 'Dictionaries'
 
 
-class Document(models.Model):
-    url = models.URLField()
-    crawled_at = models.DateTimeField()
-    index = models.ForeignKey('ElasticIndex', related_name='documents')
-    tree = models.ForeignKey('Tree', related_name='documents')
+# class Document(models.Model):
+#     document_set = models.ForeignKey('DocumentSet', related_name='documents')
+#     url = models.URLField()
+#     crawled_at = models.DateTimeField()
 
-    def __str__(self):
-        return self.url
+#     def __str__(self):
+#         return self.url
 
 
 class Annotation(models.Model):
@@ -341,31 +352,6 @@ class Query(models.Model):
     name = models.CharField(max_length=50, blank=True)
     category = models.IntegerField(choices=CATEGORY)
 
-    # TODO: separate into a QueryRun model
-    elastic_json = models.TextField(blank=True)
-    started_at = models.DateTimeField(null=True, blank=True)
-    finished_at = models.DateTimeField(null=True, blank=True)
-    process_id = models.CharField(max_length=50, null=True, blank=True)
-
-    @property
-    def status(self):
-        if self.started_at is None:
-            return 2  # Stopped
-        elif self.process_id:
-            return 0  # Running
-        else:
-            return 1  # Finished
-
-    def clear_errors(self):
-        self.errors.delete()
-
-    def log_error(self, error, error_type=None):
-        ExecuteError.log_error(self.analyses.first(), 2, error, error_type)
-
-    @property
-    def errors(self):
-        return ExecuteError.objects.filter(step=2, analysis=self.analyses.first())
-
     def __str__(self):
         return self.name
 
@@ -382,6 +368,11 @@ class Query(models.Model):
             for occurance, parts
             in groupby(self.parts.select_subclasses(), lambda o: o.occurance)
         }}
+
+
+class QueryRun(Task):
+    query = models.OneToOneField(Query)
+    elastic_json = models.TextField(blank=True)
 
 
 class QueryPart(models.Model):
@@ -492,33 +483,3 @@ class RegexPart(QueryPart):
 
     def json(self):
         return {'regexp': {'content': self.regex}}
-
-
-class ExecuteError(models.Model):
-    STEP_CHOICES = (
-        (0, "Crawling"),
-        (1, "Processing"),
-        (2, "Querying"),
-    )
-
-    step = models.IntegerField(choices=STEP_CHOICES)
-    time = models.DateTimeField(default=timezone.now)
-    msg = models.TextField()
-    error_type = models.CharField(max_length=32, null=True, blank=True)
-    analysis = models.ForeignKey('Analysis', related_name='errors')
-
-    def __str__(self):
-        # step_str = dict(self.STEP_CHOICES)[self.step]
-        # type_str = " {}".format(self.error_type) if self.error_type else ""
-        # return "{} Error{}: {}".format(step_str, type_str, self.msg)
-        return self.msg
-
-    @classmethod
-    def log_error(cls, analysis, step, error, error_type=None):
-        e = ExecuteError(
-            step=step,
-            msg=error,
-            error_type=error_type,
-            analysis=analysis,
-        )
-        e.save()
