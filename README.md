@@ -1,55 +1,44 @@
-# Django Skeleton
+# Yurika: Unstructured Text Analytics Platform
 
-[![Build Status](https://travis-ci.org/ITNG/django-skeleton.svg?branch=master)](https://travis-ci.org/ITNG/django-skeleton)
-[![Python Version](https://img.shields.io/badge/Python-3.6-blue.svg)]()
-[![Django Version](https://img.shields.io/badge/Django-1.11-blue.svg)]()
+<!-- [![Build Status](https://travis-ci.org/ITNG/yurika.svg?branch=master)](https://travis-ci.org/ITNG/yurika) -->
 
+## The Augmented Intelligence Process
 
-Extended startproject template for new Django projects.
+Our process consists of five steps:
 
-## Builtin Features
+- Gathering
+- Filtering
+- Annotating
+- Restructuring
+- Visualizing
 
-- [Developer usage docs](.docs)
-- Flexible base template layout with navbar and dismissable flash messages
-- Styled with Bootstrap 4
-- Glyphicons ported from Bootstrap 3
-- Out of the box auth views
-    - Templates for login, password change, and password reset workflows
-    - Views overridden to not clash with admin auth templates
-- Sensible settings layout and environment configuration
-    - Settings split into a `common_settings.py` and `settings.py`
-    - Settings files for development and production
-    - Per-environment configuration handled with a dotenv file
-    - Environment variables validated with django-environ
-- Extensive logging configuration
-- Sensible dependency management
-    - Application requirements managed with pip-tools
-    - Separate requirements for development and testing
-- Comprehensive test suite
-    - Tox & Travis-CI configurations
-    - Codebase linted with isort and flake8
-    - Separate suites for unit, integration, and functional tests
-    - Functional test suite examples with selenium+chromedriver
-- Deployment script for bundling the application and build artifacts
-- OAuth workflows built with oauth2client, for SSO login support
-- Sentry error reporting configured with release versions
-- Google Analytics
+### Gathering
+Crawling the web is our basic method of gathering unstructured data. We start with a list
+of URLs, then scrape the pages, parse them into an index-able format, and store them off
+for later use. In this step, we also collect any already structured data that we may find
+useful, such as geolocations or historical weather for an area. This data is stored away
+until the Restructuring step.
 
+### Filtering
+Because our crawling is unspecific and grabs everything it sees on the pages we give it,
+we end up with a lot of noise in our initial dataset. We whittle the dataset down a little
+by creating Mindmaps or PESTLE (Political, Economical, Social, Technical, Legal,
+Environmental) trees that we can use to query for specific topics within our collected
+webpages.
 
-## Using this Template
+### Annotating
+Annotating is a second run of culling our data to gain insight into our question. We can
+use regular expression matching to pull out a word from a sentence or a sentence from a
+paragraph, to find names, dates, or money (specific values or in general), or any number
+of other types of information that are relevant to the question being asked.
 
-Starting a new project and want to use this skeleton? Follow these steps.
+### Restructuring
+After annotating the data, we export it into a structured format (usually csv or json) to
+be stored in a SQL database. Typically, each type of annotation we have created is given
+its own table, along with the tables of pre-structured data we gathered in the first step.
 
-1. Copy the contents of the skeleton to your new project directory.
-2. Change the app name from the placeholder "appname" to a name of your
-choosing in the following places:
-    - The `appname` directory itself
-    - In `common_settings.py`, the `INSTALLED_APPS` setting
-    - In `common_settings.py`, the `LOGGING` setting
-    - The import statement in the project-wide `urls.py`
-3. Change the skeleton project name references to your project name.
-    - The [developer docs](.docs)
-4. Run `git init` and make your initial commit
-5. Set up git remotes and push the initial commit to a remote repository
-6. Continue to the next step for Setting up your Development Enviroment
-7. Delete this readme, as it's only relevant to the skeleton!
+### Visualizing
+Where the magic happens. Now that we have all of our data in an easily-managed format, we
+can analyze the relationships between our annotations and structured data, and create a
+Truth Table with adjustable weighted values to craft an answer to our question that's
+backed by the data.
