@@ -6,12 +6,7 @@
 #
 colorlog==3.1.2
 django-environ==0.4.4
-django==1.11.11           # via django-environ
-httplib2==0.10.3          # via oauth2client
-oauth2client==4.1.2
-pyasn1-modules==0.2.1     # via oauth2client
-pyasn1==0.4.2             # via oauth2client, pyasn1-modules, rsa
+django==1.11.11
 pytz==2018.3              # via django
 raven==6.6.0
-rsa==3.4.2                # via oauth2client
-six==1.11.0               # via django-environ, oauth2client
+six==1.11.0               # via django-environ

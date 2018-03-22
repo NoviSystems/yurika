@@ -17,13 +17,6 @@ ALLOWED_HOSTS="*"
 
 DATABASE_URL="sqlite:///db.sqlite3"
 
-# Adds google analytics to each page
-#GOOGLE_ANALYTICS_KEY=""
-
-# Use for oauth
-#GOOGLE_OPENIDCONNECT_KEY=""
-#GOOGLE_OPENIDCONNECT_SECRET=""
-
 # Adds sentry error reporting. See common_settings for details.
 #SENTRY_DSN=""
 

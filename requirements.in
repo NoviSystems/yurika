@@ -3,5 +3,4 @@ django-environ>=0.4.3
 colorlog
 
 # Optional Integrations
-oauth2client
 raven

@@ -25,9 +25,6 @@ ___password_reset_confirm = r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
 
-    # Uncomment for oauth support
-    # url(r'^oauth/', include("oauth.urls")),
-
     # Auth urls
     url(r'^login/$',                    views.LoginView.as_view(),                  name='login'),
     url(r'^logout/$',                   views.LogoutView.as_view(),                 name='logout'),

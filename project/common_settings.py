@@ -33,9 +33,6 @@ def path(value):
 env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
-    GOOGLE_ANALYTICS_KEY=(str, ''),
-    GOOGLE_OPENIDCONNECT_KEY=(str, ''),
-    GOOGLE_OPENIDCONNECT_SECRET=(str, ''),
     SENTRY_DSN=(str, ''),
 )
 env.read_env(path('.env'))  # parse .env into os.environ
@@ -112,7 +109,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'project.utils.context_processors.google_analytics',
             ],
         },
     },
@@ -178,22 +174,6 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning %s' % DEFAULT_TAGS[messages.WARNING],
     messages.ERROR: 'alert-danger %s' % DEFAULT_TAGS[messages.ERROR],
 }
-
-
-# Google Analytics
-GOOGLE_ANALYTICS_KEY = env('GOOGLE_ANALYTICS_KEY')
-
-
-# OAUTH 2
-# Copy your google oauth2 credentials into your .env file if using oauth.
-# When creating the google oauth2 credentials, use this as the callback url:
-# https://SERVER/oauth/provider/google/complete
-if env('GOOGLE_OPENIDCONNECT_KEY'):
-    GOOGLE_OPENIDCONNECT_KEY = env('GOOGLE_OPENIDCONNECT_KEY')
-    GOOGLE_OPENIDCONNECT_SECRET = env('GOOGLE_OPENIDCONNECT_SECRET')
-
-    AUTHENTICATION_BACKENDS.append('oauth.authbackend.OAuthBackend')
-    INSTALLED_APPS.append('oauth')
 
 
 # Sentry/Raven
