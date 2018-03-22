@@ -80,7 +80,7 @@ INSTALLED_APPS = [
     'django.forms',
 
     'project.utils',
-    'appname',
+    'bricks',
 ]
 
 MIDDLEWARE = [
@@ -316,7 +316,7 @@ LOGGING = {
             # * Django enables this behavior by calling
             #   https://docs.python.org/3.5/library/logging.html#logging.captureWarnings
         },
-        "appname": {
+        "bricks": {
             "level": "DEBUG" if DEBUG else "INFO",
         },
     },

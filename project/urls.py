@@ -37,5 +37,5 @@ urlpatterns = [
     url(___password_reset_confirm,      views.PasswordResetConfirmView.as_view(),   name='password_reset_confirm'),
     url(r'^reset/done/$',               views.PasswordResetCompleteView.as_view(),  name='password_reset_complete'),
 
-    url(r'^', include('appname.urls')),
+    url(r'^', include('bricks.urls')),
 ]
