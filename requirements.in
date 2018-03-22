@@ -3,6 +3,8 @@ django-environ>=0.4.3
 colorlog
 
 celery
+django-fsm
+django-model-utils
 
 # Optional Integrations
 raven

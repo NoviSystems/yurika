@@ -82,6 +82,7 @@ INSTALLED_APPS = [
 
     'project.utils',
     'bricks',
+    'mortar',
 ]
 
 MIDDLEWARE = [

@@ -3,6 +3,11 @@ from redislite import Redis
 from project.common_settings import *  # flake8: noqa
 
 
+INSTALLED_APPS += [
+    'tests.integration.mortar.testapp',
+]
+
+
 # Create a Redis instance using redislite
 redis = Redis(path('db.redis'))
 
