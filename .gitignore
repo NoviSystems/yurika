@@ -1,4 +1,6 @@
 # Application
+bricks/migrations
+mortar/migrations
 bundles/
 node_modules/
 *.sqlite3
