@@ -4,9 +4,14 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
+amqp==2.2.2               # via kombu
+billiard==3.5.0.3         # via celery
+celery==4.1.0
 colorlog==3.1.2
 django-environ==0.4.4
 django==1.11.11
-pytz==2018.3              # via django
+kombu==4.1.0              # via celery
+pytz==2018.3              # via celery, django
 raven==6.6.0
 six==1.11.0               # via django-environ
+vine==1.1.4               # via amqp

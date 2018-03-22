@@ -8,3 +8,7 @@ redis = Redis(path('db.redis'))
 
 # Use redislite for the Celery broker
 CELERY_BROKER_URL = 'redis+socket://%s' % (redis.socket_file, )
+
+# Suppress celery worker messages
+LOGGING['loggers'].setdefault('celery', {})
+LOGGING['loggers']['celery']['level'] = 'WARNING'

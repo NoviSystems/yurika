@@ -33,6 +33,7 @@ def path(value):
 env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
+    CELERY_BROKER_URL=str,
     SENTRY_DSN=(str, ''),
 )
 env.read_env(path('.env'))  # parse .env into os.environ
@@ -174,6 +175,16 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning %s' % DEFAULT_TAGS[messages.WARNING],
     messages.ERROR: 'alert-danger %s' % DEFAULT_TAGS[messages.ERROR],
 }
+
+# Each web crawl needs a new worker, since twisted reactors (used by scrapy)
+# cannot be restarted.
+CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
+
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Keep django log config in tasks
+
+CELERY_WORKER_REDIRECT_STDOUTS = False  # Prevents duplicate messages
 
 
 # Sentry/Raven
