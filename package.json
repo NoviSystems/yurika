@@ -2,7 +2,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/ITNG/django-skeleton"
+    "url": "https://github.com/ITNG/yurika"
   },
   "scripts": {
     "build": "echo 'No javascript build script...'"

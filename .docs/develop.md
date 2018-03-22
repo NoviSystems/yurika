@@ -18,13 +18,13 @@ new or existing project.
 1. Clone the repository into a new directory. e.g.:
 
    ```bash
-   $ git clone git@github.com:ITNG/django-skeleton.git
+   $ git clone git@github.com:ITNG/yurika.git
    ```
 
    and then `cd` into the new directory that was created. e.g.
 
    ```bash
-   $ cd django-skeleton
+   $ cd yurika
    ```
 
    (obviously your repo and directory name will be different for existing
