@@ -12,8 +12,13 @@ django-environ==0.4.4
 django-fsm==2.6.0
 django-model-utils==3.1.1
 django==1.11.11
+elasticsearch-dsl==6.1.0
+elasticsearch==6.2.0
+ipaddress==1.0.19         # via elasticsearch-dsl
 kombu==4.1.0              # via celery
+python-dateutil==2.7.0    # via elasticsearch-dsl
 pytz==2018.3              # via celery, django
 raven==6.6.0
-six==1.11.0               # via django-environ
+six==1.11.0               # via django-environ, elasticsearch-dsl, python-dateutil
+urllib3==1.22             # via elasticsearch
 vine==1.1.4               # via amqp

@@ -18,6 +18,7 @@ import environ
 from django.contrib.messages import DEFAULT_TAGS
 from django.contrib.messages import constants as messages
 from django.urls import reverse_lazy
+from elasticsearch_dsl import connections
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -34,6 +35,7 @@ env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
     CELERY_BROKER_URL=str,
+    ELASTICSEARCH_URL=list,
     SENTRY_DSN=(str, ''),
 )
 env.read_env(path('.env'))  # parse .env into os.environ
@@ -126,6 +128,16 @@ DATABASES = {
     # fail if no DATABASE_URL - don't use a default value
     'default': env.db(),
 }
+
+
+# Elasticsearch
+# http://elasticsearch-dsl.readthedocs.io/en/6.1.0/configuration.html
+
+connections.configure(
+    default={
+        'hosts': env('ELASTICSEARCH_URL'),
+    },
+)
 
 
 # Password validation
