@@ -1,0 +1,89 @@
+{% load staticfiles %}
+{% load utils %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Project Title{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/bootstrap-ext.css' %}">
+    <link rel="stylesheet" href="{% static 'css/glyphicons.css' %}">
+    {% block styles %}{% endblock %}
+
+    {% if GA %}
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+      ga('create', '{{ GA }}', 'auto');
+      ga('send', 'pageview');
+    </script>
+    {% endif %}
+</head>
+<body>
+
+{% block navbar %}
+<nav primary-navbar class="navbar navbar-expand-md navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">Project Title</a>
+        <button class="navbar-toggler" type="button"
+                data-toggle="collapse"
+                data-target="[primary-navbar] .collapse">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="navbar-collapse collapse">
+            <ul class="navbar-nav mr-auto">
+                {% if user.is_authenticated %}
+                {% url 'home' as home %}
+                <li class="nav-item {% isactive home exact=True %}">
+                    <a class="nav-link" href="{{ home }}">Home</a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <div class="navbar-nav">
+                {% if not user.is_authenticated %}
+                <a class="btn btn-light btn-sm" role="button" href="{% url 'login' %}">Log in</a>
+                {% else %}
+
+                <span class="navbar-text mr-3">
+                    Logged in as {{ user }}
+                </span>
+                <a class="nav-item nav-link" href="{% url 'logout' %}">Log out</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+{% endblock %}
+
+{% block messages %}
+{% if messages %}
+<div class="container mt-4">
+    {% for message in messages %}
+    <div class="alert alert-dismissable {{ message.tags }}" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block container %}
+<div class="container mt-4">
+    {% block content %}{% endblock %}
+</div>
+{% endblock %}
+
+<script src="{% static 'js/jquery.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

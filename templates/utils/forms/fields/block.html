@@ -1,0 +1,11 @@
+{% load utils %}
+
+<div class="form-group">
+    <label class="{{ field|required }}" for="{{ field.auto_id }}">{{ field.label }}</label><br>
+    {% if field.errors %}
+    {{ field|addclass:"is-invalid" }}
+    {% else %}{{ field  }}{% endif %}
+
+    {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text|safe }}</small>{% endif %}
+    {% for error in field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+</div>

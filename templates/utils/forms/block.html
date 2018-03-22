@@ -1,0 +1,12 @@
+{% load forms %}
+
+{% if form.non_field_errors %}
+<div class="text-danger">
+    The following errors have occurred:
+    {{ form.non_field_errors }}
+</div>
+{% endif %}
+
+{% for field in form %}
+{% include field|template with field=field %}
+{% endfor %}

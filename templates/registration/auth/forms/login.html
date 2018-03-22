@@ -1,0 +1,20 @@
+{# Render the non-field errors at the bottom #}
+
+{% load forms %}
+
+{% with sizes='xl-9 md-8' %}
+{% for field in form %}
+{% include field|template with field=field %}
+{% endfor %}
+
+{% if form.non_field_errors %}
+<div class="row">
+    <div class="{{ sizes|inversecols }}"></div>
+    <div class="{{ sizes|cols }}">
+        {% for error in form.non_field_errors %}
+        <p class="text-danger">{{ error }}</p>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endwith %}

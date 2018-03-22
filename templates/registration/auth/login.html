@@ -1,0 +1,29 @@
+{% extends 'registration/auth/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 col-lg-6 mx-auto">
+        <form role="form" action="{% url 'login' %}{% if next %}?next={{ next }}{% endif %}" method="POST">
+            {% csrf_token %}
+            <div class="card border-primary">
+
+                <div class="card-header text-white bg-primary">
+                    Please login
+                </div>
+
+                <div class="card-body">
+                    {{ form }}
+                </div>
+
+                <div class="card-footer">
+                    <div class="text-right">
+                        <a class="btn btn-link" href="{% url 'password_reset' %}"><small>Forget your password?</small></a>
+                        <a href="/" class="btn btn-outline-secondary" role="btn">Cancel</a>
+                        <button class="btn btn-primary" type="submit">Login</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock content %}

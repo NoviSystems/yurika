@@ -1,0 +1,15 @@
+{% load utils %}
+{% load forms %}
+
+<div class="form-group row">
+    <label class="col-form-label {{ field|required }} {{ sizes|default:'lg-9 md-7'|inversecols }}" for="{{ field.auto_id }}">{{ field.label }}</label>
+
+    <div class="{{ sizes|default:'lg-9 md-7'|cols }}">
+        {% if field.errors %}
+        {{ field|addclass:"is-invalid" }}
+        {% else %}{{ field  }}{% endif %}
+
+        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text|safe }}</small>{% endif %}
+        {% for error in field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+    </div>
+</div>
