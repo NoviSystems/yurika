@@ -344,6 +344,7 @@ class Annotation(models.Model):
     content = models.TextField()
     analysis_id = models.IntegerField()
     document_id = models.IntegerField()
+    url = models.URLField()
     category = models.IntegerField(choices=((0, 'Sentence'), (1, 'Paragraph'), (2, 'Document')))
     query_id = models.IntegerField()
 
