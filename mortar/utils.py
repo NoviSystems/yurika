@@ -475,4 +475,5 @@ def annotate(analysis):
                     analysis_id=analysis.id,
                     query_id=query.id,
                     document_id=doc.id,
+                    url=doc.url,
                     category=query.category)
