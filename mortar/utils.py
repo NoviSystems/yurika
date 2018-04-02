@@ -204,7 +204,7 @@ def update_dictionaries():
                         },
                         '_index': 'dictionaries',
                     })
-    helpers.bulk(client=es, actions=es_actions)
+    helpers.streaming_bulk(client=es, actions=es_actions, max_retries=2, request_timeout=60)
 
 
 # TODO
@@ -382,7 +382,7 @@ def get_indexed_docs(tree, filter_query):
     query = {'query': {'match_all': {}}}
     if len(filter_query['names']) or len(filter_query['regexs']):
         query = {'query': make_tree_query(filter_query)}
-    queried = helpers.scan(es, scroll=u'30m', query=query, index=tree.doc_source_index.name, doc_type='doc')
+    queried = helpers.scan(es, scroll=u'1h', raise_on_error=False, query=query, size=500, clear_scroll=False, index=tree.doc_source_index.name, doc_type='doc')
     return queried
 
 
@@ -396,9 +396,9 @@ def insert_pos_record(id, esdoc, tree, query):
     es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
     if query.category == 0:
         parag, es_out = content_to_sentences(tokenize_doc(esdoc), 0, tree, esdoc, id)
-        helpers.bulk(client=es, actions=es_out)
+        helpers.streaming_bulk(client=es, actions=es_out, max_retries=2, request_timeout=60)
     elif query.category == 1:
-        helpers.bulk(client=es, actions=content_to_paragraphs(esdoc, tree, id))
+        helpers.streaming_bulk(client=es, actions=content_to_paragraphs(esdoc, tree, id), max_retries=2, request_timeout=60)
 
 
 def create_pos_index(tree):
@@ -440,11 +440,14 @@ def create_pos_index(tree):
 def process(tree, filter, query):
     docs = get_indexed_docs(tree, filter)
     create_pos_index(tree)
+    count = 1
+    previous = tree.n_processed
     for esdoc in docs:
-        doc = clean_doc(esdoc, tree)
-        if doc is not None:
-            insert_pos_record(doc.id, esdoc, tree, query)
-
+        if count > previous:
+            doc = clean_doc(esdoc, tree)
+            if doc is not None:
+                insert_pos_record(doc.id, esdoc, tree, query)
+        count += 1
 
 def annotate(analysis):
     tree = analysis.mindmap
@@ -461,7 +464,7 @@ def annotate(analysis):
     else:
         doc_type = 'doc'
     body = {'query': json.loads(query.elastic_json)}
-    search = helpers.scan(es, scroll=u'30m', query=body, index=tree.doc_dest_index.name, doc_type=doc_type)
+    search = helpers.scan(es, scroll=u'1h', query=body, raise_on_error=False, size=500, clear_scroll=False, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
         doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
         with transaction.atomic():
