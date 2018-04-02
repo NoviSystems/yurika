@@ -331,7 +331,7 @@ class Dictionary(models.Model):
 
 
 class Document(models.Model):
-    url = models.URLField()
+    url = models.URLField(max_length=500)
     crawled_at = models.DateTimeField()
     index = models.ForeignKey('ElasticIndex', related_name='documents')
     tree = models.ForeignKey('Tree', related_name='documents')

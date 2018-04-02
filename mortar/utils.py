@@ -204,7 +204,7 @@ def update_dictionaries():
                         },
                         '_index': 'dictionaries',
                     })
-    helpers.streaming_bulk(client=es, actions=es_actions, max_retries=2, request_timeout=60)
+    helpers.bulk(client=es, actions=es_actions, max_retries=2, request_timeout=60)
 
 
 # TODO
@@ -396,9 +396,9 @@ def insert_pos_record(id, esdoc, tree, query):
     es.index(index=tree.doc_dest_index.name, id=id, doc_type='doc', body=json.dumps(body))
     if query.category == 0:
         parag, es_out = content_to_sentences(tokenize_doc(esdoc), 0, tree, esdoc, id)
-        helpers.streaming_bulk(client=es, actions=es_out, max_retries=2, request_timeout=60)
+        helpers.bulk(client=es, actions=es_out, max_retries=2, request_timeout=60)
     elif query.category == 1:
-        helpers.streaming_bulk(client=es, actions=content_to_paragraphs(esdoc, tree, id), max_retries=2, request_timeout=60)
+        helpers.bulk(client=es, actions=content_to_paragraphs(esdoc, tree, id), max_retries=2, request_timeout=60)
 
 
 def create_pos_index(tree):
@@ -441,7 +441,7 @@ def process(tree, filter, query):
     docs = get_indexed_docs(tree, filter)
     create_pos_index(tree)
     count = 1
-    previous = tree.n_processed
+    previous = 0
     for esdoc in docs:
         if count > previous:
             doc = clean_doc(esdoc, tree)
