@@ -7,6 +7,7 @@ django-fsm
 django-model-utils
 elasticsearch>=6
 elasticsearch-dsl>=6
+shortuuid
 
 # Optional Integrations
 raven
