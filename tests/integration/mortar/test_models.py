@@ -1,6 +1,7 @@
 import logging
 from contextlib import contextmanager
 
+from django.test import TestCase
 from project.utils.test import DramatiqTestCase
 from mortar.models import Task
 
@@ -136,3 +137,28 @@ class TaskChainTests(DramatiqTestCase):
 
         self.assertEqual(task1.status, STATUS.failed)
         self.assertEqual(task2.status, STATUS.not_queued)
+
+
+class ErrorHandlingTests(TestCase):
+
+    def test_log_error(self):
+        task = models.Finish.objects.create()
+        task.log_error('!!!')
+
+        error = task.errors.get()
+        self.assertEqual(error.message, '!!!')
+        self.assertEqual(error.traceback, '')
+
+    def test_log_exception(self):
+        task = models.Finish.objects.create()
+        try:
+            raise Exception('!!!')
+        except Exception as e:
+            task.log_exception(e)
+
+        error = task.errors.get()
+        self.assertEqual(error.message, '!!!')
+        self.assertIn("Traceback (most recent call last):\n", error.traceback)
+        self.assertIn(", in test_log_exception\n", error.traceback)
+        self.assertIn("    raise Exception('!!!')\n", error.traceback)
+        self.assertIn("Exception: !!!\n", error.traceback)

@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('mortar', '0002_auto_20180410_1250'),
+        ('mortar', '0001_initial'),
     ]
 
     operations = [

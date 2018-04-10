@@ -1,4 +1,5 @@
 from importlib import import_module
+from traceback import format_exception
 
 from django.db import models
 from django.utils import timezone
@@ -147,6 +148,11 @@ class Task(models.Model):
 
     def log_error(self, error):
         return self.errors.create(message=error)
+
+    def log_exception(self, exc):
+        # Note: first argument is ignore since python 3.5
+        traceback = ''.join(format_exception(None, exc, exc.__traceback__))
+        return self.errors.create(message=str(exc), traceback=traceback)
 
     def clear_errors(self):
         self.errors.delete()
