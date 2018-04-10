@@ -165,16 +165,12 @@ class TaskError(models.Model):
 
 
 class Crawler(models.Model):
-    index = models.UUIDField(unique=True, editable=False, default=b36.uuid,
+    index = models.CharField(max_length=25, unique=True, editable=False, default=b36_uuid,
                              help_text="Elasticsearch index name for crawled documents.")
+    urls = models.TextField(help_text="List of URLs to crawl (separated by newlines).")
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
-
-
-class URLSeed(models.Model):
-    crawler = models.ForeignKey(Crawler, on_delete=models.CASCADE, related_name='seeds')
-    url = models.URLField()
 
 
 class CrawlerTask(Task):
@@ -183,16 +179,3 @@ class CrawlerTask(Task):
     @property
     def task_path(self):
         return 'mortar.tasks.crawl'
-
-    def abort(self, *, clean=True):
-        """
-        Either abort the crawler cleanly, or not. A clean abort will allow
-        subsequent celery tasks to complete, while an unclean abort will kill
-        the remainder of the task chain.
-
-        A clean abort is useful when you want to end crawling, but then start
-        subsequent tasks (like preprocessing). The caveat is that a clean abort
-        takes a few seconds for Scrapy to shutdown the crawler and exit, while
-        an unclean abort is immediate.
-        """
-        super().abort(signal='SIGTERM' if clean else 'SIGABRT')

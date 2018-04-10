@@ -5,7 +5,15 @@
 #    pip-compile --output-file requirements.txt requirements.in
 #
 argh==0.26.2              # via watchdog
+asn1crypto==0.24.0        # via cryptography
+attrs==17.4.0             # via automat, service-identity
+automat==0.6.0            # via twisted
+beautifulsoup4==4.6.0
+cffi==1.11.5              # via cryptography
 colorlog==3.1.2
+constantly==15.1.0        # via twisted
+cryptography==2.2.2       # via pyopenssl
+cssselect==1.0.3          # via parsel, scrapy
 django-dramatiq==0.2.2
 django-environ==0.4.4
 django-fsm==2.6.0
@@ -16,17 +24,33 @@ elasticsearch-dsl==6.1.0
 elasticsearch==6.2.0
 gevent==1.2.2             # via watchdog-gevent
 greenlet==0.4.13          # via gevent
+hyperlink==18.0.0         # via twisted
+idna==2.6                 # via cryptography, hyperlink
+incremental==17.5.0       # via twisted
 ipaddress==1.0.19         # via elasticsearch-dsl
+lxml==4.2.1               # via parsel, scrapy
+parsel==1.4.0             # via scrapy
 pathtools==0.1.2          # via watchdog
 pika==0.11.2              # via dramatiq
 prometheus-client==0.0.20  # via dramatiq
+pyasn1-modules==0.2.1     # via service-identity
+pyasn1==0.4.2             # via pyasn1-modules, service-identity
+pycparser==2.18           # via cffi
+pydispatcher==2.0.5       # via scrapy
+pyopenssl==17.5.0         # via scrapy, service-identity
 python-dateutil==2.7.0    # via elasticsearch-dsl
 pytz==2018.3              # via django
 pyyaml==3.12              # via watchdog
+queuelib==1.5.0           # via scrapy
 raven==6.6.0
 redis==2.10.6
+scrapy==1.5.0
+service-identity==17.0.0  # via scrapy
 shortuuid==0.5.0
-six==1.11.0               # via django-environ, elasticsearch-dsl, python-dateutil
+six==1.11.0               # via automat, cryptography, django-environ, elasticsearch-dsl, parsel, pyopenssl, python-dateutil, scrapy, w3lib
+twisted==17.9.0           # via scrapy
 urllib3==1.22             # via elasticsearch
+w3lib==1.19.0             # via parsel, scrapy
 watchdog-gevent==0.1      # via dramatiq
 watchdog==0.8.3           # via dramatiq, watchdog-gevent
+zope.interface==4.4.3     # via twisted

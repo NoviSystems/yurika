@@ -19,6 +19,7 @@ from django.contrib.messages import DEFAULT_TAGS
 from django.contrib.messages import constants as messages
 from django.urls import reverse_lazy
 from elasticsearch_dsl import connections
+from scrapy.utils.log import configure_logging
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -246,6 +247,10 @@ if env('SENTRY_DSN'):
         'dsn': env('SENTRY_DSN'),
         'release': release,
     }
+
+
+# Prevent scrapy from overriding our logging configuration
+configure_logging(install_root_handler=False)
 
 
 # Our preferred logging configuration.

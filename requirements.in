@@ -2,6 +2,7 @@ Django<2.0
 django-environ>=0.4.3
 colorlog
 
+beautifulsoup4
 django-dramatiq
 django-fsm
 django-model-utils
@@ -9,6 +10,7 @@ dramatiq
 elasticsearch>=6
 elasticsearch-dsl>=6
 redis
+scrapy
 shortuuid
 
 # Optional Integrations
