@@ -19,7 +19,6 @@ from django.contrib.messages import DEFAULT_TAGS
 from django.contrib.messages import constants as messages
 from django.urls import reverse_lazy
 from elasticsearch_dsl import connections
-from scrapy.utils.log import configure_logging
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -249,10 +248,6 @@ if env('SENTRY_DSN'):
     }
 
 
-# Prevent scrapy from overriding our logging configuration
-configure_logging(install_root_handler=False)
-
-
 # Our preferred logging configuration.
 # Django takes the LOGGING setting and passes it as-is into Python's
 # logging dict-config function (logging.config.dictConfig())
@@ -356,6 +351,9 @@ LOGGING = {
             #
             # * Django enables this behavior by calling
             #   https://docs.python.org/3.5/library/logging.html#logging.captureWarnings
+        },
+        "scrapy": {
+            "level": "INFO" if DEBUG else "WARNING",
         },
         "bricks": {
             "level": "DEBUG" if DEBUG else "INFO",

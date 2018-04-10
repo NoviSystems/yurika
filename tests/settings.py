@@ -16,4 +16,5 @@ DRAMATIQ_BROKER['OPTIONS'] = {}
 
 
 # Disable most logging
-LOGGING['root']['level'] = 'WARNING'
+LOGGING['loggers']['scrapy']['level'] = 'ERROR'
+LOGGING['root']['level'] = 'ERROR'

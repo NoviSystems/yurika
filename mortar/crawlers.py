@@ -15,6 +15,7 @@ class WebCrawler(CrawlSpider):
         Rule(
             LinkExtractor(canonicalize=True, unique=True),
             follow=True,
+            callback='parse_item',
         ),
     )
 
@@ -32,7 +33,7 @@ class WebCrawler(CrawlSpider):
 
         super().__init__(*args, **kwargs)
 
-    def parse(self, response):
+    def parse_item(self, response):
         soup = BeautifulSoup(response.text, 'lxml')
 
         for element in soup(['script', 'style']):
@@ -47,5 +48,3 @@ class WebCrawler(CrawlSpider):
         )
 
         doc.save(index=self.index)
-
-        return super().parse(response)

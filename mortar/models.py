@@ -8,6 +8,8 @@ from django_fsm import FSMField, transition
 from model_utils import Choices, managers
 from shortuuid import ShortUUID
 
+from mortar import documents
+
 
 def b36_uuid():
     # Use a function so migrations don't recompute on ShortUUID.
@@ -177,6 +179,10 @@ class Crawler(models.Model):
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
+
+    @property
+    def documents(self):
+        return documents.Document.search(index=self.index)
 
 
 class CrawlerTask(Task):

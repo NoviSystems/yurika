@@ -22,10 +22,7 @@ from project import views
 
 ___password_reset_confirm = r'^reset/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$'
 
-urlpatterns = [
-    url(r'^admin/', admin.site.urls),
-
-    # Auth urls
+authpatterns = [
     url(r'^login/$',                    views.LoginView.as_view(),                  name='login'),
     url(r'^logout/$',                   views.LogoutView.as_view(),                 name='logout'),
 
@@ -36,6 +33,12 @@ urlpatterns = [
     url(r'^password_reset/done/$',      views.PasswordResetDoneView.as_view(),      name='password_reset_done'),
     url(___password_reset_confirm,      views.PasswordResetConfirmView.as_view(),   name='password_reset_confirm'),
     url(r'^reset/done/$',               views.PasswordResetCompleteView.as_view(),  name='password_reset_complete'),
+]
+
+urlpatterns = [
+    url(r'^admin/', admin.site.urls),
+
+    url(r'^', include(authpatterns)),
 
     url(r'^', include('bricks.urls')),
 ]
