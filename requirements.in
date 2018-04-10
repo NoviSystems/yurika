@@ -2,11 +2,13 @@ Django<2.0
 django-environ>=0.4.3
 colorlog
 
-celery
+django-dramatiq
 django-fsm
 django-model-utils
+dramatiq
 elasticsearch>=6
 elasticsearch-dsl>=6
+redis
 shortuuid
 
 # Optional Integrations

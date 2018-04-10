@@ -17,7 +17,7 @@ ALLOWED_HOSTS="*"
 
 DATABASE_URL="sqlite:///db.sqlite3"
 
-CELERY_BROKER_URL="redis://"
+DRAMATIQ_BROKER_URL="redis://"
 
 ELASTICSEARCH_URL="http://localhost:9200/"
 

@@ -34,7 +34,7 @@ def path(value):
 env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
-    CELERY_BROKER_URL=str,
+    DRAMATIQ_BROKER_URL=str,
     ELASTICSEARCH_URL=list,
     SENTRY_DSN=(str, ''),
 )
@@ -81,6 +81,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.forms',
+
+    'django_dramatiq',
 
     'project.utils',
     'bricks',
@@ -189,15 +191,25 @@ MESSAGE_TAGS = {
     messages.ERROR: 'alert-danger %s' % DEFAULT_TAGS[messages.ERROR],
 }
 
-# Each web crawl needs a new worker, since twisted reactors (used by scrapy)
-# cannot be restarted.
-CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+# Dramatiq - https://dramatiq.io/
 
-CELERY_WORKER_MAX_TASKS_PER_CHILD = 1
-
-CELERY_WORKER_HIJACK_ROOT_LOGGER = False  # Keep django log config in tasks
-
-CELERY_WORKER_REDIRECT_STDOUTS = False  # Prevents duplicate messages
+DRAMATIQ_BROKER = {
+    'BROKER': 'dramatiq.brokers.redis.RedisBroker',
+    'OPTIONS': {
+        'url': env('DRAMATIQ_BROKER_URL'),
+    },
+    'MIDDLEWARE': [
+        'dramatiq.middleware.AgeLimit',
+        'dramatiq.middleware.TimeLimit',
+        'dramatiq.middleware.Callbacks',
+        'dramatiq.middleware.Pipelines',
+        'dramatiq.middleware.Retries',
+        'django_dramatiq.middleware.AdminMiddleware',
+        'django_dramatiq.middleware.DbConnectionsMiddleware',
+        'mortar.middleware.SentryMiddleware',
+        'mortar.middleware.TaskStatusMiddleware',
+    ]
+}
 
 
 # Sentry/Raven

@@ -4,22 +4,29 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
-amqp==2.2.2               # via kombu
-billiard==3.5.0.3         # via celery
-celery==4.1.0
+argh==0.26.2              # via watchdog
 colorlog==3.1.2
+django-dramatiq==0.2.2
 django-environ==0.4.4
 django-fsm==2.6.0
 django-model-utils==3.1.1
 django==1.11.11
+dramatiq==1.0.0
 elasticsearch-dsl==6.1.0
 elasticsearch==6.2.0
+gevent==1.2.2             # via watchdog-gevent
+greenlet==0.4.13          # via gevent
 ipaddress==1.0.19         # via elasticsearch-dsl
-kombu==4.1.0              # via celery
+pathtools==0.1.2          # via watchdog
+pika==0.11.2              # via dramatiq
+prometheus-client==0.0.20  # via dramatiq
 python-dateutil==2.7.0    # via elasticsearch-dsl
-pytz==2018.3              # via celery, django
+pytz==2018.3              # via django
+pyyaml==3.12              # via watchdog
 raven==6.6.0
+redis==2.10.6
 shortuuid==0.5.0
 six==1.11.0               # via django-environ, elasticsearch-dsl, python-dateutil
 urllib3==1.22             # via elasticsearch
-vine==1.1.4               # via amqp
+watchdog-gevent==0.1      # via dramatiq
+watchdog==0.8.3           # via dramatiq, watchdog-gevent

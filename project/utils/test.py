@@ -6,9 +6,9 @@ from urllib.parse import urljoin, urlparse
 
 from django.conf import settings
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
-from django.test.client import Client
+from django.test import TransactionTestCase, client
 from django.urls import reverse
-
+from dramatiq import Worker, get_broker
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
@@ -27,7 +27,7 @@ driver = webdriver.Chrome(executable_path='chromedriver', chrome_options=opts)
 register(driver.quit)
 
 
-class SeleniumClient(Client):
+class SeleniumClient(client.Client):
 
     def add_cookie(self, name, **opts):
         value = self.cookies[name].value
@@ -150,3 +150,21 @@ class FunctionalTestCase(StaticLiveServerTestCase):
         )
 
         return self
+
+
+# Note: can be deleted once merged into django_dramatiq
+class DramatiqTestCase(TransactionTestCase):
+
+    def _pre_setup(self):
+        super()._pre_setup()
+
+        self.broker = get_broker()
+        self.broker.flush_all()
+
+        self.worker = Worker(self.broker, worker_timeout=100)
+        self.worker.start()
+
+    def _post_teardown(self):
+        self.worker.stop()
+
+        super()._post_teardown()

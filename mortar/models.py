@@ -1,16 +1,18 @@
 from importlib import import_module
 
-from celery import signals
-from celery.task.control import revoke
 from django.db import models
 from django.utils import timezone
+from django.utils.functional import cached_property
 from django_fsm import FSMField, transition
 from model_utils import Choices, managers
 from shortuuid import ShortUUID
 
 
-# Elasticsearch-friendly identifiers (no uppercase characters)
-b36 = ShortUUID(alphabet='0123456789abcdefghijklmnopqrstuvwxyz')
+def b36_uuid():
+    # Use a function so migrations don't recompute on ShortUUID.
+    # Elasticsearch-friendly identifiers (no uppercase characters)
+    b36 = ShortUUID(alphabet='0123456789abcdefghijklmnopqrstuvwxyz')
+    return b36.uuid()
 
 
 def import_path(path):
@@ -18,57 +20,6 @@ def import_path(path):
     module = import_module(module)
 
     return getattr(module, attr)
-
-
-@signals.task_prerun.connect
-def start(sender, task_id, task, args, kwargs, **kw):
-    try:
-        # Note that `kwargs['task_pk']` is the Task's primary key value, and
-        # the `task_id` argument is the Celery task ID, which is saved under
-        # the same name on the task model.
-        task = Task.downcast.get(pk=kwargs.get('task_pk'))
-    except Task.DoesNotExist:
-        return
-
-    task._start(task_id)
-    task.save()
-
-
-@signals.task_postrun.connect
-def finish(sender, task_id, task, args, kwargs, retval, state, **kw):
-    # ignore task failures, handled by abort/error handlers
-    if not state == 'SUCCESS':
-        return
-
-    try:
-        task = Task.downcast.get(task_id=task_id)
-    except Task.DoesNotExist:
-        return
-
-    task._finish()
-    task.save()
-
-
-@signals.task_revoked.connect
-def abort(sender, request, terminated, **kw):
-    try:
-        task = Task.downcast.get(task_id=request.task_id)
-    except Task.DoesNotExist:
-        return
-
-    task._abort()
-    task.save()
-
-
-@signals.task_failure.connect
-def error(sender, task_id, exception, args, kwargs, traceback, **kw):
-    try:
-        task = Task.downcast.get(task_id=task_id)
-    except Task.DoesNotExist:
-        return
-
-    task._error()
-    task.save()
 
 
 class CastingManager(managers.InheritanceManager):
@@ -82,37 +33,44 @@ class CastingManager(managers.InheritanceManager):
 
 class Task(models.Model):
     """
-    Base class for models that represent a process/task. Controls and tracks
-    the status of celery task objects. Note that the state transitions are
-    controlled through celery's signal handlers, and they should not be invoked
-    directly.
+    Base class for models that represent a self-contained process/task. The
+    actor function should return no value and accept the Task instance's primary
+    key as its only argument. Any configuration should be provided through
+    related database models.
 
-    The public API consists of the `task` property, which generates a task
-    signature, and the `.abort()` method, which can be used to revoke
-    long-running tasks.
+    The task's status transitions are handled by `mortar.middleware.TaskStatus`,
+    and the transition methods should not be invoked directly.
+
+    The public API consists of `send`ing the task, or composing as a `message`
+    in a Dramatiq `pipeline`. Additionally, the actor may self-terminate by
+    raising `Task.Abort`.
 
         >>> task = MyTask.objects.create()
-        >>> task.task.apply_async()
-        ...
-        >>> task.refresh_from_db()
-        >>> task.abort()
+        >>> task.send()
         ...
         >>> task.refresh_from_db()
         >>> task.status
-        'aborted'
+        'running'
+        ...
+        >>> task.refresh_from_db()
+        >>> task.status
+        'done'
 
     """
     STATUS = Choices(
-        ('not_started', 'Not Started'),
+        ('not_queued', 'Not queued'),
+        ('enqueued', 'Waiting'),
         ('running', 'Running'),
-        ('finished', 'Finished'),
+        ('failed', 'Error Occurred'),
+        ('done', 'Finished'),
+
+        # non-standard state
         ('aborted', 'Aborted'),
-        ('errored', 'Error Occurred'),
     )
 
-    task_id = models.UUIDField(null=True, default=None, editable=False,
-                               help_text="Celery task ID")
-    status = FSMField(choices=STATUS, default=STATUS.not_started, editable=False)
+    message_id = models.UUIDField(null=True, default=None, editable=False,
+                                  help_text="Dramatiq message ID")
+    status = FSMField(choices=STATUS, default=STATUS.not_queued, editable=False)
     started_at = models.DateTimeField(null=True, editable=False)
     finished_at = models.DateTimeField(null=True, editable=False)
 
@@ -122,45 +80,73 @@ class Task(models.Model):
     class Meta:
         base_manager_name = 'downcast'
 
+    class Abort(Exception):
+        pass
+
     @property
     def task_path(self):
+        """
+        The module path of the task function. This property must be implemented.
+        """
         raise NotImplementedError
 
-    @property
+    @cached_property
     def task(self):
-        task = import_path(self.task_path)
+        return import_path(self.task_path)
 
-        # immutable arg prevents results from being passed in task chain
-        return task.signature([], {'task_pk': self.pk}, immutable=True)
+    def message(self, **options):
+        """
+        Create a message for composition in a pipeline or group.
+        """
+        # pipe_ignore arg prevents results from being passed along the pipeline.
+        # tasks must be self contained and return no result.
+        options['pipe_ignore'] = True
+        return self.task.message_with_options(
+            kwargs={'task_id': self.pk},
+            **options
+        )
 
-    def abort(self, *, signal='SIGTERM'):
-        revoke(self.task_id, terminate=True, signal=signal)
+    def send(self, **options):
+        """
+        Send a message to the broker for processing.
+        """
+        return self.task.send_with_options(
+            kwargs={'task_id': self.pk},
+            **options
+        )
 
-    @transition(field=status, source=STATUS.not_started, target=STATUS.running)
-    def _start(self, task_id):
-        # """
-        # Start the task. A `task` may be provided, which is useful in cases where
-        # several tasks may need to be chained.
-        # """
-        assert self.task_id is None
+    def abort(self):
+        """
+        Signal a task to self-abort. This feature is not provided by default,
+        and it is necessary to implement a method by which the the Task subclass
+        signals to the task function to raise `Task.Abort`.
+        """
+        raise NotImplementedError
 
-        self.task_id = task_id
+    @transition(field=status, source=STATUS.not_queued, target=STATUS.enqueued)
+    def _enqueue(self, message_id):
+        assert self.message_id is None
+
+        self.message_id = message_id
+
+    @transition(field=status, source=STATUS.enqueued, target=STATUS.running)
+    def _start(self):
         self.started_at = timezone.now()
 
-    @transition(field=status, source=STATUS.running, target=STATUS.finished)
+    @transition(field=status, source=STATUS.running, target=STATUS.done)
     def _finish(self):
+        self.finished_at = timezone.now()
+
+    @transition(field=status, source=STATUS.running, target=STATUS.failed)
+    def _fail(self):
         self.finished_at = timezone.now()
 
     @transition(field=status, source=STATUS.running, target=STATUS.aborted)
     def _abort(self):
         self.finished_at = timezone.now()
 
-    @transition(field=status, source=STATUS.running, target=STATUS.errored)
-    def _error(self):
-        self.finished_at = timezone.now()
-
-    def log_error(self, error, error_type=None):
-        return self.errors.create(message=error, type=error_type)
+    def log_error(self, error):
+        return self.errors.create(message=error)
 
     def clear_errors(self):
         self.errors.delete()
@@ -170,7 +156,7 @@ class TaskError(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='errors')
     timestamp = models.DateTimeField(default=timezone.now)
     message = models.TextField()
-    type = models.CharField(max_length=32, null=True, blank=True)
+    traceback = models.TextField()
 
     def __str__(self):
         if self.type:

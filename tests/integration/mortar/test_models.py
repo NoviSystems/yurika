@@ -1,8 +1,7 @@
-import unittest
-from unittest.mock import patch
+import logging
+from contextlib import contextmanager
 
-from django.test import TestCase, override_settings
-
+from project.utils.test import DramatiqTestCase
 from mortar.models import Task
 
 from .testapp import models
@@ -11,97 +10,129 @@ from .testapp import models
 STATUS = Task.STATUS
 
 
-@override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
-                   CELERY_TASK_ALWAYS_EAGER=True, )
-class TaskTransitionTests(TestCase):
+@contextmanager
+def disable_logging(name):
+    logger = logging.getLogger(name)
+    level = logger.level
+    logger.setLevel(logging.CRITICAL)
+    yield
+    logger.setLevel(level)
 
-    def test_finished(self):
-        task = models.Finished.objects.create()
 
-        self.assertEqual(task.status, STATUS.not_started)
-        task.task.apply_async()
+class TaskTransitionTests(DramatiqTestCase):
+
+    def test_finish(self):
+        task = models.Finish.objects.create()
+
+        self.assertEqual(task.status, STATUS.not_queued)
+        task.send()
+
+        self.broker.join(task.task.queue_name)
+        self.worker.join()
+
         task.refresh_from_db()
-        self.assertEqual(task.status, STATUS.finished)
+        self.assertEqual(task.status, STATUS.done)
 
-    @patch('celery.app.trace.logger')
-    def test_errored(self, mock_logger):
-        task = models.Errored.objects.create()
+    @disable_logging('dramatiq.middleware.retries.Retries')
+    @disable_logging('dramatiq.worker.WorkerThread')
+    def test_fail(self):
+        task = models.Fail.objects.create()
 
-        self.assertEqual(task.status, STATUS.not_started)
-        task.task.apply_async()
+        self.assertEqual(task.status, STATUS.not_queued)
+        task.send()
+
+        self.broker.join(task.task.queue_name)
+        self.worker.join()
+
         task.refresh_from_db()
-        self.assertEqual(task.status, STATUS.errored)
+        self.assertEqual(task.status, STATUS.failed)
 
-        # We cannot trivially perform more comprehensive assertions on logging
-        # calls, as celery calls `.log` instead of the appropriate helper.
-        mock_logger.log.assert_called_once()
+    @disable_logging('dramatiq.middleware.retries.Retries')
+    @disable_logging('dramatiq.worker.WorkerThread')
+    def test_abort(self):
+        task = models.Abort.objects.create()
+
+        self.assertEqual(task.status, STATUS.not_queued)
+        task.send()
+
+        self.broker.join(task.task.queue_name)
+        self.worker.join()
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, STATUS.aborted)
 
     def test_inheritance(self):
         """
         Ensure child tasks can override the transition methods.
-        `Finished._finish` sets `flag`.
+        `Finish._finish` sets `flag`.
         """
-        task = models.Finished.objects.create()
+        task = models.Finish.objects.create()
 
-        self.assertEqual(task.status, STATUS.not_started)
+        self.assertEqual(task.status, STATUS.not_queued)
         self.assertFalse(task.flag)
-        task.task.apply_async()
+        task.send()
+
+        self.broker.join(task.task.queue_name)
+        self.worker.join()
+
         task.refresh_from_db()
-        self.assertEqual(task.status, STATUS.finished)
+        self.assertEqual(task.status, STATUS.done)
         self.assertTrue(task.flag)
 
 
-@override_settings(CELERY_EAGER_PROPAGATES_EXCEPTIONS=True,
-                   CELERY_TASK_ALWAYS_EAGER=True, )
-class TaskChainTests(TestCase):
+class TaskChainTests(DramatiqTestCase):
 
     def test_successful_chain(self):
-        task1 = models.Finished.objects.create()
-        task2 = models.Finished.objects.create()
+        task1 = models.Finish.objects.create()
+        task2 = models.Finish.objects.create()
 
-        chain = task1.task | task2.task
-        chain.apply_async()
+        chain = task1.message() | task2.message()
+        chain.run()
 
-        task1.refresh_from_db()
-        task2.refresh_from_db()
-
-        self.assertEqual(task1.status, STATUS.finished)
-        self.assertEqual(task2.status, STATUS.finished)
-
-    @patch('celery.app.trace.logger')
-    def test_success_then_error(self, mock_logger):
-        task1 = models.Finished.objects.create()
-        task2 = models.Errored.objects.create()
-
-        chain = task1.task | task2.task
-        chain.apply_async()
+        self.broker.join(task1.task.queue_name)
+        self.broker.join(task2.task.queue_name)
+        self.worker.join()
 
         task1.refresh_from_db()
         task2.refresh_from_db()
 
-        self.assertEqual(task1.status, STATUS.finished)
-        self.assertEqual(task2.status, STATUS.errored)
+        self.assertEqual(task1.status, STATUS.done)
+        self.assertEqual(task2.status, STATUS.done)
 
-        mock_logger.log.assert_called_once()
+    @disable_logging('dramatiq.middleware.retries.Retries')
+    @disable_logging('dramatiq.worker.WorkerThread')
+    def test_success_then_error(self):
+        task1 = models.Finish.objects.create()
+        task2 = models.Fail.objects.create()
 
-    @patch('celery.app.trace.logger')
-    @unittest.expectedFailure
-    def test_error_revokes_remainder(self, mock_logger):
-        """
-        Test is currently broken, as the task error is unexpectedly raised.
-        It is not clear if this is an issue with celery generally, or only if
-        when it's operating in synchronous/EAGER mode.
-        """
-        task1 = models.Errored.objects.create()
-        task2 = models.Finished.objects.create()
+        chain = task1.message() | task2.message()
+        chain.run()
 
-        chain = task1.task | task2.task
-        chain.apply_async()
+        self.broker.join(task1.task.queue_name)
+        self.broker.join(task2.task.queue_name)
+        self.worker.join()
 
         task1.refresh_from_db()
         task2.refresh_from_db()
 
-        self.assertEqual(task1.status, STATUS.errored)
-        self.assertEqual(task2.status, STATUS.aborted)
+        self.assertEqual(task1.status, STATUS.done)
+        self.assertEqual(task2.status, STATUS.failed)
 
-        mock_logger.log.assert_called_once()
+    @disable_logging('dramatiq.middleware.retries.Retries')
+    @disable_logging('dramatiq.worker.WorkerThread')
+    def test_error_revokes_remainder(self):
+        task1 = models.Fail.objects.create()
+        task2 = models.Finish.objects.create()
+
+        chain = task1.message() | task2.message()
+        chain.run()
+
+        self.broker.join(task1.task.queue_name)
+        self.broker.join(task2.task.queue_name)
+        self.worker.join()
+
+        task1.refresh_from_db()
+        task2.refresh_from_db()
+
+        self.assertEqual(task1.status, STATUS.failed)
+        self.assertEqual(task2.status, STATUS.not_queued)

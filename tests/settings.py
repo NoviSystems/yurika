@@ -1,5 +1,3 @@
-from redislite import Redis
-
 from project.common_settings import *  # flake8: noqa
 
 
@@ -8,12 +6,14 @@ INSTALLED_APPS += [
 ]
 
 
-# Create a Redis instance using redislite
-redis = Redis(path('db.redis'))
+# Store outgoing test emails in django.core.mail.outbox`.
+# https://docs.djangoproject.com/en/2.0/topics/testing/tools/#email-services
+EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-# Use redislite for the Celery broker
-CELERY_BROKER_URL = 'redis+socket://%s' % (redis.socket_file, )
+# Use stub broker in testing
+DRAMATIQ_BROKER['BROKER'] = 'dramatiq.brokers.stub.StubBroker'
+DRAMATIQ_BROKER['OPTIONS'] = {}
 
-# Suppress celery worker messages
-LOGGING['loggers'].setdefault('celery', {})
-LOGGING['loggers']['celery']['level'] = 'WARNING'
+
+# Disable most logging
+LOGGING['root']['level'] = 'WARNING'
