@@ -3,6 +3,7 @@ bricks/migrations
 mortar/migrations
 bundles/
 node_modules/
+.crawlers/
 .vagrant/
 *.sqlite3
 *.redis
