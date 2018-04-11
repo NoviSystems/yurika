@@ -5,7 +5,7 @@ from django.utils import timezone
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
-from mortar import documents, models
+from mortar import documents
 
 
 class WebCrawler(CrawlSpider):
@@ -24,8 +24,8 @@ class WebCrawler(CrawlSpider):
         'ROBOTSTXT_OBEY': True,
     }
 
-    def __init__(self, *args, task_id, **kwargs):
-        self.task = models.CrawlerTask.objects.get(pk=task_id)
+    def __init__(self, *args, task, **kwargs):
+        self.task = task
         self.index = self.task.crawler.index
 
         if 'start_urls' not in kwargs:
