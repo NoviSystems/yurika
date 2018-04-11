@@ -2,6 +2,8 @@ from importlib import import_module
 from traceback import format_exception
 
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_fsm import FSMField, transition
@@ -197,3 +199,9 @@ class CrawlerTask(Task):
     def revoke(self):
         self.revoked = True
         self.save(update_fields=['revoked'])
+
+
+@receiver(post_save, sender=Crawler)
+def crawler_task(sender, instance, created, **kwargs):
+    if created:
+        CrawlerTask.objects.create(crawler=instance)

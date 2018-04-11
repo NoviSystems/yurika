@@ -30,7 +30,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
 
         # create a crawler and it's management task
         crawler = models.Crawler.objects.create(urls=urljoin(base_url, 'a'))
-        task = models.CrawlerTask.objects.create(crawler=crawler)
+        task = crawler.task
 
         # send off the task
         task.send()
@@ -54,7 +54,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
 
         # create a crawler and it's management task
         crawler = models.Crawler.objects.create(urls=urljoin(base_url, 'a'))
-        task = models.CrawlerTask.objects.create(crawler=crawler)
+        task = crawler.task
 
         # send off the task ann immediately revoke task
         task.send()
