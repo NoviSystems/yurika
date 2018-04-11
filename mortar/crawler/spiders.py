@@ -43,7 +43,8 @@ class WebCrawler(CrawlSpider):
             url=response.url,
             referer=str(response.request.headers.get('Referer', None)),
             title=soup.title.string if soup.title else "",
-            content=soup.get_text(),
+            html=response.text,
+            text=soup.get_text(),
             timestamp=datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f"),
         )
 

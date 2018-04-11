@@ -7,7 +7,8 @@ class Document(DocType):
     url = field.Text()
     referer = field.Text()
     title = field.Text()
-    content = field.Text()
+    html = field.Text()
+    text = field.Text()
     timestamp = field.Date(default_timezone=settings.TIME_ZONE)
 
     @classmethod
