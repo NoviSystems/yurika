@@ -12,6 +12,7 @@ elasticsearch-dsl>=6
 redis
 scrapy
 shortuuid
+terminaltables
 
 # Optional Integrations
 raven

@@ -68,11 +68,11 @@ class Task(models.Model):
         ('not_queued', 'Not queued'),
         ('enqueued', 'Waiting'),
         ('running', 'Running'),
-        ('failed', 'Error Occurred'),
         ('done', 'Finished'),
+        ('failed', 'Failed'),
 
         # non-standard state
-        ('aborted', 'Aborted'),
+        ('aborted', 'Stopped'),
     )
 
     message_id = models.UUIDField(null=True, default=None, editable=False,

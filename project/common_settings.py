@@ -352,6 +352,9 @@ LOGGING = {
             # * Django enables this behavior by calling
             #   https://docs.python.org/3.5/library/logging.html#logging.captureWarnings
         },
+        "elasticsearch": {
+            "level": "WARNING",
+        },
         "scrapy": {
             "level": "INFO" if DEBUG else "WARNING",
         },
