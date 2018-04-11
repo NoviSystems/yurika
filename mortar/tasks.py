@@ -13,7 +13,13 @@ def crawl(task_id):
 
     proc = Process(target=crawler.crawl, args=(task, ))
     proc.start()
-    proc.join()
 
-    if task.revoked:
-        raise task.Abort
+    while proc.exitcode is None:
+        task.refresh_from_db()
+
+        if task.revoked:
+            proc.terminate()
+            proc.join()
+            raise task.Abort
+
+        proc.join(.5)
