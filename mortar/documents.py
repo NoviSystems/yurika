@@ -13,13 +13,13 @@ class Document(DocType):
     @classmethod
     def create_index(cls, sender, instance, created, **kwargs):
         if created:
-            idx = Index(instance.index)
+            idx = Index(instance.index_name)
             idx.doc_type = cls
             idx.create()
 
     @classmethod
     def delete_index(cls, sender, instance, **kwargs):
-        idx = Index(instance.index)
+        idx = Index(instance.index_name)
         try:
             idx.delete()
         except TransportError:

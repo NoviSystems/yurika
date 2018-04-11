@@ -29,7 +29,7 @@ class WebCrawler(CrawlSpider):
 
     def __init__(self, *args, task, **kwargs):
         self.task = task
-        self.index = self.task.crawler.index
+        self.index = self.task.crawler.index_name
 
         if 'start_urls' not in kwargs:
             kwargs['start_urls'] = self.task.crawler.urls.split('\n')

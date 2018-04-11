@@ -1,3 +1,4 @@
+import uuid
 from importlib import import_module
 from traceback import format_exception
 
@@ -7,17 +8,15 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_fsm import FSMField, transition
+from elasticsearch_dsl import Index
 from model_utils import Choices, managers
 from shortuuid import ShortUUID
 
 from mortar import documents
 
 
-def b36_uuid():
-    # Use a function so migrations don't recompute on ShortUUID.
-    # Elasticsearch-friendly identifiers (no uppercase characters)
-    b36 = ShortUUID(alphabet='0123456789abcdefghijklmnopqrstuvwxyz')
-    return b36.uuid()
+# Elasticsearch-friendly identifiers (no uppercase characters)
+b36_uuid = ShortUUID(alphabet='0123456789abcdefghijklmnopqrstuvwxyz')
 
 
 def import_path(path):
@@ -169,22 +168,27 @@ class TaskError(models.Model):
     traceback = models.TextField()
 
     def __str__(self):
-        if self.type:
-            return "Task Error {}: {}".format(self.type, self.message)
         return "Task Error: {}".format(self.message)
 
 
 class Crawler(models.Model):
-    index = models.CharField(max_length=25, unique=True, editable=False, default=b36_uuid,
-                             help_text="Elasticsearch index name for crawled documents.")
+    uuid = models.UUIDField(unique=True, editable=False, default=uuid.uuid4)
     urls = models.TextField(help_text="List of URLs to crawl (separated by newlines).")
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
 
     @property
+    def index_name(self):
+        return b36_uuid.encode(self.uuid)
+
+    @property
+    def index(self):
+        return Index(self.index_name)
+
+    @property
     def documents(self):
-        return documents.Document.search(index=self.index)
+        return documents.Document.search(index=self.index_name)
 
 
 class CrawlerTask(Task):

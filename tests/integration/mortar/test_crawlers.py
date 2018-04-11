@@ -3,7 +3,6 @@ from contextlib import contextmanager
 from urllib.parse import urljoin
 
 from django.test import LiveServerTestCase, override_settings
-from elasticsearch_dsl import Index
 from project.utils.test import DramatiqTestCase
 from mortar.models import Task
 
@@ -44,7 +43,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         self.assertEqual(task.status, STATUS.done)
 
         # ensure the index has been populated
-        Index(crawler.index).refresh()
+        crawler.index.refresh()
 
         # and there should be three crawled documents
         self.assertEqual(crawler.documents.count(), 3)
@@ -69,7 +68,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         self.assertEqual(task.status, STATUS.aborted)
 
         # ensure the index has been populated
-        Index(crawler.index).refresh()
+        crawler.index.refresh()
 
         # and there should be less than three crawled documents
         self.assertLess(crawler.documents.count(), 3)
