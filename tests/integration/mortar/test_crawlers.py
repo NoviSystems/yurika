@@ -55,7 +55,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         crawler = models.Crawler.objects.create(urls=urljoin(base_url, 'a'))
         task = crawler.task
 
-        # send off the task ann immediately revoke task
+        # send off the task and immediately revoke task
         task.send()
         task.revoke()
 
@@ -63,7 +63,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         self.broker.join(task.task.queue_name)
         self.worker.join()
 
-        # the task should be done
+        # the task should be aborted
         task.refresh_from_db()
         self.assertEqual(task.status, STATUS.aborted)
 
@@ -72,3 +72,29 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
 
         # and there should be less than three crawled documents
         self.assertLess(crawler.documents.count(), 3)
+
+    def test_restart(self):
+        # Start and revoke a crawler
+        self.test_revoke()
+
+        # then restart the crawler
+        crawler = models.Crawler.objects.get()
+        crawler.restart()
+        task = crawler.task
+
+        # send off the task
+        task.send()
+
+        # wait for the task to complete
+        self.broker.join(task.task.queue_name)
+        self.worker.join()
+
+        # the task should be done
+        task.refresh_from_db()
+        self.assertEqual(task.status, STATUS.done)
+
+        # ensure the index has been populated
+        crawler.index.refresh()
+
+        # and there should be three crawled documents
+        self.assertEqual(crawler.documents.count(), 3)

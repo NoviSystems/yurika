@@ -1,3 +1,4 @@
+import shutil
 import uuid
 from importlib import import_module
 from traceback import format_exception
@@ -178,6 +179,16 @@ class Crawler(models.Model):
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
+
+    def restart(self, clear=False):
+        """
+        Restart the crawler. Note that the task needs to be re-queued.
+        """
+        if clear:
+            shutil.rmtree(self.state_dir)
+
+        self.task.delete()
+        self.task = CrawlerTask.objects.create(crawler=self)
 
     @property
     def state_dir(self):
