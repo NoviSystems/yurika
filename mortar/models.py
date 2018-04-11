@@ -13,6 +13,7 @@ from model_utils import Choices, managers
 from shortuuid import ShortUUID
 
 from mortar import documents
+from project import utils
 
 
 # Elasticsearch-friendly identifiers (no uppercase characters)
@@ -177,6 +178,13 @@ class Crawler(models.Model):
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
+
+    @property
+    def state_dir(self):
+        """
+        Directory where crawler state/persistence data is stored.
+        """
+        return utils.path(f'.crawlers/{self.uuid}')
 
     @property
     def index_name(self):
