@@ -21,6 +21,9 @@ class WebCrawler(CrawlSpider):
 
     custom_settings = {
         'USER_AGENT': '',
+        'EXTENSIONS': {
+            'mortar.crawler.extensions.TaskRevoked': 0,
+        },
         'ROBOTSTXT_OBEY': True,
     }
 

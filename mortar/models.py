@@ -118,7 +118,7 @@ class Task(models.Model):
             **options
         )
 
-    def abort(self):
+    def revoke(self):
         """
         Signal a task to self-abort. This feature is not provided by default,
         and it is necessary to implement a method by which the the Task subclass
@@ -187,7 +187,13 @@ class Crawler(models.Model):
 
 class CrawlerTask(Task):
     crawler = models.OneToOneField(Crawler, on_delete=models.CASCADE, related_name='task')
+    revoked = models.BooleanField(default=False, editable=False,
+                                  help_text="Task has been marked for revocation.")
 
     @property
     def task_path(self):
         return 'mortar.tasks.crawl'
+
+    def revoke(self):
+        self.revoked = True
+        self.save(update_fields=['revoked'])

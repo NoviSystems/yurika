@@ -12,3 +12,6 @@ def crawl(task_id):
     proc = Process(target=crawler.crawl, args=(task, ))
     proc.start()
     proc.join()
+
+    if task.revoked:
+        raise task.Abort
