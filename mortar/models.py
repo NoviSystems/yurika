@@ -1,3 +1,4 @@
+import os
 import shutil
 import uuid
 from importlib import import_module
@@ -180,11 +181,24 @@ class Crawler(models.Model):
     def __str__(self):
         return 'Crawler: %s' % self.pk
 
-    def restart(self, clear=False):
+    def resume(self):
         """
-        Restart the crawler. Note that the task needs to be re-queued.
+        Resume the crawler from where it left off. It is assumed the
+        state directory was not cleared by the user.
+
+        Note: the crawler task still needs to be re-queued.
         """
-        if clear:
+        self.task.delete()
+        self.task = CrawlerTask.objects.create(crawler=self)
+
+    def restart(self):
+        """
+        Restart the crawler by clearing its existing state. The index is not
+        cleared, and will contain updated, duplicate responses.
+
+        Note: the crawler task still needs to be re-queued.
+        """
+        if os.path.exists(self.state_dir):
             shutil.rmtree(self.state_dir)
 
         self.task.delete()
