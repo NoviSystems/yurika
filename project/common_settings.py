@@ -200,7 +200,7 @@ DRAMATIQ_BROKER = {
     },
     'MIDDLEWARE': [
         'dramatiq.middleware.AgeLimit',
-        'dramatiq.middleware.TimeLimit',
+        # 'dramatiq.middleware.TimeLimit',
         'dramatiq.middleware.Callbacks',
         'dramatiq.middleware.Pipelines',
         'dramatiq.middleware.Retries',
