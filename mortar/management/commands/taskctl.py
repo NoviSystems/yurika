@@ -1,3 +1,4 @@
+import time
 import uuid
 from argparse import ArgumentTypeError
 
@@ -21,6 +22,10 @@ updated, duplicate documents.
 
 RESUME_HELP = """
 Resume a crawler from where it left off.
+"""
+
+BOUNCE_HELP = """
+Safely stop a crawler then resume from where it left off.
 """
 
 
@@ -103,6 +108,14 @@ class Command(BaseCommand):
 
         parser = subparsers.add_parser('resume', cmd=self, help=RESUME_HELP)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
+        parser.add_argument('--time-limit', dest='time_limit', type=int,
+                            help="Time limit (in seconds) for how long the "
+                                 "crawler should run before it is terminated.")
+
+        parser = subparsers.add_parser('bounce', cmd=self, help=BOUNCE_HELP)
+        parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
+        parser.add_argument('--wait', dest='wait', type=int, default=0,
+                            help="How many seconds to wait before resuming the task.")
         parser.add_argument('--time-limit', dest='time_limit', type=int,
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
@@ -223,3 +236,16 @@ class Command(BaseCommand):
         crawler = models.Crawler.objects.get(uuid=id)
         crawler.resume()
         crawler.task.send(**message_opts)
+
+    def bounce(self, id, wait, **options):
+        self.stop(id, **options)
+
+        crawler = models.Crawler.objects.get(uuid=id)
+        while crawler.task.status == crawler.task.STATUS.running:
+            crawler.task.refresh_from_db()
+            time.sleep(.1)
+
+        # wait to resume (defaults to 0 seconds)
+        time.sleep(wait)
+
+        self.resume(id, **options)
