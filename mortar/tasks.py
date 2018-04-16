@@ -5,7 +5,7 @@ import dramatiq
 from mortar import crawler, models
 
 
-@dramatiq.actor(max_retries=0)
+@dramatiq.actor(max_retries=0, time_limit=float('inf'))
 def crawl(task_id):
     # NOTE: wrapping the crawler in a task enables pipelining,
     #       otherwise this would be unnecessary indirection.
