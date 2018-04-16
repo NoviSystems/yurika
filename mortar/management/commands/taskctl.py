@@ -82,36 +82,50 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         subparsers = parser.add_subparsers(dest='command')
 
+        # #################################################################### #
+        # #### INFO ########################################################## #
         parser = subparsers.add_parser('info', cmd=self)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.", nargs='?')
 
+        # #################################################################### #
+        # #### CREATE ######################################################## #
         parser = subparsers.add_parser('create', cmd=self)
         parser.add_argument('-c', '--crawl', dest='crawl', type=urls_file, required=True,
                             help="File path of URLs to crawl, delimited by newlines.")
         parser.add_argument('-b', '--block', dest='block', type=urls_file,
                             help="File path of URLs to block, delimited by newlines.")
 
+        # #################################################################### #
+        # #### START ######################################################### #
         parser = subparsers.add_parser('start', cmd=self)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
         parser.add_argument('--time-limit', dest='time_limit', type=int,
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
 
+        # #################################################################### #
+        # #### STOP ########################################################## #
         parser = subparsers.add_parser('stop', cmd=self)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
 
+        # #################################################################### #
+        # #### RESTART ####################################################### #
         parser = subparsers.add_parser('restart', cmd=self, help=RESTART_HELP)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
         parser.add_argument('--time-limit', dest='time_limit', type=int,
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
 
+        # #################################################################### #
+        # #### RESUME ######################################################## #
         parser = subparsers.add_parser('resume', cmd=self, help=RESUME_HELP)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
         parser.add_argument('--time-limit', dest='time_limit', type=int,
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
 
+        # #################################################################### #
+        # #### BOUNCE ######################################################## #
         parser = subparsers.add_parser('bounce', cmd=self, help=BOUNCE_HELP)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
         parser.add_argument('--wait', dest='wait', type=int, default=0,
@@ -120,6 +134,8 @@ class Command(BaseCommand):
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
 
+        # #################################################################### #
+        # #### STATS ######################################################### #
         parser = subparsers.add_parser('stats', cmd=self)
 
     def handle(self, command, **options):
