@@ -1,6 +1,7 @@
 from multiprocessing import Process
 
 import dramatiq
+from dramatiq.middleware import TimeLimitExceeded
 
 from mortar import crawler, models
 
@@ -14,12 +15,19 @@ def crawl(task_id):
     proc = Process(target=crawler.crawl, args=(task, ))
     proc.start()
 
-    while proc.exitcode is None:
-        task.refresh_from_db()
+    try:
+        while proc.exitcode is None:
+            task.refresh_from_db()
 
-        if task.revoked:
-            proc.terminate()
-            proc.join()
-            raise task.Abort
+            if task.revoked:
+                proc.terminate()
+                proc.join()
+                raise task.Abort
 
-        proc.join(.5)
+            proc.join(.5)
+
+    except TimeLimitExceeded:
+        proc.terminate()
+        proc.join()
+
+        raise

@@ -88,15 +88,24 @@ class Command(BaseCommand):
 
         parser = subparsers.add_parser('start', cmd=self)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
+        parser.add_argument('--time-limit', dest='time_limit', type=int,
+                            help="Time limit (in seconds) for how long the "
+                                 "crawler should run before it is terminated.")
 
         parser = subparsers.add_parser('stop', cmd=self)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
 
         parser = subparsers.add_parser('restart', cmd=self, help=RESTART_HELP)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
+        parser.add_argument('--time-limit', dest='time_limit', type=int,
+                            help="Time limit (in seconds) for how long the "
+                                 "crawler should run before it is terminated.")
 
         parser = subparsers.add_parser('resume', cmd=self, help=RESUME_HELP)
         parser.add_argument('id', type=uuid.UUID, help="Crawler UUID.")
+        parser.add_argument('--time-limit', dest='time_limit', type=int,
+                            help="Time limit (in seconds) for how long the "
+                                 "crawler should run before it is terminated.")
 
         parser = subparsers.add_parser('stats', cmd=self)
 
@@ -177,8 +186,13 @@ class Command(BaseCommand):
     def start(self, id, **options):
         self.stdout.write('Starting ...')
 
+        message_opts = {}
+        if options.get('time_limit') is not None:
+            # convert to milliseconds
+            message_opts['time_limit'] = options['time_limit'] * 1000
+
         crawler = models.Crawler.objects.get(uuid=id)
-        crawler.task.send()
+        crawler.task.send(**message_opts)
 
     def stop(self, id, **options):
         self.stdout.write('Stopping ...')
@@ -189,13 +203,23 @@ class Command(BaseCommand):
     def restart(self, id, **options):
         self.stdout.write('Restarting ...')
 
+        message_opts = {}
+        if options.get('time_limit') is not None:
+            # convert to milliseconds
+            message_opts['time_limit'] = options['time_limit'] * 1000
+
         crawler = models.Crawler.objects.get(uuid=id)
         crawler.restart()
-        crawler.task.send()
+        crawler.task.send(**message_opts)
 
     def resume(self, id, **options):
         self.stdout.write('Resuming ...')
 
+        message_opts = {}
+        if options.get('time_limit') is not None:
+            # convert to milliseconds
+            message_opts['time_limit'] = options['time_limit'] * 1000
+
         crawler = models.Crawler.objects.get(uuid=id)
         crawler.resume()
-        crawler.task.send()
+        crawler.task.send(**message_opts)
