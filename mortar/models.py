@@ -112,6 +112,9 @@ class Task(models.Model):
         """
         Create a message for composition in a pipeline or group.
         """
+        if self.message_id:
+            raise RuntimeError('Task already queued.')
+
         # pipe_ignore arg prevents results from being passed along the pipeline.
         # tasks must be self contained and return no result.
         options['pipe_ignore'] = True
@@ -124,6 +127,9 @@ class Task(models.Model):
         """
         Send a message to the broker for processing.
         """
+        if self.message_id:
+            raise RuntimeError('Task already queued.')
+
         return self.task.send_with_options(
             kwargs={'task_id': self.pk},
             **options
