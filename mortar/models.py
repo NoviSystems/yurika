@@ -194,28 +194,46 @@ class Crawler(models.Model):
     def __str__(self):
         return 'Crawler: %s' % self.pk
 
-    def resume(self):
-        """
-        Resume the crawler from where it left off. It is assumed the
-        state directory was not cleared by the user.
+    def start(self, **options):
+        if self.task.status != self.task.STATUS.not_queued:
+            raise RuntimeError('Crawler has already been started.')
 
-        Note: the crawler task still needs to be re-queued.
-        """
-        self.task.delete()
-        self.task = CrawlerTask.objects.create(crawler=self)
+        self.task.send(**options)
 
-    def restart(self):
+    def stop(self):
+        if self.task.status != self.task.STATUS.running:
+            raise RuntimeError('Crawler is not currently running.')
+        self.task.revoke()
+
+    def restart(self, **options):
         """
         Restart the crawler by clearing its existing state. The index is not
         cleared, and will contain updated, duplicate responses.
-
-        Note: the crawler task still needs to be re-queued.
         """
+        if self.task.status == self.task.STATUS.running:
+            raise RuntimeError('Crawler is already running.')
+
         if os.path.exists(self.state_dir):
             shutil.rmtree(self.state_dir)
 
         self.task.delete()
         self.task = CrawlerTask.objects.create(crawler=self)
+        self.task.send(**options)
+
+    def resume(self, **options):
+        """
+        Resume the crawler from where it left off. It is assumed the
+        state directory was not cleared by the user.
+        """
+        if self.task.status == self.task.STATUS.running:
+            raise RuntimeError('Crawler is already running.')
+
+        if not self.resumable:
+            raise RuntimeError('Crawler is not resumable (missing metadata).')
+
+        self.task.delete()
+        self.task = CrawlerTask.objects.create(crawler=self)
+        self.task.send(**options)
 
     @property
     def resumable(self):

@@ -3,7 +3,7 @@ import uuid
 from argparse import ArgumentTypeError
 
 import elasticsearch
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.utils.formats import localize
@@ -157,7 +157,10 @@ class Command(BaseCommand):
     def handle(self, command, **options):
         handler = getattr(self, command)
 
-        return handler(**options)
+        try:
+            return handler(**options)
+        except RuntimeError as exc:
+            raise CommandError(str(exc)) from exc
 
     def style_status(self, status, text):
         STATUS = models.CrawlerTask.STATUS
@@ -255,25 +258,19 @@ class Command(BaseCommand):
 
     def start(self, crawler, **options):
         self.stdout.write('Starting ...')
-
-        crawler.task.send(**self.task_options(options))
+        crawler.start(**self.task_options(options))
 
     def stop(self, crawler, **options):
         self.stdout.write('Stopping ...')
-
-        crawler.task.revoke()
+        crawler.stop()
 
     def restart(self, crawler, **options):
         self.stdout.write('Restarting ...')
-
-        crawler.restart()
-        crawler.task.send(**self.task_options(options))
+        crawler.restart(**self.task_options(options))
 
     def resume(self, crawler, **options):
         self.stdout.write('Resuming ...')
-
-        crawler.resume()
-        crawler.task.send(**self.task_options(options))
+        crawler.resume(**self.task_options(options))
 
     def bounce(self, crawler, wait, **options):
         self.stop(crawler, **options)
