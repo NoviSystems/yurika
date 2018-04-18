@@ -174,11 +174,25 @@ class Command(BaseCommand):
         except elasticsearch.TransportError:
             return 'err!'
 
+    def header(self):
+        return [
+            'ID',
+            'Elasticsearch index',
+            'Status',
+            'Resumable',
+            'docs',
+            'errs',
+            'Crawler started',
+            'Crawler stopped',
+            'Runtime',
+        ]
+
     def row(self, crawler):
         return [
             crawler.pk,
             colorize(crawler.index_name, fg='cyan'),
             self.style_status(crawler.task.status, crawler.task.get_status_display()),
+            'Yes' if crawler.resumable else 'No',
             self.document_count(crawler),
             crawler.task.errors.count(),
             localize(crawler.task.started_at) or '-',
@@ -192,19 +206,15 @@ class Command(BaseCommand):
 
         crawlers = models.Crawler.objects.all()
 
-        HEADER = ['ID', 'Elasticsearch index', 'Status', 'docs', 'errs', 'Crawler started', 'Crawler stopped', 'Runtime']
         data = [self.row(crawler) for crawler in crawlers]
-        data.insert(0, HEADER)
+        data.insert(0, self.header())
 
         table = SingleTable(data, title='Crawlers: ' + str(crawlers.count()))
         table.justify_columns[0] = 'right'
         self.stdout.write(table.table)
 
     def instance_info(self, crawler, **options):
-        instance = SingleTable([
-            ['ID', 'Elasticsearch index', 'Status', 'docs', 'errs', 'Crawler started', 'Crawler stopped', 'Runtime'],
-            self.row(crawler)
-        ])
+        instance = SingleTable([self.header(), self.row(crawler)])
         instance.justify_columns[0] = 'right'
 
         crawl = SingleTable([[u] for u in crawler.urls.split('\n')], title=' Crawl URLs ')

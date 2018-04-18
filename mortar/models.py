@@ -218,6 +218,10 @@ class Crawler(models.Model):
         self.task = CrawlerTask.objects.create(crawler=self)
 
     @property
+    def resumable(self):
+        return os.path.exists(self.state_dir)
+
+    @property
     def state_dir(self):
         """
         Directory where crawler state/persistence data is stored.
