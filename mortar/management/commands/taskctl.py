@@ -200,6 +200,14 @@ class Command(BaseCommand):
             utils.humanize_timedelta(crawler.task.runtime) or '-',
         ]
 
+    def task_options(self, options):
+        task_options = {}
+        if options.get('time_limit') is not None:
+            # convert to milliseconds
+            task_options['time_limit'] = options['time_limit'] * 1000
+
+        return task_options
+
     def info(self, crawler=None, **options):
         if crawler is not None:
             return self.instance_info(crawler, **options)
@@ -248,12 +256,7 @@ class Command(BaseCommand):
     def start(self, crawler, **options):
         self.stdout.write('Starting ...')
 
-        message_opts = {}
-        if options.get('time_limit') is not None:
-            # convert to milliseconds
-            message_opts['time_limit'] = options['time_limit'] * 1000
-
-        crawler.task.send(**message_opts)
+        crawler.task.send(**self.task_options(options))
 
     def stop(self, crawler, **options):
         self.stdout.write('Stopping ...')
@@ -263,24 +266,14 @@ class Command(BaseCommand):
     def restart(self, crawler, **options):
         self.stdout.write('Restarting ...')
 
-        message_opts = {}
-        if options.get('time_limit') is not None:
-            # convert to milliseconds
-            message_opts['time_limit'] = options['time_limit'] * 1000
-
         crawler.restart()
-        crawler.task.send(**message_opts)
+        crawler.task.send(**self.task_options(options))
 
     def resume(self, crawler, **options):
         self.stdout.write('Resuming ...')
 
-        message_opts = {}
-        if options.get('time_limit') is not None:
-            # convert to milliseconds
-            message_opts['time_limit'] = options['time_limit'] * 1000
-
         crawler.resume()
-        crawler.task.send(**message_opts)
+        crawler.task.send(**self.task_options(options))
 
     def bounce(self, crawler, wait, **options):
         self.stop(crawler, **options)
