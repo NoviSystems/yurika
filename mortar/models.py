@@ -91,6 +91,13 @@ class Task(models.Model):
         pass
 
     @property
+    def runtime(self):
+        try:
+            return self.finished_at - self.started_at
+        except TypeError:
+            return None
+
+    @property
     def task_path(self):
         """
         The module path of the task function. This property must be implemented.

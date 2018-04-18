@@ -13,6 +13,7 @@ from django.utils.termcolors import colorize
 from terminaltables.other_tables import WindowsTable as SingleTable
 
 from mortar import models
+from project import utils
 
 RESTART_HELP = """
 Clear a crawler's persistent state and restart it.
@@ -161,6 +162,7 @@ class Command(BaseCommand):
             crawler.task.errors.count(),
             localize(crawler.task.started_at) or '-',
             localize(crawler.task.finished_at) or '-',
+            utils.humanize_timedelta(crawler.task.runtime) or '-',
         ]
 
     def info(self, id=None, **options):
@@ -169,7 +171,7 @@ class Command(BaseCommand):
 
         crawlers = models.Crawler.objects.all()
 
-        HEADER = ['', 'ID', 'Status', 'docs', 'errs', 'Crawler started', 'Crawler stopped']
+        HEADER = ['', 'ID', 'Status', 'docs', 'errs', 'Crawler started', 'Crawler stopped', 'Runtime']
         data = [self.row(i, c) for i, c in enumerate(crawlers, 1)]
         data.insert(0, HEADER)
 
@@ -180,7 +182,7 @@ class Command(BaseCommand):
         crawler = models.Crawler.objects.get(uuid=id)
 
         instance = SingleTable([
-            ['ID', 'Status', 'docs', 'errs', 'Crawler started', 'Crawler stopped'],
+            ['ID', 'Status', 'docs', 'errs', 'Crawler started', 'Crawler stopped', 'Runtime'],
             self.row(0, crawler)[1:]
         ])
 

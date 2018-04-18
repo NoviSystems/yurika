@@ -1,3 +1,3 @@
-from .utils import path
+from .utils import path, humanize_timedelta
 
-__all__ = ['path']
+__all__ = ['path', 'humanize_timedelta']
