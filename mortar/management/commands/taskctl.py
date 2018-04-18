@@ -2,6 +2,7 @@ import time
 import uuid
 from argparse import ArgumentTypeError
 
+import elasticsearch
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -167,12 +168,18 @@ class Command(BaseCommand):
 
         return style_func(text)
 
+    def document_count(self, crawler):
+        try:
+            return crawler.documents.count()
+        except elasticsearch.TransportError:
+            return 'err!'
+
     def row(self, crawler):
         return [
             crawler.pk,
             colorize(crawler.index_name, fg='cyan'),
             self.style_status(crawler.task.status, crawler.task.get_status_display()),
-            crawler.documents.count(),
+            self.document_count(crawler),
             crawler.task.errors.count(),
             localize(crawler.task.started_at) or '-',
             localize(crawler.task.finished_at) or '-',
