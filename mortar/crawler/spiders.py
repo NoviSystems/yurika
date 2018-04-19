@@ -22,6 +22,9 @@ class WebCrawler(CrawlSpider):
     custom_settings = {
         'USER_AGENT': '',
         'ROBOTSTXT_OBEY': True,
+        'SPIDER_MIDDLEWARES': {
+            'mortar.crawler.middleware.ExceptionLoggingMiddleware': 1000,
+        },
     }
 
     def __init__(self, *args, task, **kwargs):
