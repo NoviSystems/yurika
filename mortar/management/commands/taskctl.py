@@ -96,7 +96,9 @@ class Command(BaseCommand):
     help = "Crawler task management"
 
     def add_arguments(self, parser):
+        # https://github.com/python/cpython/pull/3027
         subparsers = parser.add_subparsers(dest='command')
+        subparsers.required = True
 
         # #################################################################### #
         # #### INFO ########################################################## #
