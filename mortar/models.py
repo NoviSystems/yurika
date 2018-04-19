@@ -1,5 +1,6 @@
 import os
 import shutil
+import re
 import uuid
 from importlib import import_module
 from traceback import format_exception
@@ -169,7 +170,7 @@ class Task(models.Model):
         return self.errors.create(message=error)
 
     def log_exception(self, exc):
-        # Note: first argument is ignore since python 3.5
+        # Note: first argument is ignored since python 3.5
         traceback = ''.join(format_exception(None, exc, exc.__traceback__))
         return self.errors.create(message=str(exc), traceback=traceback)
 
@@ -193,9 +194,20 @@ class TaskError(models.Model):
 class Crawler(models.Model):
     uuid = models.UUIDField(unique=True, editable=False, default=uuid.uuid4)
     urls = models.TextField(help_text="List of URLs to crawl (separated by newlines).")
+    block = models.TextField(blank=True,
+                             help_text="List of domains to block (separated by newlines.")
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
+
+    @cached_property
+    def block_re(self):
+        if not self.block:
+            return None
+
+        block = self.block.splitlines()
+        block = '|'.join(re.escape(domain) for domain in block)
+        return re.compile(rf'^({block})')
 
     def start(self, **options):
         if self.task.status != self.task.STATUS.not_queued:

@@ -57,12 +57,16 @@ def nth_error(value):
     raise ArgumentTypeError(f"errors are 1-indexed")
 
 
-def urls_file(filename):
+def file_contents(filename):
     try:
         with open(filename, 'r') as file:
-            contents = file.read()
+            return file.read()
     except OSError:
         raise ArgumentTypeError(f"can't open '{filename}'")
+
+
+def urls(filename):
+    contents = file_contents(filename)
 
     urls = []
     try:
@@ -75,6 +79,26 @@ def urls_file(filename):
         raise ArgumentTypeError(f"invalid URL '{url}' in '{filename}'")
 
     return urls
+
+
+def domains(filename):
+    contents = file_contents(filename)
+
+    domains = []
+    for domain in contents.strip().split('\n'):
+        domain = domain.strip()
+        domains.append(domain)
+
+        pre = f"invalid domain '{domain}' in '{filename} "
+
+        # validate domain
+        if '//' in domain:
+            raise ArgumentTypeError(f"{pre} - domain must not contain a scheme")
+
+        if '/' in domain:
+            raise ArgumentTypeError(f"{pre} - domain must not contain a path")
+
+    return domains
 
 
 def side_by_side(left, right, spacer=8):
@@ -133,10 +157,10 @@ class Command(BaseCommand):
         # #################################################################### #
         # #### CREATE ######################################################## #
         parser = subparsers.add_parser('create', cmd=self)
-        parser.add_argument('-c', '--crawl', dest='crawl', type=urls_file, required=True,
+        parser.add_argument('-c', '--crawl', dest='crawl', type=urls, required=True,
                             help="File path of URLs to crawl, delimited by newlines.")
-        parser.add_argument('-b', '--block', dest='block', type=urls_file,
-                            help="File path of URLs to block, delimited by newlines.")
+        parser.add_argument('-b', '--block', dest='block', type=domains,
+                            help="File path of domains to block, delimited by newlines.")
 
         # #################################################################### #
         # #### DELETE ######################################################## #
@@ -267,8 +291,7 @@ class Command(BaseCommand):
         instance.justify_columns[0] = 'right'
 
         crawl = SingleTable([[u] for u in crawler.urls.split('\n')], title=' Crawl URLs ')
-        block = SingleTable([[' ' * 20]], title=' Block URLs ')
-        # block = SingleTable(crawler.block.split('\n'), title=' Block URLs ')
+        block = SingleTable([[d] for d in crawler.block.split('\n')], title=' Block URLs ')
         crawl.inner_heading_row_border = False
         block.inner_heading_row_border = False
 
@@ -288,10 +311,13 @@ class Command(BaseCommand):
 
         self.stdout.write(SingleTable(data, title='Crawlers').table)
 
-    def create(self, crawl, **options):
+    def create(self, crawl, block, **options):
         self.stdout.write('Creating ...')
 
-        c = models.Crawler.objects.create(urls='\n'.join(crawl))
+        crawl = '\n'.join(crawl)
+        block = '\n'.join(block) if block is not None else ''
+
+        c = models.Crawler.objects.create(urls=crawl, block=block)
         self.stdout.write(self.style.SUCCESS(f'ID: {c.uuid}'))
 
     def delete(self, crawler, **options):

@@ -23,7 +23,8 @@ class WebCrawler(CrawlSpider):
         'USER_AGENT': '',
         'ROBOTSTXT_OBEY': True,
         'SPIDER_MIDDLEWARES': {
-            'mortar.crawler.middleware.ExceptionLoggingMiddleware': 1000,
+            'mortar.crawler.middleware.LogExceptionMiddleware': 1000,
+            'mortar.crawler.middleware.BlockDomainMiddleware': 900,
         },
     }
 
