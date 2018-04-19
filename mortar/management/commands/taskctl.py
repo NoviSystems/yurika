@@ -48,6 +48,15 @@ def crawler(value):
     raise ArgumentTypeError(f"invalid ID or UUID '{value}'")
 
 
+def nth_error(value):
+    value = int(value)
+
+    if value > 0:
+        return value - 1
+
+    raise ArgumentTypeError(f"errors are 1-indexed")
+
+
 def urls_file(filename):
     try:
         with open(filename, 'r') as file:
@@ -92,6 +101,22 @@ def side_by_side(left, right, spacer=8):
     return '\n'.join([''.join(parts) for parts in zip(left, spacers, right)])
 
 
+def style_by_line(text, style_func):
+    return '\n'.join([style_func(line) for line in text.splitlines()])
+
+
+def truncate_message(message, max_width):
+    # truncate extra lines to single line + ellipsis
+    lines = message.splitlines()
+    message = lines[0] + '...' if len(lines) > 1 else lines[0]
+
+    # truncate to width + ellipsis
+    if len(message) > max_width:
+        message = message[:max_width - 3] + '...'
+
+    return message
+
+
 class Command(BaseCommand):
     help = "Crawler task management"
 
@@ -112,6 +137,11 @@ class Command(BaseCommand):
                             help="File path of URLs to crawl, delimited by newlines.")
         parser.add_argument('-b', '--block', dest='block', type=urls_file,
                             help="File path of URLs to block, delimited by newlines.")
+
+        # #################################################################### #
+        # #### DELETE ######################################################## #
+        parser = subparsers.add_parser('delete', cmd=self)
+        parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
 
         # #################################################################### #
         # #### START ######################################################### #
@@ -151,6 +181,12 @@ class Command(BaseCommand):
         parser.add_argument('--time-limit', dest='time_limit', type=int,
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
+
+        # #################################################################### #
+        # #### ERRORS ######################################################## #
+        parser = subparsers.add_parser('errors', cmd=self)
+        parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
+        parser.add_argument('error', type=nth_error, help="Nth error.", nargs='?')
 
         # #################################################################### #
         # #### STATS ######################################################### #
@@ -258,6 +294,10 @@ class Command(BaseCommand):
         c = models.Crawler.objects.create(urls='\n'.join(crawl))
         self.stdout.write(self.style.SUCCESS(f'ID: {c.uuid}'))
 
+    def delete(self, crawler, **options):
+        self.stdout.write('Deleting ...')
+        crawler.delete()
+
     def start(self, crawler, **options):
         self.stdout.write('Starting ...')
         crawler.start(**self.task_options(options))
@@ -285,3 +325,51 @@ class Command(BaseCommand):
         time.sleep(wait)
 
         self.resume(crawler, **options)
+
+    def errors(self, crawler, error=None, **options):
+        errors = crawler.task.errors.all()
+
+        # error detail
+        if error is not None:
+            return self.instance_error(errors[error])
+
+        if not errors.exists():
+            self.stdout.write('No errors.')
+
+        # error list
+        tz = errors[0].timestamp.strftime('%Z')
+        HEADER = ['n', f'Timestamp ({tz})', 'Message']
+        data = [
+            [i, error.timestamp.strftime('%Y-%m-%d %H:%M:%S'), '']
+            for i, error in enumerate(errors, start=1)
+        ]
+        data.insert(0, HEADER)
+
+        table = SingleTable(data, title='Errors: ' + str(errors.count()))
+        table.justify_columns[0] = 'right'
+
+        # truncate error messages to max column width.
+        max_width = table.column_max_width(2)
+
+        # first row contains headers
+        for row, error in zip(table.table_data[1:], errors):
+            row[2] = truncate_message(error.message, max_width)
+
+        self.stdout.write(table.table)
+
+    def instance_error(self, error):
+        data = [
+            ['Timestamp', error.timestamp.strftime('%Y-%m-%d %H:%M:%S %Z')],
+            ['Message', style_by_line(error.message, self.style.NOTICE)],
+        ]
+
+        if error.traceback:
+            data.append(
+                ['Traceback', style_by_line(error.traceback, self.style.NOTICE)]
+            )
+
+        table = SingleTable(data)
+        table.inner_row_border = True
+        table.justify_columns[0] = 'right'
+
+        self.stdout.write(table.table)

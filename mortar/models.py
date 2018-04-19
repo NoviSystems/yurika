@@ -183,6 +183,9 @@ class TaskError(models.Model):
     message = models.TextField()
     traceback = models.TextField()
 
+    class Meta:
+        ordering = ('-timestamp', )
+
     def __str__(self):
         return "Task Error: {}".format(self.message)
 
