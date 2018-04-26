@@ -6,7 +6,13 @@ from dramatiq.middleware import TimeLimitExceeded
 from mortar import crawler, models
 
 
-@dramatiq.actor(max_retries=0, time_limit=float('inf'))
+DAY = 86_400_000
+
+
+# We can't actually use an infinite time limit, as the redis broker will assume
+# the lack of a (n)ack is due to a network error. Instead, cap at 7 days, which
+# is shy of the 7.5 day requeue period.
+@dramatiq.actor(max_retries=0, time_limit=(7 * DAY))
 def crawl(task_id):
     # NOTE: wrapping the crawler in a task enables pipelining,
     #       otherwise this would be unnecessary indirection.
