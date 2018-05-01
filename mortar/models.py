@@ -6,11 +6,12 @@ from importlib import import_module
 from traceback import format_exception
 
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.functional import cached_property
 from django_fsm import FSMField, transition
+from elasticsearch import TransportError
 from elasticsearch_dsl import Index
 from model_utils import Choices, managers
 from shortuuid import ShortUUID
@@ -265,13 +266,29 @@ class Crawler(models.Model):
     def index_name(self):
         return b36_uuid.encode(self.uuid)
 
-    @property
+    @cached_property
     def index(self):
         return Index(self.index_name)
 
     @property
     def documents(self):
         return documents.Document.search(index=self.index_name)
+
+    @staticmethod
+    def _create_index(sender, instance, created, **kwargs):
+        if created:
+            documents.Document.init(instance.index_name)
+
+    @staticmethod
+    def _delete_index(sender, instance, **kwargs):
+        try:
+            instance.index.delete()
+        except TransportError:
+            pass
+
+
+post_save.connect(Crawler._create_index, sender=Crawler)
+post_delete.connect(Crawler._delete_index, sender=Crawler)
 
 
 class CrawlerTask(Task):
