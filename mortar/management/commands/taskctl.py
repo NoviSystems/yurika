@@ -235,7 +235,7 @@ class Command(BaseCommand):
 
     def document_count(self, crawler):
         try:
-            return crawler.documents.count()
+            return crawler.documents.search().count()
         except elasticsearch.TransportError:
             return 'err!'
 

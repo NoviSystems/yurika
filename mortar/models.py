@@ -272,7 +272,7 @@ class Crawler(models.Model):
 
     @property
     def documents(self):
-        return documents.Document.search(index=self.index_name)
+        return documents.Document.context(index=self.index_name)
 
     @staticmethod
     def _create_index(sender, instance, created, **kwargs):
