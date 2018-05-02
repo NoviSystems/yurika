@@ -71,8 +71,9 @@ class Command(BaseCommand):
 
     def info(self, dictionary=None, **options):
         dictionaries = documents.Dictionary.search()
+        instances = [d for d in dictionaries.scan()]
 
-        data = [[colorize(d.meta.id, fg='cyan'), d.name, ''] for d in dictionaries]
+        data = [[colorize(d.meta.id, fg='cyan'), d.name, ''] for d in instances]
         data.insert(0, ['Elasticsearch ID', 'Name', 'Terms'])
 
         table = SingleTable(data, title='Dictionaries: ' + str(dictionaries.count()))
@@ -80,7 +81,7 @@ class Command(BaseCommand):
         max_width = table.column_max_width(2)
 
         # first row contains headers
-        for row, dictionary in zip(table.table_data[1:], dictionaries):
+        for row, dictionary in zip(table.table_data[1:], instances):
             row[2] = truncate_message(', '.join(dictionary.terms), max_width)
 
         self.stdout.write(table.table)
