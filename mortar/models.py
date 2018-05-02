@@ -210,6 +210,11 @@ class Crawler(models.Model):
         block = '|'.join(re.escape(domain) for domain in block)
         return re.compile(rf'^({block})')
 
+    def should_block(self, url):
+        if self.block_re is not None:
+            return bool(self.block_re.match(url))
+        return False
+
     def start(self, **options):
         if self.task.status != self.task.STATUS.not_queued:
             raise RuntimeError('Crawler has already been started.')

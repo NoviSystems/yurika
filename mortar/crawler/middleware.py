@@ -26,11 +26,9 @@ class BlockDomainMiddleware(object):
 
     def should_follow(self, request, spider):
         escaped_url = safe_url_string(request.url, request.encoding)
-        block_re = spider.task.crawler.block_re
+        block = spider.task.crawler.should_block
 
-        if block_re is not None:
-            return bool(block_re.match(escaped_url))
-        return True
+        return not block(escaped_url)
 
     def process_start_requests(self, start_requests, spider):
         return self.filter_results(start_requests, spider)
