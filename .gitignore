@@ -1,6 +1,4 @@
 # Application
-bricks/migrations
-mortar/migrations
 bundles/
 node_modules/
 .crawlers/
