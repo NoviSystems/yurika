@@ -320,12 +320,13 @@ class Command(BaseCommand):
     def errors(self, crawler, error=None, **options):
         errors = crawler.task.errors.all()
 
+        if not errors.exists():
+            self.stdout.write('No errors.')
+            return
+
         # error detail
         if error is not None:
             return self.instance_error(errors[error])
-
-        if not errors.exists():
-            self.stdout.write('No errors.')
 
         # error list
         tz = errors[0].timestamp.strftime('%Z')
