@@ -1,4 +1,4 @@
-Django<2.0
+Django~=1.11
 django-environ>=0.4.3
 colorlog
 
@@ -11,6 +11,7 @@ django-model-utils
 -e git+https://github.com/Bogdanp/dramatiq.git#21ef374f0ae4189508e11ee7683fb55f1c296a5d#egg=dramatiq
 elasticsearch>=6
 elasticsearch-dsl>=6
+nltk
 redis
 scrapy
 shortuuid

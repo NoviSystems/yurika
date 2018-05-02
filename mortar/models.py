@@ -14,6 +14,7 @@ from django_fsm import FSMField, transition
 from elasticsearch import TransportError
 from elasticsearch_dsl import Index
 from model_utils import Choices, managers
+from nltk.tokenize import sent_tokenize
 from shortuuid import ShortUUID
 
 from mortar import documents
@@ -314,3 +315,60 @@ class CrawlerTask(Task):
 def crawler_task(sender, instance, created, **kwargs):
     if created:
         CrawlerTask.objects.create(crawler=instance)
+
+
+class SentenceTokenizer(models.Model):
+    uuid = models.UUIDField(unique=True, editable=False, default=uuid.uuid4)
+    crawler = models.OneToOneField(Crawler, on_delete=models.CASCADE)
+
+    @classmethod
+    def to_sentences(cls, document):
+        sentences = sent_tokenize(document.text)
+        sentences = [
+            documents.Sentence(
+                document_id=document.meta.id,
+                text=sentence,
+            ) for sentence in sentences
+        ]
+        return sentences
+
+    def tokenize(self, document):
+        if self.sentences.search() \
+                         .filter('term', document_id=document.meta.id) \
+                         .count() > 0:
+            return  # noop - already tokenized
+
+        sentences = self.to_sentences(document)
+        self.sentences.bulk_create(sentences)
+
+    @property
+    def index_name(self):
+        return b36_uuid.encode(self.uuid)
+
+    @cached_property
+    def index(self):
+        return Index(self.index_name)
+
+    @property
+    def documents(self):
+        return self.crawler.documents
+
+    @property
+    def sentences(self):
+        return documents.Sentence.context(index=self.index_name)
+
+    @staticmethod
+    def _create_index(sender, instance, created, **kwargs):
+        if created:
+            documents.Sentence.init(instance.index_name)
+
+    @staticmethod
+    def _delete_index(sender, instance, **kwargs):
+        try:
+            instance.index.delete()
+        except TransportError:
+            pass
+
+
+post_save.connect(SentenceTokenizer._create_index, sender=SentenceTokenizer)
+post_delete.connect(SentenceTokenizer._delete_index, sender=SentenceTokenizer)

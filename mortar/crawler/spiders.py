@@ -30,7 +30,6 @@ class WebCrawler(CrawlSpider):
 
     def __init__(self, *args, task, **kwargs):
         self.task = task
-        self.index = self.task.crawler.index_name
 
         if 'start_urls' not in kwargs:
             kwargs['start_urls'] = self.task.crawler.urls.split('\n')
@@ -38,6 +37,9 @@ class WebCrawler(CrawlSpider):
         super().__init__(*args, **kwargs)
 
     def parse_item(self, response):
+        crawler = self.task.crawler
+        tokenizer = getattr(crawler, 'sentencetokenizer', None)
+
         soup = BeautifulSoup(response.text, 'lxml')
 
         for element in soup(['script', 'style']):
@@ -57,4 +59,9 @@ class WebCrawler(CrawlSpider):
             timestamp=datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f"),
         )
 
-        doc.save(index=self.index)
+        # save doc to crawler's document index
+        crawler.documents.create(doc)
+
+        # parse sentences from document
+        if tokenizer is not None:
+            tokenizer.tokenize(doc)

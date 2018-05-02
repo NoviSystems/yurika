@@ -161,6 +161,8 @@ class Command(BaseCommand):
                             help="File path of URLs to crawl, delimited by newlines.")
         parser.add_argument('-b', '--block', dest='block', type=domains,
                             help="File path of domains to block, delimited by newlines.")
+        parser.add_argument('--no-tokenize', action='store_false', dest='tokenize', default=True,
+                            help="Don't tokenize crawled documents into sentences.")
 
         # #################################################################### #
         # #### DELETE ######################################################## #
@@ -311,13 +313,15 @@ class Command(BaseCommand):
 
         self.stdout.write(SingleTable(data, title='Crawlers').table)
 
-    def create(self, crawl, block, **options):
+    def create(self, crawl, block, tokenize, **options):
         self.stdout.write('Creating ...')
 
         crawl = '\n'.join(crawl)
         block = '\n'.join(block) if block is not None else ''
 
         c = models.Crawler.objects.create(urls=crawl, block=block)
+        if tokenize:
+            models.SentenceTokenizer.objects.create(crawler=c)
         self.stdout.write(self.style.SUCCESS(f'ID: {c.uuid}'))
 
     def delete(self, crawler, **options):

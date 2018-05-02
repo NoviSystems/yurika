@@ -26,12 +26,17 @@ class DocBase(DocType):
 
 
 class Document(DocBase):
-    url = field.Text()
-    referer = field.Text()
+    url = field.Keyword()
+    referer = field.Keyword()
     title = field.Text()
     html = field.Text()
     text = field.Text()
     timestamp = field.Date(default_timezone=settings.TIME_ZONE)
+
+
+class Sentence(DocBase):
+    document_id = field.Keyword()
+    text = field.Text()
 
 
 class DocContext(object):
