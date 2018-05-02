@@ -43,12 +43,17 @@ class WebCrawler(CrawlSpider):
         for element in soup(['script', 'style']):
             element.decompose()
 
+        text = soup.get_text()
+        text = [line.strip() for line in text.splitlines()]
+        text = [line for line in text if line]
+        text = '\n'.join(text)
+
         doc = documents.Document(
             url=response.url,
             referer=str(response.request.headers.get('Referer', None)),
             title=soup.title.string if soup.title else "",
             html=response.text,
-            text=soup.get_text(),
+            text=text,
             timestamp=datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f"),
         )
 
