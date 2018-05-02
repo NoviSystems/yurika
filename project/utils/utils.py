@@ -1,6 +1,13 @@
 import os
+from contextlib import contextmanager
+from logging import getLogger
 
 from django.conf import settings
+
+
+__all__ = [
+    'path', 'log_level', 'humanize_timedelta',
+]
 
 
 def path(value):
@@ -8,6 +15,20 @@ def path(value):
     Builds absolute paths relative to settings.BASE_DIR.
     """
     return os.path.abspath(os.path.join(settings.BASE_DIR, value))
+
+
+@contextmanager
+def log_level(logger, level):
+    """
+    Temporarily override a logger's log level.
+    """
+    if isinstance(logger, str):
+        logger = getLogger(logger)
+
+    actual = logger.level
+    logger.setLevel(level)
+    yield
+    logger.setLevel(actual)
 
 
 def humanize_timedelta(td):

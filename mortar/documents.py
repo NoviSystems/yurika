@@ -39,6 +39,14 @@ class Sentence(DocBase):
     text = field.Text()
 
 
+class Dictionary(DocBase):
+    name = field.Keyword()
+    terms = field.Keyword()
+
+    class Meta:
+        index = 'dictionaries'
+
+
 class DocContext(object):
     def __init__(self, doc_type, using=None, index=None):
         self.doc_type = doc_type
