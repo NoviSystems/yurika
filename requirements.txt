@@ -28,6 +28,7 @@ ipaddress==1.0.19         # via elasticsearch-dsl
 lxml==4.2.1               # via parsel, scrapy
 nltk==3.2.5
 parsel==1.4.0             # via scrapy
+progressbar2==3.37.1
 prometheus-client==0.0.20
 pyasn1-modules==0.2.1     # via service-identity
 pyasn1==0.4.2             # via pyasn1-modules, service-identity
@@ -35,6 +36,7 @@ pycparser==2.18           # via cffi
 pydispatcher==2.0.5       # via scrapy
 pyopenssl==17.5.0         # via scrapy, service-identity
 python-dateutil==2.7.0    # via elasticsearch-dsl
+python-utils==2.3.0       # via progressbar2
 pytz==2018.3              # via django
 queuelib==1.5.0           # via scrapy
 raven==6.6.0
@@ -42,7 +44,7 @@ redis==2.10.6
 scrapy==1.5.0
 service-identity==17.0.0  # via scrapy
 shortuuid==0.5.0
-six==1.11.0               # via automat, cryptography, django-environ, elasticsearch-dsl, nltk, parsel, pyopenssl, python-dateutil, scrapy, w3lib
+six==1.11.0               # via automat, cryptography, django-environ, elasticsearch-dsl, nltk, parsel, progressbar2, pyopenssl, python-dateutil, python-utils, scrapy, w3lib
 terminaltables==3.1.0
 twisted==17.9.0           # via scrapy
 urllib3==1.22             # via elasticsearch

@@ -2,6 +2,7 @@ import uuid
 from argparse import ArgumentTypeError
 
 import elasticsearch
+import progressbar
 from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
@@ -159,6 +160,13 @@ class Command(BaseCommand):
         parser = subparsers.add_parser('errors', cmd=self)
         parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
         parser.add_argument('error', type=nth_error, help="Nth error.", nargs='?')
+
+        # #################################################################### #
+        # #### TOKENIZE ###################################################### #
+        parser = subparsers.add_parser('tokenize', cmd=self)
+        parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
+        parser.add_argument('--stats', action='store_true', dest='stats', default=False,
+                            help="Display the tokenized sentence statistics.")
 
         # #################################################################### #
         # #### STATS ######################################################### #
@@ -336,5 +344,42 @@ class Command(BaseCommand):
         table = SingleTable(data)
         table.inner_row_border = True
         table.justify_columns[0] = 'right'
+
+        self.stdout.write(table.table)
+
+    def tokenize(self, crawler, stats, **options):
+        tokenizer = getattr(crawler, 'sentencetokenizer', None)
+        if tokenizer is None:
+            tokenizer = models.SentenceTokenizer.objects.create(crawler=crawler)
+
+        if stats:
+            return self.tokenizer_stats(tokenizer)
+
+        self.stdout.write('Tokenizing documents into sentences ...')
+        documents = crawler.documents.search()
+        for doc in progressbar.progressbar(documents.scan(), max_value=documents.count()):
+            tokenizer.tokenize(doc)
+
+    def tokenizer_stats(self, tokenizer):
+        def chunk(iterable, n):
+            for i in range(0, len(iterable), n):
+                yield iterable[i:i + n]
+
+        document_ids = [hit.meta.id for hit in tokenizer.documents.search()[:100]]
+        sentence_counts = [
+            tokenizer.sentences.search().filter('term', document_id=doc).count()
+            for doc in document_ids
+        ]
+
+        data = [
+            ['%s | %s' % pair for pair in zip(l, r)]
+            for l, r in zip(chunk(document_ids, 5), chunk(sentence_counts, 5))
+        ]
+
+        table = SingleTable(data, title=' Documents: %d | Sentences: %d ' % (
+            tokenizer.documents.search().count(),
+            tokenizer.sentences.search().count(),
+        ))
+        table.inner_heading_row_border = False
 
         self.stdout.write(table.table)

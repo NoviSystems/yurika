@@ -12,6 +12,7 @@ django-model-utils
 elasticsearch>=6
 elasticsearch-dsl>=6
 nltk
+progressbar2
 redis
 scrapy
 shortuuid
