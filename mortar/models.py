@@ -1,6 +1,7 @@
+import json
 import os
-import shutil
 import re
+import shutil
 import uuid
 from importlib import import_module
 from traceback import format_exception
@@ -372,3 +373,52 @@ class SentenceTokenizer(models.Model):
 
 post_save.connect(SentenceTokenizer._create_index, sender=SentenceTokenizer)
 post_delete.connect(SentenceTokenizer._delete_index, sender=SentenceTokenizer)
+
+
+class Annotation(models.Model):
+    crawler = models.ForeignKey(Crawler, on_delete=models.CASCADE)
+    query = models.TextField(help_text="Elasticsearch query JSON.")
+
+    def execute(self):
+        if self.document_set.exists() or self.sentence_set.exists():
+            return  # noop - already executed
+
+        query = json.loads(self.query)
+        tokenizer = self.crawler.sentencetokenizer
+        sentences = [s for s in tokenizer.sentences.search().update_from_dict(query).scan()]
+        documents = tokenizer.documents.mget({s.document_id for s in sentences}, missing='skip')
+
+        documents = [Document(
+            elastic_id=doc.meta.id,
+            annotation=self,
+            url=doc.url,
+            timestamp=doc.timestamp,
+            text=doc.text,
+        ) for doc in documents]
+        Document.objects.bulk_create(documents)
+
+        sentences = [Sentence(
+            elastic_id=sentence.meta.id,
+            annotation=self,
+            document=Document.objects.get(elastic_id=sentence.document_id),
+            text=sentence.text,
+        ) for sentence in sentences]
+        Sentence.objects.bulk_create(sentences)
+
+    class Meta:
+        ordering = ['pk']
+
+
+class Document(models.Model):
+    annotation = models.ForeignKey(Annotation, on_delete=models.CASCADE)
+    elastic_id = models.CharField(max_length=20)
+    url = models.URLField(max_length=2083)
+    timestamp = models.DateTimeField()
+    text = models.TextField()
+
+
+class Sentence(models.Model):
+    annotation = models.ForeignKey(Annotation, on_delete=models.CASCADE)
+    elastic_id = models.CharField(max_length=20)
+    document = models.ForeignKey(Document, on_delete=models.CASCADE)
+    text = models.TextField()
