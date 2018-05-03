@@ -1,4 +1,3 @@
-import time
 import uuid
 from argparse import ArgumentTypeError
 
@@ -25,10 +24,6 @@ updated, duplicate documents.
 
 RESUME_HELP = """
 Resume a crawler from where it left off.
-"""
-
-BOUNCE_HELP = """
-Safely stop a crawler then resume from where it left off.
 """
 
 
@@ -155,16 +150,6 @@ class Command(BaseCommand):
         # #### RESUME ######################################################## #
         parser = subparsers.add_parser('resume', cmd=self, help=RESUME_HELP)
         parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
-        parser.add_argument('--time-limit', dest='time_limit', type=int,
-                            help="Time limit (in seconds) for how long the "
-                                 "crawler should run before it is terminated.")
-
-        # #################################################################### #
-        # #### BOUNCE ######################################################## #
-        parser = subparsers.add_parser('bounce', cmd=self, help=BOUNCE_HELP)
-        parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
-        parser.add_argument('--wait', dest='wait', type=int, default=0,
-                            help="How many seconds to wait before resuming the task.")
         parser.add_argument('--time-limit', dest='time_limit', type=int,
                             help="Time limit (in seconds) for how long the "
                                  "crawler should run before it is terminated.")
@@ -304,18 +289,6 @@ class Command(BaseCommand):
     def resume(self, crawler, **options):
         self.stdout.write('Resuming ...')
         crawler.resume(**self.task_options(options))
-
-    def bounce(self, crawler, wait, **options):
-        self.stop(crawler, **options)
-
-        while crawler.task.status == crawler.task.STATUS.running:
-            crawler.task.refresh_from_db()
-            time.sleep(.1)
-
-        # wait to resume (defaults to 0 seconds)
-        time.sleep(wait)
-
-        self.resume(crawler, **options)
 
     def errors(self, crawler, error=None, **options):
         errors = crawler.task.errors.all()
