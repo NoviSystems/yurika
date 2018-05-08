@@ -6,6 +6,7 @@ import uuid
 from importlib import import_module
 from traceback import format_exception
 
+import jsonfield
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -199,6 +200,7 @@ class Crawler(models.Model):
     urls = models.TextField(help_text="List of URLs to crawl (separated by newlines).")
     block = models.TextField(blank=True,
                              help_text="List of domains to block (separated by newlines.")
+    config = jsonfield.JSONField(default=dict, help_text="Override settings for Scrapy.")
 
     def __str__(self):
         return 'Crawler: %s' % self.pk

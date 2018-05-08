@@ -1,3 +1,4 @@
+import json
 import uuid
 from argparse import ArgumentTypeError
 
@@ -98,6 +99,15 @@ def domains(filename):
     return domains
 
 
+def config(filename):
+    contents = file_contents(filename)
+
+    try:
+        return json.loads(contents)
+    except json.JSONDecodeError as e:
+        raise ArgumentTypeError(str(e))
+
+
 class Command(BaseCommand):
     help = "Crawler task management"
 
@@ -114,12 +124,26 @@ class Command(BaseCommand):
         # #################################################################### #
         # #### CREATE ######################################################## #
         parser = subparsers.add_parser('create', cmd=self)
-        parser.add_argument('-c', '--crawl', dest='crawl', type=urls, required=True,
-                            help="File path of URLs to crawl, delimited by newlines.")
+        parser.add_argument('-s', '--start', dest='crawl', type=urls, required=True,
+                            help="File path of URLs to start crawling from, delimited by newlines.")
         parser.add_argument('-b', '--block', dest='block', type=domains,
                             help="File path of domains to block, delimited by newlines.")
+        parser.add_argument('-c', '--config', dest='config', type=config,
+                            help="File path for a Scrapy JSON config.")
         parser.add_argument('--no-tokenize', action='store_false', dest='tokenize', default=True,
                             help="Don't tokenize crawled documents into sentences.")
+
+        # #################################################################### #
+        # #### CONFIG ######################################################## #
+        parser = subparsers.add_parser('config', cmd=self)
+        parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
+
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument('--get-value', dest='get', metavar='NAME', help="Get a config value.")
+        group.add_argument('--set-value', dest='set', metavar=('NAME', 'VALUE'), nargs=2, help="Set a config value.")
+        group.add_argument('--unset-value', dest='unset', metavar='NAME', help="Unset a config value.")
+        group.add_argument('--replace', dest='replace', metavar='FILENAME', type=config, help="Replace the config.")
+        group.add_argument('--echo', dest='echo', action='store_true', default=False, help="View the config.")
 
         # #################################################################### #
         # #### DELETE ######################################################## #
@@ -267,16 +291,63 @@ class Command(BaseCommand):
 
         self.stdout.write(SingleTable(data, title='Crawlers').table)
 
-    def create(self, crawl, block, tokenize, **options):
+    def create(self, crawl, block, config, tokenize, **options):
         self.stdout.write('Creating ...')
 
         crawl = '\n'.join(crawl)
         block = '\n'.join(block) if block is not None else ''
 
-        c = models.Crawler.objects.create(urls=crawl, block=block)
+        c = models.Crawler.objects.create(
+            urls=crawl,
+            block=block,
+            config=config,
+        )
+
         if tokenize:
             models.SentenceTokenizer.objects.create(crawler=c)
         self.stdout.write(self.style.SUCCESS(f'ID: {c.uuid}'))
+
+    def config(self, crawler, **options):
+        if options.get('get') is not None:
+            name = options['get']
+            if name in crawler.config:
+                value = json.dumps(crawler.config.get(name))
+            else:
+                value = '<not set>'
+
+            self.stdout.write('GET %s: %s' % (name, value))
+
+        elif options.get('set') is not None:
+            name, value = options['set']
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                raise ArgumentTypeError('must be valid JSON')
+
+            crawler.config[name] = value
+            crawler.save(update_fields=['config'])
+            self.stdout.write('SET %s: %s' % (name, value))
+
+        elif options.get('unset') is not None:
+            name = options['unset']
+            if name in crawler.config:
+                value = json.dumps(crawler.config.get(name))
+            else:
+                value = '<not set>'
+
+            del crawler.config[name]
+            crawler.save(update_fields=['config'])
+            self.stdout.write('UNSET %s: %s' % (name, value))
+
+        elif options.get('replace') is not None:
+            contents = options['replace']
+
+            crawler.config = contents
+            crawler.save(update_fields=['config'])
+            self.stdout.write('Replaced config')
+
+        elif options.get('echo'):
+            self.stdout.write(json.dumps(crawler.config, indent=4, sort_keys=True))
 
     def delete(self, crawler, **options):
         self.stdout.write('Deleting ...')
