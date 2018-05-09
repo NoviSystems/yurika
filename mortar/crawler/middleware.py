@@ -11,8 +11,18 @@ logger = logging.getLogger(__name__)
 
 class LogExceptionMiddleware(object):
 
+    def __init__(self, stats):
+        self.stats = stats
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.stats)
+
     def process_spider_exception(self, response, exception, spider):
-        spider.task.log_exception(exception)
+        logger = getattr(spider, 'exception_logger', None)
+        if logger is not None:
+            logger(exception)
+            self.stats.inc_value('exceptions/logged', spider=spider)
 
 
 class BlockedDomainMiddleware(object):
