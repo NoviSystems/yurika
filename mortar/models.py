@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import shutil
 import uuid
 from importlib import import_module
@@ -204,20 +203,6 @@ class Crawler(models.Model):
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
-
-    @cached_property
-    def block_re(self):
-        if not self.block:
-            return None
-
-        block = self.block.splitlines()
-        block = '|'.join(re.escape(domain) for domain in block)
-        return re.compile(rf'^({block})')
-
-    def should_block(self, url):
-        if self.block_re is not None:
-            return bool(self.block_re.match(url))
-        return False
 
     def start(self, **options):
         if self.task.status != self.task.STATUS.not_queued:
