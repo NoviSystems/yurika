@@ -18,11 +18,22 @@ def crawl(task):
             traceback=failure.getTraceback(),
         )
 
-    process = CrawlerProcess({
+    process = CrawlerProcess({**task.crawler.config, **{
         # enables state persistence, allowing crawler to be paused/unpaused
-        'JOBDIR': task.crawler.state_dir
-    }, install_root_handler=False)
+        'JOBDIR': task.crawler.state_dir,
+    }}, install_root_handler=False)
 
-    d = process.crawl(WebCrawler, task=task)
-    d.addErrback(twisted_exc)
+    deferred = process.crawl(
+        WebCrawler,
+        start_urls=task.crawler.start_urls.splitlines(),
+        task=task,
+
+        # scrapy.spidermiddlewares.offsite.OffsiteMiddleware
+        allowed_domains=task.crawler.allowed_domains.splitlines(),
+        # mortar.middleware.BlockDomainMiddleware
+        blocked_domains=task.crawler.blocked_domains.splitlines(),
+        # mortar.middleware.LogExceptionMiddleware
+        exception_logger=task.log_exception,
+    )
+    deferred.addErrback(twisted_exc)
     process.start()

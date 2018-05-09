@@ -22,19 +22,24 @@ class WebCrawler(CrawlSpider):
     custom_settings = {
         'USER_AGENT': '',
         'ROBOTSTXT_OBEY': True,
-        'SPIDER_MIDDLEWARES': {
-            'mortar.crawler.middleware.LogExceptionMiddleware': 1000,
-            'mortar.crawler.middleware.BlockDomainMiddleware': 900,
+        'SPIDER_MIDDLEWARES_BASE': {
+            # default scrapy middleware
+            'scrapy.spidermiddlewares.httperror.HttpErrorMiddleware': 50,
+            'scrapy.spidermiddlewares.offsite.OffsiteMiddleware': 500,
+            'scrapy.spidermiddlewares.referer.RefererMiddleware': 700,
+            'scrapy.spidermiddlewares.urllength.UrlLengthMiddleware': 800,
+            'scrapy.spidermiddlewares.depth.DepthMiddleware': 900,
+
+            # default mortar middleware
+            'mortar.crawler.middleware.LogExceptionMiddleware': 100,
+            'mortar.crawler.middleware.BlockedDomainMiddleware': 500,
+            'mortar.crawler.middleware.DistanceMiddleware': 900,
         },
     }
 
     def __init__(self, *args, task, **kwargs):
-        self.task = task
-
-        if 'start_urls' not in kwargs:
-            kwargs['start_urls'] = self.task.crawler.urls.split('\n')
-
         super().__init__(*args, **kwargs)
+        self.task = task
 
     def parse_item(self, response):
         crawler = self.task.crawler
