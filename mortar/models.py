@@ -1,11 +1,13 @@
 import json
 import os
+import re
 import shutil
 import uuid
 from importlib import import_module
 from traceback import format_exception
 
 import jsonfield
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
@@ -24,6 +26,15 @@ from project import utils
 
 # Elasticsearch-friendly identifiers (no uppercase characters)
 b36_uuid = ShortUUID(alphabet='0123456789abcdefghijklmnopqrstuvwxyz')
+
+# very simple domain name validation (matches 'domain.tld', '.domain.tld')
+domains_re = re.compile(r'^([a-zA-Z0-9\.\-])*$', flags=re.IGNORECASE)
+
+
+def validate_domains(text):
+    for domain in text.splitlines():
+        if domains_re.match(domain) is None:
+            raise ValidationError("Invalid domain name: '%(domain)s'", params={'domain': domain})
 
 
 def import_path(path):
@@ -196,9 +207,11 @@ class TaskError(models.Model):
 
 class Crawler(models.Model):
     uuid = models.UUIDField(unique=True, editable=False, default=uuid.uuid4)
-    urls = models.TextField(help_text="List of URLs to crawl (separated by newlines).")
-    block = models.TextField(blank=True,
-                             help_text="List of domains to block (separated by newlines.")
+    start_urls = models.TextField(help_text="List of URLs to crawl (separated by newlines).")
+    allowed_domains = models.TextField(blank=True, validators=[validate_domains],
+                                       help_text="List of domains to allow (separated by newlines).")
+    blocked_domains = models.TextField(blank=True, validators=[validate_domains],
+                                       help_text="List of domains to block (separated by newlines).")
     config = jsonfield.JSONField(default=dict, help_text="Override settings for Scrapy.")
 
     def __str__(self):

@@ -124,14 +124,18 @@ class Command(BaseCommand):
         # #################################################################### #
         # #### CREATE ######################################################## #
         parser = subparsers.add_parser('create', cmd=self)
-        parser.add_argument('-s', '--start', dest='crawl', type=urls, required=True,
+        parser.add_argument('-s', '--start-urls', dest='start', type=urls, required=True,
                             help="File path of URLs to start crawling from, delimited by newlines.")
-        parser.add_argument('-b', '--block', dest='block', type=domains,
-                            help="File path of domains to block, delimited by newlines.")
         parser.add_argument('-c', '--config', dest='config', type=config,
                             help="File path for a Scrapy JSON config.")
         parser.add_argument('--no-tokenize', action='store_false', dest='tokenize', default=True,
                             help="Don't tokenize crawled documents into sentences.")
+
+        group = parser.add_mutually_exclusive_group(required=False)
+        group.add_argument('-a', '--allowed-domains', dest='allow', type=domains,
+                           help="File path of domains to allow, delimited by newlines.")
+        group.add_argument('-b', '--blocked-domains', dest='block', type=domains,
+                           help="File path of domains to block, delimited by newlines.")
 
         # #################################################################### #
         # #### CONFIG ######################################################## #
@@ -270,14 +274,20 @@ class Command(BaseCommand):
         instance = SingleTable([self.header(), self.row(crawler)])
         instance.justify_columns[0] = 'right'
 
-        crawl = SingleTable([[u] for u in crawler.urls.split('\n')], title=' Crawl URLs ')
-        block = SingleTable([[d] for d in crawler.block.split('\n')], title=' Block URLs ')
-        crawl.inner_heading_row_border = False
+        start = SingleTable([[u] for u in crawler.start_urls.split('\n')], title=' Start URLs ')
+        allow = SingleTable([[d] for d in crawler.allowed_domains.split('\n')], title=' Allowed ')
+        block = SingleTable([[d] for d in crawler.blocked_domains.split('\n')], title=' Blocked ')
+        start.inner_heading_row_border = False
         block.inner_heading_row_border = False
 
         self.stdout.write(instance.table)
         self.stdout.write('')
-        self.stdout.write(side_by_side(crawl.table, block.table))
+        output = start.table
+        if crawler.allowed_domains:
+            output = side_by_side(output, allow.table)
+        if crawler.blocked_domains:
+            output = side_by_side(output, block.table)
+        self.stdout.write(output)
         self.stdout.write('')
 
     def stats(self, **options):
@@ -291,15 +301,17 @@ class Command(BaseCommand):
 
         self.stdout.write(SingleTable(data, title='Crawlers').table)
 
-    def create(self, crawl, block, config, tokenize, **options):
+    def create(self, start, allow, block, config, tokenize, **options):
         self.stdout.write('Creating ...')
 
-        crawl = '\n'.join(crawl)
+        start = '\n'.join(start)
+        allow = '\n'.join(allow) if allow is not None else ''
         block = '\n'.join(block) if block is not None else ''
 
         c = models.Crawler.objects.create(
-            urls=crawl,
-            block=block,
+            start_urls=start,
+            allowed_domains=allow,
+            blocked_domains=block,
             config=config,
         )
 
