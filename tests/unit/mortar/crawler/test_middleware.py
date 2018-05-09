@@ -99,7 +99,15 @@ class BlockedDomainMiddlewareTestCase(TestCase):
                 self.assertEqual(middleware.should_block(request, spider), should_block)
 
     @spider_middleware(blocked_domains=['https://domain.org'])
-    def test_url_in_blocked_domains(self, spider, middleware):
+    def test_scheme_in_blocked_domains(self, spider, middleware):
+        with self.assertRaises(AssertionError) as exc_info:
+            middleware.get_host_regex(spider)
+
+        msg = "blocked_domains only accepts domains, not URLs."
+        self.assertEqual(str(exc_info.exception), msg)
+
+    @spider_middleware(blocked_domains=['domain.org/path'])
+    def test_path_in_blocked_domains(self, spider, middleware):
         with self.assertRaises(AssertionError) as exc_info:
             middleware.get_host_regex(spider)
 

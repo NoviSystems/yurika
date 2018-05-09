@@ -62,7 +62,9 @@ class BlockedDomainMiddleware(object):
 
         for domain in blocked_domains:
             assert domain, "blocked_domains only accepts domains, not empty values."
-            assert '://' not in domain, "blocked_domains only accepts domains, not URLs."
+
+            # domains should not contain a scheme (//) or a path (/)
+            assert '/' not in domain, "blocked_domains only accepts domains, not URLs."
 
         return re.compile(r'^(.*)(%s)' % '|'.join(re.escape(d) for d in blocked_domains))
 
