@@ -65,3 +65,36 @@ class BlockedDomainMiddleware(object):
             assert '://' not in domain, "blocked_domains only accepts domains, not URLs."
 
         return re.compile(r'^(.*)(%s)' % '|'.join(re.escape(d) for d in blocked_domains))
+
+
+class DistanceMiddleware(object):
+    def __init__(self, stats, maxdist):
+        self.stats = stats
+        self.maxdist = maxdist
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        settings = crawler.settings
+        distance = settings.getint('DISTANCE_LIMIT')
+        return cls(crawler.stats, distance)
+
+    def process_spider_output(self, response, result, spider):
+        for item in result:
+            distance = response.meta.get('distance', 0)
+
+            if not isinstance(item, Request):
+                yield item
+            elif self.maxdist and distance < self.maxdist:
+                if self.different_domains(response, item):
+                    item.meta['distance'] = distance + 1
+                yield item
+            else:
+                logger.debug(
+                    f"Ignoring link (distance > {self.maxdist}): {item}",
+                    extra={'spider': spider}
+                )
+
+    def different_domains(self, response, request):
+        a = urlparse_cached(response).hostname or ''
+        b = urlparse_cached(request).hostname or ''
+        return a != b

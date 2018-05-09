@@ -1,20 +1,20 @@
-from functools import wraps
+from functools import partial, wraps
 from unittest import TestCase
 
-from scrapy.http import Request
+from scrapy.http import Request, Response
 from scrapy.utils.test import get_crawler
 
-from mortar.crawler.middleware import BlockedDomainMiddleware
+from mortar.crawler import middleware
 
 
-def spider_middleware(**kwargs):
+def spider_middleware(middleware_cls, settings=None, **spider_kwargs):
     """
     Create a spider and middleware and inject them into the test arguments.
     """
-    kwargs.setdefault('name', 'spider')
-    crawler = get_crawler()
-    spider = crawler._create_spider(**kwargs)
-    middleware = BlockedDomainMiddleware.from_crawler(crawler)
+    spider_kwargs.setdefault('name', 'spider')
+    crawler = get_crawler(settings_dict=settings)
+    spider = crawler._create_spider(**spider_kwargs)
+    middleware = middleware_cls.from_crawler(crawler)
 
     def wrapper(test_method):
         @wraps(test_method)
@@ -25,6 +25,7 @@ def spider_middleware(**kwargs):
 
 
 class BlockedDomainMiddlewareTestCase(TestCase):
+    spider_middleware = partial(spider_middleware, middleware.BlockedDomainMiddleware)
 
     @spider_middleware(blocked_domains=['domain.org'])
     def test_should_block_obeys_dont_filter(self, spider, middleware):
@@ -98,7 +99,7 @@ class BlockedDomainMiddlewareTestCase(TestCase):
                 self.assertEqual(middleware.should_block(request, spider), should_block)
 
     @spider_middleware(blocked_domains=['https://domain.org'])
-    def test_url_in_blocked_domains(self, middleware, spider):
+    def test_url_in_blocked_domains(self, spider, middleware):
         with self.assertRaises(AssertionError) as exc_info:
             middleware.get_host_regex(spider)
 
@@ -106,9 +107,73 @@ class BlockedDomainMiddlewareTestCase(TestCase):
         self.assertEqual(str(exc_info.exception), msg)
 
     @spider_middleware(blocked_domains=[None])
-    def test_empty_value_in_blocked_domains(self, middleware, spider):
+    def test_empty_value_in_blocked_domains(self, spider, middleware):
         with self.assertRaises(AssertionError) as exc_info:
             middleware.get_host_regex(spider)
 
         msg = "blocked_domains only accepts domains, not empty values."
         self.assertEqual(str(exc_info.exception), msg)
+
+
+class DistanceMiddlewareTestCase(TestCase):
+    spider_middleware = partial(spider_middleware, middleware.DistanceMiddleware)
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 5})
+    def test_different_domains(self, spider, middleware):
+        response, request = Response('http://domain.org'), Request('http://domain.org')
+        self.assertFalse(middleware.different_domains(response, request))
+
+        response, request = Response('http://domain.org'), Request('http://sub.domain.org')
+        self.assertTrue(middleware.different_domains(response, request))
+
+        response, request = Response('http://domain.org'), Request('http://domain.com')
+        self.assertTrue(middleware.different_domains(response, request))
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 5})
+    def test_process_same_domain(self, spider, middleware):
+        request = Request('http://domain.org')
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://domain.org')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertNotIn('distance', out[0].meta)
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 5})
+    def test_process_different_domain(self, spider, middleware):
+        request = Request('http://domain.org')
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://domain.com')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertEqual(out[0].meta['distance'], 1)
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 5})
+    def test_process_subdomain(self, spider, middleware):
+        request = Request('http://domain.org')
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://sub.domain.org')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertEqual(out[0].meta['distance'], 1)
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 5})
+    def test_process_middle_distance(self, spider, middleware):
+        request = Request('http://domain.org', meta={'distance': 3})
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://domain.com')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertEqual(out[0].meta['distance'], 4)
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 5})
+    def test_process_max_distance(self, spider, middleware):
+        request = Request('http://domain.org', meta={'distance': 5})
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://domain.com')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, [])
