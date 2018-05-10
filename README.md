@@ -1,6 +1,7 @@
 # Yurika: Unstructured Text Analytics Platform
 
-<!-- [![Build Status](https://travis-ci.org/ITNG/yurika.svg?branch=master)](https://travis-ci.org/ITNG/yurika) -->
+[![Build Status](https://travis-ci.org/ITNG/yurika.svg?branch=master)](https://travis-ci.org/ITNG/yurika)
+[![Codecov](https://codecov.io/gh/ITNG/yurika/branch/master/graph/badge.svg)](https://codecov.io/gh/ITNG/yurika)
 
 ## The Augmented Intelligence Process
 
