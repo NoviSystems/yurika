@@ -50,6 +50,7 @@ from scrapy.spiders import CrawlSpider, Rule
 from w3lib.url import safe_url_string
 
 from mortar import models
+from elasticsearch import helpers
 
 
 log = logging.getLogger(__name__)
@@ -151,7 +152,6 @@ class Document(scrapy.Item):
     tstamp = scrapy.Field(serializer=str)
     title = scrapy.Field()
 
-
 class WebCrawler(CrawlSpider):
     name = 'MyTest'
     rules = (
@@ -194,6 +194,7 @@ class WebCrawler(CrawlSpider):
         # reformat any html entities that make tags appear in text
         # text = response.text.replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
         soup = BeautifulSoup(response.text, 'lxml')
+        #doc_list=[]
 
         for script in soup(["script", "style"]):
             script.decompose()
@@ -204,8 +205,14 @@ class WebCrawler(CrawlSpider):
         doc['tstamp'] = datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f")
         doc['content'] = soup.get_text()
         doc['title'] = soup.title.string if soup.title else ""
+	
+
         self.client.index(index=self.index_name, id=response.url, doc_type='doc', body=json.dumps(doc))
 
         doc_item = Document(url=doc['url'], tstamp=doc['tstamp'], content=doc['content'], title=doc['title'])
+
+	#bulk indexing of source documents
+        #doc_list.append(doc_item)
+        #helpers.bulk(client=self.client, actions=(b.indexing() for b in doc_list))
 
         return doc_item

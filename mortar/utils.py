@@ -193,6 +193,11 @@ def update_dictionaries():
                         filepath=os.path.join(root, f),
                     )
                     d.words = dictfile.read()
+                    words = d.words.split("\n")
+                    if not words[-1]:
+                        wordsNew = words[:-1]
+                    else:
+                        wordsNew = words[:]
                     d.save()
                     es_actions.append({
                         '_op_type': 'index',
@@ -200,7 +205,7 @@ def update_dictionaries():
                         '_id': d.id,
                         '_source': {
                             'name': d.name,
-                            'words': d.words.split("\n")
+                            'words': wordsNew
                         },
                         '_index': 'dictionaries',
                     })
@@ -220,19 +225,17 @@ def associate_tree(tree):
             node.dictionary = aidict[0]
             node.save()
 
-
 def make_dict_query(dictionary):
-    return {
-        "terms": {
-            "content": {
-                "index": "dictionaries",
-                "type": "dictionary",
-                "id": dictionary.id,
-                "path": "words"
+     return {
+            'terms': {
+                'content': {
+                    'index': 'dictionaries',
+                    'type': 'dictionary',
+                    'id': dictionary.dictionary_id,
+                    'path': 'words',
+                }
             }
         }
-    }
-
 
 def make_regex_query(regex):
     return {'bool': {'must': {'regexp': {'content': regex.regex if regex.regex else regex.name}}}}
@@ -330,21 +333,23 @@ def content_to_sentences(content, paragraph, tree, esdoc, django_id):
     es_out = []
     tagged_paragraph = ''
     place = 0
+    es = settings.ES_CLIENT
     for sent, pos in content:
         tagged_sentence = ''.join([
             ' ' + i[0] + '|' + i[1] for i in pos
             if len(i[1]) and i[0] not in string.punctuation
         ])
         body = {
-            '_type': 'sentence',
-            '_source': {
+           '_index' : tree.doc_dest_index.name,
+           '_type': 'sentence',
+           '_source': {
                 'content': sent.rstrip('\n'),
-                'paragraph': paragraph,
-                'place': place,
-                'tokens': tagged_sentence
-            },
-            '_parent': django_id,
-            '_index': tree.doc_dest_index.name,
+               	'paragraph': paragraph,
+               	'place': place,
+                'tokens': tagged_sentence,
+		'source_doc_id': django_id,
+		'doc_content': content
+            }
         }
         place += 1
         es_out.append(body)
@@ -353,7 +358,8 @@ def content_to_sentences(content, paragraph, tree, esdoc, django_id):
 
 
 def content_to_paragraphs(esdoc, tree, django_id):
-    paragraphs = esdoc['_source']['content'].split('\n')
+    content = esdoc['_source']['content']
+    paragraphs = content.split('\n')
     out = []
     place = 0
     for p in paragraphs:
@@ -363,14 +369,15 @@ def content_to_paragraphs(esdoc, tree, django_id):
             tags, sentences = content_to_sentences(sentence_content, place, tree, esdoc, django_id)
             out.extend(sentences)
             body = {
+                '_index' : tree.doc_dest_index.name,
                 '_type': 'paragraph',
                 '_source': {
                     'content': p,
                     'tokens': tags,
                     'place': place,
-                },
-                '_parent': django_id,
-                '_index': tree.doc_dest_index.name,
+		    'source_doc_id': django_id,
+		    'doc_content': content
+                }
             }
             out.append(body)
             place += 1
@@ -389,7 +396,7 @@ def get_indexed_docs(tree, filter_query):
 def insert_pos_record(id, esdoc, tree, query):
     es = settings.ES_CLIENT
     body = {
-        'url': esdoc['_source']['url'],
+#        'url': esdoc['_source']['url'],
         'tstamp': esdoc['_source']['tstamp'],
         'content': esdoc['_source']['content'],
     }
@@ -406,34 +413,133 @@ def create_pos_index(tree):
     i_client = IndicesClient(client=es)
     name = tree.doc_dest_index.name
     if not i_client.exists(name):
-        pos_settings = {
-            'mappings': {
-                'doc': {
-                    'properties': {
-                        'content': {'type': 'text'},
-                        'url': {'type': 'text', 'index': 'false'},
-                        'tstamp': {
-                            'type': 'date',
-                            'format': 'strict_date_optional_time||epoch_millis'
-                        },
-                    },
-                },
-                'sentence': {
-                    '_parent': {'type': 'doc'},
-                    'properties': {
-                        'content': {'type': 'text'},
-                        'tokens': {'type': 'text'},
-                    },
-                },
-                'paragraph': {
-                    '_parent': {'type': 'doc'},
-                    'properties': {
-                        'content': {'type': 'text'},
-                        'tokens': {'type': 'text'},
-                    },
-                },
+
+        pos_settings ={
+            'settings': {
+                    'number_of_shards': 5,
+                    'number_of_replicas': 1,
+                    'analysis': {
+                           'analyzer': {
+                                 'keyword_analyzer' : {
+                                        'tokenizer':'keyword',
+                                        'filter':['lowercase','minimal_english_stemmer'],
+                                        'type' : 'custom'
+                                  },
+                                  'standard_analyzer':{
+                                        'tokenizer':'standard',
+                                        'filter':['lowercase','minimal_english_stemmer'],
+                                        'type' : 'custom'
+                                  },
+                                  'edgeNgram_analyzer': {
+                                        'type': 'custom',
+                                        'tokenizer': 'standard',
+                                        'filter': ['lowercase','edgeNgram_filter']
+                                  }
+                            },
+                            'filter' : {
+                                  'minimal_english_stemmer' : {
+                                        'type' : 'stemmer',
+                                        'name' : 'minimal_english'
+                                  },
+                                  'edgeNgram_filter' : {
+                                        'type': 'edgeNGram',
+                                        'min_gram': 2,
+                                        'max_gram': 8
+                                  }
+                            }
+                    }
             },
+            'mappings': {
+                    'doc': {
+                           'properties': {
+                                  'content': {
+                                        'type' : 'text'
+                                  },
+                                  'tstamp': {
+                                        'type': 'date',
+                                        'format': 'strict_date_optional_time||epoch_millis'
+                                  }
+                           }
+                    },
+
+                    'sentence': {
+                           'properties': {
+                                  'tokens' : {
+                                        'type' : 'text',
+                                        'analyzer' : 'keyword'
+                                  },
+                                  'content' : {
+                                        'fields' : {
+                                              'raw' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'keyword'
+                                              },
+                                              'keyword_tokenized' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'keyword_analyzer'
+                                              },
+                                              'standard_tokenized' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'standard_analyzer'
+                                              },
+                                              'ngram_tokenized' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'edgeNgram_analyzer'
+                                              }
+                                        },
+                                        'type' : 'text'
+                                  },
+                                  'source_doc_id' : {
+                                        'type' : 'text',
+                                        'analyzer' : 'keyword'
+                                  },
+                                  'doc_content' : {
+                                        'type' : 'text',
+                                        'analyzer' : 'keyword'
+                                  }
+                           }
+                    },
+
+                    'paragraph': {
+                           'properties': {
+                                  'tokens' : {
+                                        'type' : 'text',
+                                        'analyzer' : 'keyword'
+                                  },
+                                  'content' : {
+                                        'fields' : {
+                                              'raw' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'keyword'
+                                              },
+                                              'keyword_tokenized' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'keyword_analyzer'
+                                              },
+                                              'standard_tokenized' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'standard_analyzer'
+                                              },
+                                              'ngram_tokenized' : {
+                                                  'type' : 'text',
+                                                  'analyzer' : 'edgeNgram_analyzer'
+                                              }
+                                        },
+                                        'type' : 'text'
+                                  },
+                                  'source_doc_id' : {
+                                        'type' : 'text',
+                                        'analyzer' : 'keyword'
+                                  },
+                                  'doc_content' : {
+                                        'type' : 'text',
+                                        'analyzer' : 'keyword'
+                                  }
+                           }
+                     }
+               }
         }
+     
         i_client.create(index=name, body=json.dumps(pos_settings))
 
 
@@ -448,6 +554,15 @@ def process(tree, filter, query):
             if doc is not None:
                 insert_pos_record(doc.id, esdoc, tree, query)
         count += 1
+
+def fetch_terms_from_dictionary(name):
+    es = settings.ES_CLIENT
+    body = {"query": {"term" : {"name" : name}}}
+    search = helpers.scan(es, query=body, size=500, index='dictionaries', doc_type = 'dictionary')
+    for hit in search:
+        words = hit['_source']['words']
+        return words
+            
 
 def annotate(analysis):
     tree = analysis.mindmap
@@ -466,7 +581,7 @@ def annotate(analysis):
     body = {'query': json.loads(query.elastic_json)}
     search = helpers.scan(es, scroll=u'1h', query=body, raise_on_error=False, size=500, clear_scroll=False, index=tree.doc_dest_index.name, doc_type=doc_type)
     for hit in search:
-        doc = models.Document.objects.get(id=int(hit['_parent']) if doc_type != 'doc' else int(hit['_id']))
+        doc = models.Document.objects.get(id=int(hit['_source']['source_doc_id']) if doc_type != 'doc' else int(hit['_id']))
         with transaction.atomic():
             models.Annotation.objects \
                 .using('explorer') \

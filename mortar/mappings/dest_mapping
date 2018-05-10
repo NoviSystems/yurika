@@ -19,10 +19,18 @@
     }
   },
   "mappings": {
+    "doc": {
+      "properties": {
+          "content": {
+		"type" : "text"
+          },
+          "tstamp": {
+              "type": "date",
+              "format": "strict_date_optional_time||epoch_millis"
+          }
+      }
+    },
   	"sentence": {
-      "_source": {
-        "enabled": true
-      },
       "properties": {
         "tokens" : {
             "type" : "text",
@@ -38,7 +46,8 @@
                     "type" : "text",
                     "analyzer" : "keyword_analyzer"
                   }
-            }  
+            },
+		        "type" : "text"  
         },
         "source_doc_id" : {
             "type" : "text",
@@ -47,15 +56,19 @@
         "doc_content" : {
             "type" : "text",
             "analyzer" : "keyword"
+        },
+        "paragraph" : {
+            "type" : "text",
+            "analyzer" : "keyword"
+        },
+        "place" : {
+            "type" : "integer"
         }
         
       }
     },
     
     "paragraph": {
-      "_source": {
-        "enabled": true
-      },
       "properties": {
         "tokens" : {
             "type" : "text",
@@ -71,7 +84,8 @@
                     "type" : "text",
                     "analyzer" : "keyword_analyzer"
                   }
-            }  
+            },
+		        "type" : "text"
         },
         "source_doc_id" : {
             "type" : "text",
@@ -80,6 +94,9 @@
         "doc_content" : {
             "type" : "text",
             "analyzer" : "keyword"
+        },
+        "place" : {
+            "type" : "integer"
         }
         
       }
@@ -87,4 +104,3 @@
     
   }
 }
-

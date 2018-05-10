@@ -42,6 +42,7 @@ from django.db.models import options
 from django.utils import timezone
 from model_utils import Choices, managers
 from mptt.models import MPTTModel, TreeForeignKey
+from elasticsearch import helpers
 
 
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('index_mapping', )
@@ -414,6 +415,7 @@ class QueryPart(models.Model):
         ('must', 'Must occur'),
         ('should', 'Should occur'),
         ('must_not', 'Must not occur'),
+        ('filter', 'Filter by')
     )
 
     query = models.ForeignKey('Query', related_name='parts')
@@ -436,7 +438,7 @@ class QueryPart(models.Model):
 
 class DictionaryPart(QueryPart):
     dictionary = models.ForeignKey('Dictionary', related_name='+')
-
+    
     def json(self):
         return {
             'terms': {
