@@ -1,10 +1,14 @@
 language: python
 cache: pip
 
+sudo: required
+
 python:
     - "3.6"
 
-sudo: required
+services:
+    - elasticsearch
+    - redis
 
 stages:
     - lint
@@ -30,7 +34,7 @@ before_install:
     - ln -s project/develop/env .env
 
 install:
-    - pip install tox tox-travis
+    - pip install tox tox-travis tox-venv
 
 script:
     - tox
