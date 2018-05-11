@@ -5,6 +5,7 @@ from django.test import TestCase
 from django_dramatiq.test import DramatiqTestCase
 
 from mortar.models import Task
+from project.utils import log_level
 
 from .testapp import models
 
@@ -14,11 +15,8 @@ STATUS = Task.STATUS
 
 @contextmanager
 def disable_logging(name):
-    logger = logging.getLogger(name)
-    level = logger.level
-    logger.setLevel(logging.CRITICAL)
-    yield
-    logger.setLevel(level)
+    with log_level(name, logging.CRITICAL):
+        yield
 
 
 class TaskTransitionTests(DramatiqTestCase):

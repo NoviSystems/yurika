@@ -1,6 +1,4 @@
-import logging
 import time
-from contextlib import contextmanager
 from urllib.parse import urljoin
 
 from django.test import LiveServerTestCase, override_settings
@@ -10,15 +8,6 @@ from mortar import models
 
 
 STATUS = models.Task.STATUS
-
-
-@contextmanager
-def disable_logging(name):
-    logger = logging.getLogger(name)
-    level = logger.level
-    logger.setLevel(logging.CRITICAL)
-    yield
-    logger.setLevel(level)
 
 
 @override_settings(ROOT_URLCONF='tests.integration.mortar.testapp.urls')

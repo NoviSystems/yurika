@@ -27,8 +27,10 @@ def log_level(logger, level):
 
     actual = logger.level
     logger.setLevel(level)
-    yield
-    logger.setLevel(actual)
+    try:
+        yield
+    finally:
+        logger.setLevel(actual)
 
 
 def humanize_timedelta(td):
