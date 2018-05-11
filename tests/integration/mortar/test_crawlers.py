@@ -4,13 +4,12 @@ from contextlib import contextmanager
 from urllib.parse import urljoin
 
 from django.test import LiveServerTestCase, override_settings
-from project.utils.test import DramatiqTestCase
-from mortar.models import Task
+from django_dramatiq.test import DramatiqTestCase
 
 from mortar import models
 
 
-STATUS = Task.STATUS
+STATUS = models.Task.STATUS
 
 
 @contextmanager

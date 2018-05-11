@@ -1,9 +1,6 @@
 import dramatiq
-
 from django_dramatiq.models import Task
-
-# from django_dramatiq.test import DramatiqTestCase
-from project.utils.test import DramatiqTestCase
+from django_dramatiq.test import DramatiqTestCase
 
 
 class TestDramatiqTestCase(DramatiqTestCase):

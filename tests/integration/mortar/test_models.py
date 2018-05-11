@@ -2,7 +2,8 @@ import logging
 from contextlib import contextmanager
 
 from django.test import TestCase
-from project.utils.test import DramatiqTestCase
+from django_dramatiq.test import DramatiqTestCase
+
 from mortar.models import Task
 
 from .testapp import models
