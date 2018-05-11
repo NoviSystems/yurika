@@ -9,6 +9,7 @@ from terminaltables import SingleTable
 
 from mortar import documents
 from project.utils import log_level
+
 from .utils import truncate_message
 
 

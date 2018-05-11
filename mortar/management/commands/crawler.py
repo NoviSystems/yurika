@@ -4,8 +4,8 @@ from argparse import ArgumentTypeError
 
 import elasticsearch
 import progressbar
-from django.core.management.base import BaseCommand, CommandError
 from django.core.exceptions import ValidationError
+from django.core.management.base import BaseCommand, CommandError
 from django.core.validators import URLValidator
 from django.utils.formats import localize
 from django.utils.termcolors import colorize
@@ -13,7 +13,9 @@ from terminaltables import SingleTable
 
 from mortar import models
 from project import utils
+
 from .utils import side_by_side, style_by_line, truncate_message
+
 
 RESTART_HELP = """
 Clear a crawler's persistent state and restart it.
