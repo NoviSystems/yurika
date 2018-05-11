@@ -5,10 +5,7 @@ import elasticsearch
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.termcolors import colorize
 from elasticsearch_dsl import Index
-
-# UnixTable uses VT-100 escape sequences, which gives incorrect string lengths
-# WindowsTable is compatible
-from terminaltables.other_tables import WindowsTable as SingleTable
+from terminaltables import SingleTable
 
 from mortar import documents
 from project.utils import log_level

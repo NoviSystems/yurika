@@ -9,10 +9,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.utils.formats import localize
 from django.utils.termcolors import colorize
-
-# UnixTable uses VT-100 escape sequences, which gives incorrect string lengths
-# WindowsTable is compatible
-from terminaltables.other_tables import WindowsTable as SingleTable
+from terminaltables import SingleTable
 
 from mortar import models
 from project import utils
