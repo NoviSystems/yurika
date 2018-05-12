@@ -185,3 +185,13 @@ class DistanceMiddlewareTestCase(TestCase):
 
         out = list(middleware.process_spider_output(response, result, spider))
         self.assertEqual(out, [])
+
+    @spider_middleware(settings={'DISTANCE_LIMIT': 0})
+    def test_disabled(self, spider, middleware):
+        request = Request('http://domain.org')
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://domain.com')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertEqual(out[0].meta['distance'], 1)

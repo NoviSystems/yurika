@@ -86,15 +86,15 @@ class DistanceMiddleware(object):
 
             if not isinstance(item, Request):
                 yield item
-            elif self.maxdist and distance < self.maxdist:
-                if self.different_domains(response, item):
-                    item.meta['distance'] = distance + 1
-                yield item
-            else:
+            elif self.maxdist and distance >= self.maxdist:
                 logger.debug(
                     f"Ignoring link (distance > {self.maxdist}): {item}",
                     extra={'spider': spider}
                 )
+            else:
+                if self.different_domains(response, item):
+                    item.meta['distance'] = distance + 1
+                yield item
 
     def different_domains(self, response, request):
         a = urlparse_cached(response).hostname or ''
