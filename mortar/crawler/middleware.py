@@ -70,30 +70,45 @@ class BlockedDomainMiddleware(object):
 
 
 class DistanceMiddleware(object):
-    def __init__(self, stats, maxdist):
+    """
+    Similar to DepthMiddleware, but the distance/depth only increases
+    when traversing to a different domain.
+    """
+
+    def __init__(self, stats, maxdist, verbose):
         self.stats = stats
         self.maxdist = maxdist
+        self.verbose = verbose
 
     @classmethod
     def from_crawler(cls, crawler):
         settings = crawler.settings
         distance = settings.getint('DISTANCE_LIMIT')
-        return cls(crawler.stats, distance)
+        verbose = settings.getbool('DISTANCE_STATS_VERBOSE')
+        return cls(crawler.stats, distance, verbose)
 
     def process_spider_output(self, response, result, spider):
         for item in result:
-            distance = response.meta.get('distance', 0)
-
             if not isinstance(item, Request):
                 yield item
-            elif self.maxdist and distance >= self.maxdist:
+                continue
+
+            # only increase with domain change
+            distance = response.meta.get('distance', 0)
+            if self.different_domains(response, item):
+                distance += 1
+
+            if self.maxdist and distance > self.maxdist:
                 logger.debug(
                     f"Ignoring link (distance > {self.maxdist}): {item}",
                     extra={'spider': spider}
                 )
             else:
-                if self.different_domains(response, item):
-                    item.meta['distance'] = distance + 1
+                if self.verbose:
+                    self.stats.inc_value(f'request_distance_count/{distance}', spider=spider)
+                self.stats.max_value('request_distance_max', distance, spider=spider)
+                item.meta['distance'] = distance
+
                 yield item
 
     def different_domains(self, response, request):

@@ -145,7 +145,7 @@ class DistanceMiddlewareTestCase(TestCase):
 
         out = list(middleware.process_spider_output(response, result, spider))
         self.assertEqual(out, result)
-        self.assertNotIn('distance', out[0].meta)
+        self.assertEqual(out[0].meta['distance'], 0)
 
     @spider_middleware(settings={'DISTANCE_LIMIT': 5})
     def test_process_different_domain(self, spider, middleware):
@@ -195,3 +195,29 @@ class DistanceMiddlewareTestCase(TestCase):
         out = list(middleware.process_spider_output(response, result, spider))
         self.assertEqual(out, result)
         self.assertEqual(out[0].meta['distance'], 1)
+
+    @spider_middleware(settings={'DISTANCE_STATS_VERBOSE': True})
+    def test_stats(self, spider, middleware):
+        request = Request('http://domain.org')
+        response = Response('http://domain.org', request=request)
+        result = [Request('http://domain.org'), Request('http://domain.com')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertEqual(out[0].meta['distance'], 0)
+        self.assertEqual(out[1].meta['distance'], 1)
+
+        stats = spider.crawler.stats
+        self.assertEqual(stats.get_value('request_distance_count/0', spider=spider), 1)
+        self.assertEqual(stats.get_value('request_distance_count/1', spider=spider), 1)
+        self.assertEqual(stats.get_value('request_distance_max', spider=spider), 1)
+
+    @spider_middleware(settings={'DISTNACE_LIMIT': 5})
+    def test_non_request_ignored(self, spider, middleware):
+        request = Request('http://domain.org')
+        response = Response('http://domain.org', request=request)
+        result = [None, Request('http://domain.org')]
+
+        out = list(middleware.process_spider_output(response, result, spider))
+        self.assertEqual(out, result)
+        self.assertEqual(out[1].meta['distance'], 0)
