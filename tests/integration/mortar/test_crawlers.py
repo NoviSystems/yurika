@@ -17,7 +17,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         base_url = self.live_server_url
 
         # create a crawler and it's management task
-        crawler = models.Crawler.objects.create(urls=urljoin(base_url, 'a'))
+        crawler = models.Crawler.objects.create(start_urls=urljoin(base_url, 'a'))
         task = crawler.task
 
         # send off the task
@@ -35,13 +35,13 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         crawler.index.refresh()
 
         # and there should be three crawled documents
-        self.assertEqual(crawler.documents.count(), 3)
+        self.assertEqual(crawler.documents.search().count(), 3)
 
     def test_revoke(self):
         base_url = self.live_server_url
 
         # create a crawler and it's management task
-        crawler = models.Crawler.objects.create(urls=urljoin(base_url, 'a'))
+        crawler = models.Crawler.objects.create(start_urls=urljoin(base_url, 'a'))
         task = crawler.task
 
         # send off the task and immediately revoke task
@@ -60,7 +60,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         crawler.index.refresh()
 
         # and there should be less than three crawled documents
-        self.assertLess(crawler.documents.count(), 3)
+        self.assertLess(crawler.documents.search().count(), 3)
 
     def test_resume(self):
         # Start and revoke a crawler
@@ -86,7 +86,7 @@ class CrawlerTests(DramatiqTestCase, LiveServerTestCase):
         crawler.index.refresh()
 
         # and there should be three crawled documents
-        self.assertEqual(crawler.documents.count(), 3)
+        self.assertEqual(crawler.documents.search().count(), 3)
 
 
 class OpenCrawlerTests(DramatiqTestCase):
@@ -109,13 +109,13 @@ class OpenCrawlerTests(DramatiqTestCase):
 
     def test_restart(self):
         # create a crawler and send off the task
-        crawler = models.Crawler.objects.create(urls='https://www.ncsu.edu')
+        crawler = models.Crawler.objects.create(start_urls='https://www.ncsu.edu')
 
         # crawl for a bit
         self.crawl(crawler)
 
         # the task should be aborted and there should be some crawled documents
-        initial_count = crawler.documents.count()
+        initial_count = crawler.documents.search().count()
         self.assertEqual(crawler.task.status, STATUS.aborted)
         self.assertGreater(initial_count, 0)
 
@@ -126,7 +126,7 @@ class OpenCrawlerTests(DramatiqTestCase):
         self.crawl(crawler)
 
         # the task should be aborted and there should be more crawled documents
-        doc_count = crawler.documents.count()
+        doc_count = crawler.documents.search().count()
         self.assertEqual(crawler.task.status, STATUS.aborted)
         self.assertGreater(doc_count, initial_count)
 
@@ -136,13 +136,13 @@ class OpenCrawlerTests(DramatiqTestCase):
 
     def test_resume(self):
         # create a crawler and send off the task
-        crawler = models.Crawler.objects.create(urls='https://www.ncsu.edu')
+        crawler = models.Crawler.objects.create(start_urls='https://www.ncsu.edu')
 
         # crawl for a bit
         self.crawl(crawler)
 
         # the task should be aborted and there should be some crawled documents
-        initial_count = crawler.documents.count()
+        initial_count = crawler.documents.search().count()
         self.assertEqual(crawler.task.status, STATUS.aborted)
         self.assertGreater(initial_count, 0)
 
@@ -153,7 +153,7 @@ class OpenCrawlerTests(DramatiqTestCase):
         self.crawl(crawler)
 
         # the task should be aborted and there should be more crawled documents
-        doc_count = crawler.documents.count()
+        doc_count = crawler.documents.search().count()
         self.assertEqual(crawler.task.status, STATUS.aborted)
         self.assertGreater(doc_count, initial_count)
 
