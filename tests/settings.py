@@ -6,6 +6,15 @@ INSTALLED_APPS += [
 ]
 
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'db.sqlite3',
+        'TEST': {'NAME': 'test.sqlite3'},
+    }
+}
+
+
 # Store outgoing test emails in django.core.mail.outbox`.
 # https://docs.djangoproject.com/en/2.0/topics/testing/tools/#email-services
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
