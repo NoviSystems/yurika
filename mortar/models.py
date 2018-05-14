@@ -17,7 +17,6 @@ from django_fsm import FSMField, transition
 from elasticsearch import TransportError
 from elasticsearch_dsl import Index
 from model_utils import Choices, managers
-from nltk.tokenize import sent_tokenize
 from shortuuid import ShortUUID
 
 from mortar import documents
@@ -324,6 +323,9 @@ class SentenceTokenizer(models.Model):
 
     @classmethod
     def to_sentences(cls, document):
+        # see: https://github.com/nltk/nltk/issues/947
+        from nltk.tokenize import sent_tokenize
+
         sentences = sent_tokenize(document.text)
         sentences = [
             documents.Sentence(
