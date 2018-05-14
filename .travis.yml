@@ -1,7 +1,6 @@
+sudo: required
 language: python
 cache: pip
-
-sudo: required
 
 python:
     - "3.6"
@@ -13,7 +12,6 @@ services:
 stages:
     - lint
     - test
-    - system
 
 matrix:
     fast_finish: true
@@ -22,13 +20,13 @@ matrix:
       - { stage: lint, env: TOXENV=lint, }
       - { stage: lint, env: TOXENV=isort, }
 
-      - { stage: test, env: TOXENV=unit, }
-      - { stage: test, env: TOXENV=integration, }
-
-      - stage: system
-        env: TOXENV=functional
+      - stage: test
+        env: TOXENV=coverage
         addons:
             chrome: stable
+        after_success:
+            - pip install codecov && codecov
+
 
 before_install:
     - ln -s project/develop/env .env
