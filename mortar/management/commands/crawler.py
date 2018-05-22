@@ -86,9 +86,9 @@ def domains(filename):
         domain = domain.strip()
         domains.append(domain)
 
-        pre = f"invalid domain '{domain}' in '{filename} "
+        pre = f"invalid domain '{domain}' in '{filename}'"
 
-        # validate domain
+        # simple domain validation
         if '//' in domain:
             raise ArgumentTypeError(f"{pre} - domain must not contain a scheme")
 

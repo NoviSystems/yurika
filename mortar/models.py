@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import shutil
 import uuid
 from importlib import import_module
@@ -26,15 +25,11 @@ from project import utils
 # Elasticsearch-friendly identifiers (no uppercase characters)
 b36_uuid = ShortUUID(alphabet='0123456789abcdefghijklmnopqrstuvwxyz')
 
-# very simple domain name validation (matches 'domain.tld', '.domain.tld')
-domains_re = re.compile(r'^([a-zA-Z0-9\.\-])*$', flags=re.IGNORECASE)
-
 
 def validate_domains(text):
     for domain in text.splitlines():
-        if domains_re.match(domain) is None:
-            raise ValidationError("Invalid domain name: '%(domain)s'", params={'domain': domain})
-
+        msg = "Invalid domain name: '%(domain)s'." % {'domain': domain}
+        validators.DomainValidator(message=msg)(domain)
 
 def import_path(path):
     module, attr = path.rsplit('.', 1)
