@@ -306,13 +306,16 @@ class Command(BaseCommand):
         start = '\n'.join(start)
         allow = '\n'.join(allow) if allow is not None else ''
         block = '\n'.join(block) if block is not None else ''
+        config = config if config is not None else {}
 
-        c = models.Crawler.objects.create(
+        c = models.Crawler(
             start_urls=start,
             allowed_domains=allow,
             blocked_domains=block,
             config=config,
         )
+        c.full_clean()
+        c.save()
 
         if tokenize:
             models.SentenceTokenizer.objects.create(crawler=c)

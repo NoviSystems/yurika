@@ -20,6 +20,7 @@ from shortuuid import ShortUUID
 
 from mortar import documents
 from project import utils
+from project.utils import validators
 
 
 # Elasticsearch-friendly identifiers (no uppercase characters)
@@ -30,6 +31,11 @@ def validate_domains(text):
     for domain in text.splitlines():
         msg = "Invalid domain name: '%(domain)s'." % {'domain': domain}
         validators.DomainValidator(message=msg)(domain)
+
+
+def validate_dict(value):
+    if not isinstance(value, dict):
+        raise ValidationError("Value is not a 'dictionary' type.")
 
 
 class CastingManager(managers.InheritanceManager):
@@ -200,7 +206,8 @@ class Crawler(models.Model):
                                        help_text="List of domains to allow (separated by newlines).")
     blocked_domains = models.TextField(blank=True, validators=[validate_domains],
                                        help_text="List of domains to block (separated by newlines).")
-    config = jsonfield.JSONField(default=dict, help_text="Override settings for Scrapy.")
+    config = jsonfield.JSONField(blank=True, default=dict, validators=[validate_dict],
+                                 help_text="Override settings for Scrapy.")
 
     def __str__(self):
         return 'Crawler: %s' % self.pk
