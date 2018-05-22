@@ -82,9 +82,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.forms',
 
+    'rest_framework',
     'django_dramatiq',
 
     'project.utils',
+    'api',
     'bricks',
     'mortar',
 ]

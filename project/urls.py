@@ -40,5 +40,6 @@ urlpatterns = [
 
     url(r'^', include(authpatterns)),
 
+    url(r'^api/', include('api.urls')),
     url(r'^', include('bricks.urls')),
 ]

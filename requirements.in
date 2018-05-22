@@ -3,6 +3,7 @@ django-environ>=0.4.3
 colorlog
 
 beautifulsoup4
+djangorestframework
 django-dramatiq
 django-fsm
 django-model-utils
