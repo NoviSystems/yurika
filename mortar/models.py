@@ -2,7 +2,6 @@ import json
 import os
 import shutil
 import uuid
-from importlib import import_module
 from traceback import format_exception
 
 import jsonfield
@@ -12,6 +11,7 @@ from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.utils.functional import cached_property
+from django.utils.module_loading import import_string
 from django_fsm import FSMField, transition
 from elasticsearch import TransportError
 from elasticsearch_dsl import Index
@@ -30,12 +30,6 @@ def validate_domains(text):
     for domain in text.splitlines():
         msg = "Invalid domain name: '%(domain)s'." % {'domain': domain}
         validators.DomainValidator(message=msg)(domain)
-
-def import_path(path):
-    module, attr = path.rsplit('.', 1)
-    module = import_module(module)
-
-    return getattr(module, attr)
 
 
 class CastingManager(managers.InheritanceManager):
@@ -115,7 +109,7 @@ class Task(models.Model):
 
     @cached_property
     def task(self):
-        return import_path(self.task_path)
+        return import_string(self.task_path)
 
     def message(self, **options):
         """
