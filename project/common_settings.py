@@ -42,7 +42,7 @@ env.read_env(path('.env'))  # parse .env into os.environ
 
 
 # Authentication
-AUTH_USER_MODEL = 'utils.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 LOGIN_URL = reverse_lazy('login')
 LOGOUT_URL = reverse_lazy('logout')
@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'django_dramatiq',
 
     'project.utils',
+    'accounts',
     'api',
     'bricks',
     'mortar',
