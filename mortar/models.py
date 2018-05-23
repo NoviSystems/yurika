@@ -209,6 +209,9 @@ class Crawler(models.Model):
     config = jsonfield.JSONField(blank=True, default=dict, validators=[validate_dict],
                                  help_text="Override settings for Scrapy.")
 
+    class Meta:
+        ordering = ['pk']
+
     def __str__(self):
         return 'Crawler: %s' % self.pk
 
@@ -311,6 +314,11 @@ class CrawlerTask(Task):
 def crawler_task(sender, instance, created, **kwargs):
     if created:
         CrawlerTask.objects.create(crawler=instance)
+
+
+class CrawlerAccount(models.Model):
+    crawler = models.OneToOneField(Crawler, on_delete=models.CASCADE)
+    account = models.ForeignKey('accounts.Account', on_delete=models.CASCADE)
 
 
 class SentenceTokenizer(models.Model):
