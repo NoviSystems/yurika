@@ -1,6 +1,5 @@
 from django.conf import settings
 from dramatiq import middleware
-from raven.contrib.django import models as raven
 
 from .models import Task
 
@@ -12,6 +11,8 @@ class SentryMiddleware(middleware.Middleware):
 
     def after_process_message(self, broker, message, *, result=None, exception=None):
         if hasattr(settings, 'RAVEN_CONFIG') and exception is not None:
+            from raven.contrib.django import models as raven
+
             raven.client.captureException()
 
 
