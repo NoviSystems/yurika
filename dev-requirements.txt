@@ -1,4 +1,0 @@
-tox
-tox-venv
-ipython
-pip-tools

@@ -1,0 +1,7 @@
+include LICENSE
+include README.md
+recursive-include src/yurika/static *.js *.css *.png *.ico *.eot *.svg *.ttf *.woff *.woff2
+recursive-include src/yurika/templates *.html
+recursive-include src/yurika
+global-exclude __pycache__
+global-exclude *.py[co]
