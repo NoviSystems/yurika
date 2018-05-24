@@ -7,7 +7,7 @@ from django.utils.termcolors import colorize
 from elasticsearch_dsl import Search, exceptions
 from terminaltables import SingleTable
 
-from mortar import models
+from yurika.mortar import models
 
 
 def crawler(value):

@@ -1,7 +1,7 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from project.utils import validators
+from yurika.utils import validators
 
 
 class DomainField(serializers.CharField):

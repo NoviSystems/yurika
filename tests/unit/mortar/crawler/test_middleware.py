@@ -4,7 +4,7 @@ from unittest import TestCase
 from scrapy.http import Request, Response
 from scrapy.utils.test import get_crawler
 
-from mortar.crawler import middleware
+from yurika.mortar.crawler import middleware
 
 
 def spider_middleware(middleware_cls, settings=None, **spider_kwargs):

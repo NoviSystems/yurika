@@ -3,7 +3,7 @@ from multiprocessing import Process
 import dramatiq
 from dramatiq.middleware import Shutdown, TimeLimitExceeded
 
-from mortar import crawler, models
+from . import crawler, models
 
 
 DAY = 86_400_000

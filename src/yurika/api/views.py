@@ -1,7 +1,7 @@
 from rest_framework import viewsets
 
-from accounts import models as accounts
-from mortar import models as mortar
+from yurika.accounts import models as accounts
+from yurika.mortar import models as mortar
 
 from . import serializers
 

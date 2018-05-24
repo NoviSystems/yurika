@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import mortar.models
+import yurika.mortar.models
 
 
 class Migration(migrations.Migration):
@@ -16,11 +16,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='crawler',
             name='allowed_domains',
-            field=models.TextField(blank=True, help_text='List of domains to allow (separated by newlines).', validators=[mortar.models.validate_domains]),
+            field=models.TextField(blank=True, help_text='List of domains to allow (separated by newlines).', validators=[yurika.mortar.models.validate_domains]),
         ),
         migrations.AlterField(
             model_name='crawler',
             name='blocked_domains',
-            field=models.TextField(blank=True, help_text='List of domains to block (separated by newlines).', validators=[mortar.models.validate_domains]),
+            field=models.TextField(blank=True, help_text='List of domains to block (separated by newlines).', validators=[yurika.mortar.models.validate_domains]),
         ),
     ]

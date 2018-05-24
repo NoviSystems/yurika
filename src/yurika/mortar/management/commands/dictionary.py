@@ -7,10 +7,10 @@ from django.utils.termcolors import colorize
 from elasticsearch_dsl import Index
 from terminaltables import SingleTable
 
-from mortar import documents
-from project.utils import log_level
+from yurika.mortar import documents
+from yurika.utils import log_level
 
-from .utils import truncate_message
+from ..utils import truncate_message
 
 
 def file_contents(filename):

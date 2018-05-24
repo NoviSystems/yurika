@@ -1,8 +1,8 @@
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from accounts import models as accounts
-from mortar import models as mortar
+from yurika.accounts import models as accounts
+from yurika.mortar import models as mortar
 
 from . import fields
 

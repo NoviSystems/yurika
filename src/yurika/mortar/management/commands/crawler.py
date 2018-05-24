@@ -11,10 +11,10 @@ from django.utils.formats import localize
 from django.utils.termcolors import colorize
 from terminaltables import SingleTable
 
-from mortar import models
-from project import utils
+from yurika.mortar.models import models
+from yurika.utils import utils
 
-from .utils import side_by_side, style_by_line, truncate_message
+from ..utils import side_by_side, style_by_line, truncate_message
 
 
 RESTART_HELP = """

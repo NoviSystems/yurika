@@ -1,7 +1,7 @@
 from django.test import TestCase
 from rest_framework import serializers
 
-from api import fields
+from yurika.api import fields
 
 
 def get_items(value):

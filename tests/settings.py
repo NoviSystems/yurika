@@ -1,4 +1,4 @@
-from project.common_settings import *  # flake8: noqa
+from yurika.settings import *  # flake8: noqa
 
 
 INSTALLED_APPS += [

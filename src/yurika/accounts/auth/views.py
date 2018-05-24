@@ -1,7 +1,7 @@
 from django.contrib.auth import forms as auth_forms
 from django.contrib.auth import views as auth_views
 
-from ...utils import forms
+from yurika.utils import forms
 
 
 class AuthenticationForm(forms.HorizontalForm, auth_forms.AuthenticationForm):

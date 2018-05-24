@@ -18,9 +18,9 @@ from elasticsearch_dsl import Index
 from model_utils import Choices, managers
 from shortuuid import ShortUUID
 
-from mortar import documents
-from project import utils
-from project.utils import validators
+from yurika.utils import utils, validators
+
+from . import documents
 
 
 # Elasticsearch-friendly identifiers (no uppercase characters)
@@ -303,7 +303,7 @@ class CrawlerTask(Task):
 
     @property
     def task_path(self):
-        return 'mortar.tasks.crawl'
+        return 'yurika.mortar.tasks.crawl'
 
     def revoke(self):
         self.revoked = True

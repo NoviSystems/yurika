@@ -21,8 +21,8 @@ from django.urls import reverse_lazy
 from elasticsearch_dsl import connections
 
 
-# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Build paths inside the project with `path()`
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def path(value):
@@ -85,11 +85,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_dramatiq',
 
-    'project.utils',
-    'accounts',
-    'api',
-    'bricks',
-    'mortar',
+    'yurika.accounts',
+    'yurika.api',
+    'yurika.bricks',
+    'yurika.mortar',
+    'yurika.utils',
 ]
 
 MIDDLEWARE = [
@@ -102,9 +102,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'project.urls'
+ROOT_URLCONF = 'yurika.urls'
 
-WSGI_APPLICATION = 'project.wsgi.application'
+WSGI_APPLICATION = 'yurika.wsgi.application'
 
 TEMPLATES = [
     {
@@ -225,8 +225,8 @@ DRAMATIQ_BROKER = {
         'dramatiq.middleware.ShutdownNotifications',
         'django_dramatiq.middleware.AdminMiddleware',
         'django_dramatiq.middleware.DbConnectionsMiddleware',
-        'mortar.middleware.SentryMiddleware',
-        'mortar.middleware.TaskStatusMiddleware',
+        'yurika.mortar.middleware.SentryMiddleware',
+        'yurika.mortar.middleware.TaskStatusMiddleware',
     ]
 }
 

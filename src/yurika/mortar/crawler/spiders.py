@@ -5,7 +5,7 @@ from django.utils import timezone
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
-from mortar import documents
+from .. import documents
 
 
 class WebCrawler(CrawlSpider):
@@ -31,9 +31,9 @@ class WebCrawler(CrawlSpider):
             'scrapy.spidermiddlewares.depth.DepthMiddleware': 900,
 
             # default mortar middleware
-            'mortar.crawler.middleware.LogExceptionMiddleware': 100,
-            'mortar.crawler.middleware.BlockedDomainMiddleware': 500,
-            'mortar.crawler.middleware.DistanceMiddleware': 900,
+            'yurika.mortar.crawler.middleware.LogExceptionMiddleware': 100,
+            'yurika.mortar.crawler.middleware.BlockedDomainMiddleware': 500,
+            'yurika.mortar.crawler.middleware.DistanceMiddleware': 900,
         },
     }
 
