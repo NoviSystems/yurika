@@ -38,9 +38,12 @@ YURIKA_CONF = os.path.abspath(os.environ['YURIKA_CONF'])
 env = environ.Env(
     DEBUG=(bool, False),
     SECRET_KEY=str,
+    ALLOWED_HOSTS=list,
     DRAMATIQ_BROKER_URL=str,
     ELASTICSEARCH_URL=list,
     SENTRY_DSN=(str, ''),
+    STATIC_ROOT=(str, 'static-root'),
+    MEDIA_ROOT=(str, 'media-root'),
 )
 env.read_env(os.path.join(YURIKA_CONF, 'yurika.env'))
 
@@ -178,6 +181,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+STATIC_ROOT = path(env.str('STATIC_ROOT'))
+
 STATICFILES_DIRS = [
     path('static')
 ]
@@ -187,6 +192,8 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/1.11/topics/files/
 
 MEDIA_URL = '/media/'
+
+MEDIA_ROOT = path(env('MEDIA_ROOT'))
 
 
 # Messages - tags compatible w/ bootstrap and django admin styles

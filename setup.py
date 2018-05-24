@@ -54,6 +54,7 @@ setup(
     entry_points={
         'console_scripts': [
             'yurika = yurika.__main__:main',
+            'yurika-setup = yurika.__main__:init',
         ],
     },
     classifiers=[
