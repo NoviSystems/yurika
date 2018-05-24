@@ -30,6 +30,10 @@ def path(value):
     return os.path.abspath(os.path.join(BASE_DIR, value))
 
 
+# Base directory for configuration files
+YURIKA_CONF = os.path.abspath(os.environ['YURIKA_CONF'])
+
+
 # Read in environment variables. Default values should be secure.
 env = environ.Env(
     DEBUG=(bool, False),
@@ -38,7 +42,7 @@ env = environ.Env(
     ELASTICSEARCH_URL=list,
     SENTRY_DSN=(str, ''),
 )
-env.read_env(path('.env'))  # parse .env into os.environ
+env.read_env(os.path.join(YURIKA_CONF, 'yurika.env'))
 
 
 # Authentication
