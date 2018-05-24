@@ -4,10 +4,14 @@ cache: pip
 
 python:
     - "3.6"
+    - "3.7-dev"
 
 services:
     - elasticsearch
     - redis
+
+addons:
+    chrome: stable
 
 stages:
     - lint
@@ -15,26 +19,34 @@ stages:
 
 matrix:
     fast_finish: true
+    allow_failures:
+      - env: TOXENV=warnings
+      - python: "3.7-dev"
 
     include:
-      - { stage: lint, env: TOXENV=lint, }
-      - { stage: lint, env: TOXENV=isort, }
+      - stage: lint
+        env: TOXENV="lint,isort"
+        script: pip install -U tox tox-venv
+        addons:
 
       - stage: test
         env: TOXENV=coverage
-        addons:
-            chrome: stable
-        before_install:
-            - pip install .
-            - yurika-setup . --dev
+        after_success:
+            - pip install codecov && codecov
+
+      - stage: test
+        env: TOXENV=warnings
         after_success:
             - pip install codecov && codecov
 
 install:
-    - pip install tox tox-travis tox-venv
+    - pip install -U pip six setuptools wheel
+    - pip install -U tox tox-travis tox-venv
+    - python setup.py bdist_wheel
+    - pip install ./dist/yurika-*.whl
+    - yurika-setup . --dev
 
-script:
-    - tox
+script: tox --installpkg ./dist/yurika-*.whl
 
 notifications:
     email: false
