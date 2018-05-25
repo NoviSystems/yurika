@@ -14,9 +14,9 @@ __all__ = [
 
 def path(value):
     """
-    Builds absolute paths relative to settings.BASE_DIR.
+    Builds absolute paths relative to the Yurika configuration directory.
     """
-    return os.path.abspath(os.path.join(settings.BASE_DIR, value))
+    return os.path.abspath(os.path.join(settings.YURIKA_CONF, value))
 
 
 @contextmanager
