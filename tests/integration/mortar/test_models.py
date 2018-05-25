@@ -4,8 +4,8 @@ from contextlib import contextmanager
 from django.test import TestCase
 from django_dramatiq.test import DramatiqTestCase
 
-from mortar.models import Task
-from project.utils import log_level
+from yurika.mortar.models import Task
+from yurika.utils import log_level
 
 from .testapp import models
 

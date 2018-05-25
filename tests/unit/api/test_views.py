@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from accounts import models as accounts
+from yurika.accounts import models as accounts
 
 
 class CrawlerViewSetTests(APITestCase):

@@ -1,7 +1,7 @@
 from django.db import models
 from django_fsm import transition
 
-from mortar.models import Task
+from yurika.mortar.models import Task
 
 
 STATUS = Task.STATUS

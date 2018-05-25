@@ -1,24 +1,3 @@
-Django~=1.11
-django-environ>=0.4.3
-colorlog
-
-beautifulsoup4
-djangorestframework
-django-dramatiq
-django-fsm
-django-model-utils
-
-# dramatiq 1.1.0 + unreleased ShutdownNotifications middleware
--e git+https://github.com/Bogdanp/dramatiq.git#21ef374f0ae4189508e11ee7683fb55f1c296a5d#egg=dramatiq
-elasticsearch>=6
-elasticsearch-dsl>=6
-jsonfield2
-nltk
-progressbar2
-redis
-scrapy
-shortuuid
-terminaltables
-
-# Optional Integrations
-raven
+# dramatiq 1.1.0 + unreleased features (ShutdownNotifications middleware & Redis heartbeats)
+-e git+https://github.com/Bogdanp/dramatiq.git#2c3c47cc356e3034db002555a9ddd216e73a12ce#egg=dramatiq
+-e .[sentry]

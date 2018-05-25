@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 
-from project.utils.test import FunctionalTestCase
+from yurika.utils.test import FunctionalTestCase
 
 
 User = get_user_model()

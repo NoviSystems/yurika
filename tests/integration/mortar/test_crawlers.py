@@ -5,7 +5,7 @@ from django.test import LiveServerTestCase, override_settings
 from django.urls import reverse
 from django_dramatiq.test import DramatiqTestCase
 
-from mortar import models
+from yurika.mortar import models
 
 
 STATUS = models.Task.STATUS

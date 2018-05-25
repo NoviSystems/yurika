@@ -4,8 +4,6 @@ from django.conf.urls import include, url
 from django.http import HttpResponse
 from django.urls import reverse
 
-from project.urls import authpatterns
-
 
 def view_a(response):
     url_b = reverse('b')
@@ -78,5 +76,5 @@ urlpatterns = [
     url(r'^slow$', view_slow, name='slow'),
     url(r'^ref_slow$', view_ref_slow, name='ref-slow'),
     url(r'^$', view_c, name='home'),
-    url(r'^', include(authpatterns)),
+    url(r'^', include('yurika.accounts.auth.urls')),
 ]

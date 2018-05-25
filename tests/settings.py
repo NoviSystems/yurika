@@ -1,4 +1,4 @@
-from project.common_settings import *  # flake8: noqa
+from yurika.settings import *  # flake8: noqa
 
 
 INSTALLED_APPS += [
@@ -13,6 +13,10 @@ DATABASES = {
         'TEST': {'NAME': 'test.sqlite3'},
     }
 }
+
+
+# Weak hashing algorithm for performance improvements
+PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 
 # Store outgoing test emails in django.core.mail.outbox`.

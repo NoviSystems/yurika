@@ -1,4 +1,6 @@
 # Application
+yurika.env
+settings.py
 bundles/
 node_modules/
 .crawlers/
