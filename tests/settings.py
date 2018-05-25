@@ -15,6 +15,10 @@ DATABASES = {
 }
 
 
+# Weak hashing algorithm for performance improvements
+PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
+
 # Store outgoing test emails in django.core.mail.outbox`.
 # https://docs.djangoproject.com/en/2.0/topics/testing/tools/#email-services
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'

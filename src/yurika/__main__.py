@@ -4,7 +4,7 @@ import sys
 from argparse import ArgumentParser
 
 
-DEV_CONF = """\
+DEV_SETTINGS = """\
 '''
 -*- Development Settings -*-
 
@@ -20,7 +20,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 """
 
 
-PROD_CONF = """\
+PROD_SETTINGS = """\
 '''
 -*- Production Settings -*-
 
@@ -46,7 +46,7 @@ STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesSto
 """
 
 
-DEV_ENV = """\
+DEV_ENVFILE = """\
 # Environment settings suitable for development.
 # Note that these settings are *not* secure.
 
@@ -62,7 +62,7 @@ ELASTICSEARCH_URL="http://localhost:9200/"
 # SENTRY_DSN=""
 """
 
-PROD_ENV = """\
+PROD_ENVFILE = """\
 # Environment settings template.
 
 DEBUG=false
@@ -78,13 +78,13 @@ ELASTICSEARCH_URL=""
 """
 
 
-def init():
+def init(args=None):
     parser = ArgumentParser(description='Initialize a new configuration directory.')
     parser.add_argument('directory', type=str)
     parser.add_argument('--dev', dest='dev', action='store_true', default=False,
                         help="Use settings more suitable for development.")
 
-    options = parser.parse_args()
+    options = parser.parse_args(args)
 
     directory = os.path.abspath(options.directory)
     settings = os.path.join(directory, 'settings.py')
@@ -98,15 +98,15 @@ def init():
         parser.error(f"A file already exists at '{dotenv}'.")
 
     with open(settings, 'w') as file:
-        file.write(DEV_CONF if options.dev else PROD_CONF)
+        file.write(DEV_SETTINGS if options.dev else PROD_SETTINGS)
         print('Yurika settings created...')
     with open(dotenv, 'w') as file:
-        file.write(DEV_ENV if options.dev else PROD_ENV)
+        file.write(DEV_ENVFILE if options.dev else PROD_ENVFILE)
         print('Yurika environment file created...')
     print('\nDone!')
 
 
-def main():
+def main(args=None):
     sys.path.insert(0, os.environ['YURIKA_CONF'])
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 
@@ -118,8 +118,8 @@ def main():
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    execute_from_command_line(sys.argv)
+    execute_from_command_line(args)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))

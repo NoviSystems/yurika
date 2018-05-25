@@ -1,12 +1,14 @@
 import os
+import sys
 from contextlib import contextmanager
+from io import StringIO
 from logging import getLogger
 
 from django.conf import settings
 
 
 __all__ = [
-    'path', 'log_level', 'humanize_timedelta',
+    'path', 'capture_output', 'log_level', 'humanize_timedelta',
 ]
 
 
@@ -15,6 +17,20 @@ def path(value):
     Builds absolute paths relative to settings.BASE_DIR.
     """
     return os.path.abspath(os.path.join(settings.BASE_DIR, value))
+
+
+@contextmanager
+def capture_output():
+    """
+    Temporarily capture stdout/stderr streams.
+    """
+    tmpout, tmperr = StringIO(), StringIO()
+    stdout, stderr = sys.stdout, sys.stderr
+    try:
+        sys.stdout, sys.stderr = tmpout, tmperr
+        yield sys.stdout, sys.stderr
+    finally:
+        sys.stdout, sys.stderr = stdout, stderr
 
 
 @contextmanager
