@@ -107,8 +107,9 @@ def init(args=None):
 
 
 def main(args=None):
-    sys.path.insert(0, os.environ['YURIKA_CONF'])
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
+    os.environ.setdefault('YURIKA_CONF', '.')
+    sys.path.insert(0, os.environ['YURIKA_CONF'])
 
     try:
         from django.core.management import execute_from_command_line

@@ -1,5 +1,7 @@
 import os.path
 import tempfile
+from subprocess import PIPE, run
+from unittest import mock
 
 from django.test import TestCase
 
@@ -115,3 +117,19 @@ class YurikaSetupTests(TestCase):
             stdout.seek(0), stderr.seek(0)
             self.assertEqual(stdout.read(), '')
             self.assertIn(message, stderr.read())
+
+
+class MainTests(TestCase):
+
+    def test_yurika_conf_not_set(self):
+        with mock.patch.dict('os.environ', {'PYTHONPATH': '.'}):
+            del os.environ['YURIKA_CONF']
+
+            proc = run(['yurika'], stdout=PIPE, stderr=PIPE, check=True)
+            stdout = proc.stdout.decode('utf-8')
+            stderr = proc.stderr.decode('utf-8')
+
+            self.assertIn("Type 'yurika help <subcommand>'", stdout)
+            self.assertEqual(stderr, '')
+
+        self.assertIn('YURIKA_CONF', os.environ)
