@@ -11,7 +11,7 @@ from django.utils.formats import localize
 from django.utils.termcolors import colorize
 from terminaltables import SingleTable
 
-from yurika.mortar.models import models
+from yurika.mortar import models
 from yurika.utils import utils
 
 from ..utils import side_by_side, style_by_line, truncate_message
