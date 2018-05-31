@@ -4,8 +4,7 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
--e git+https://github.com/Bogdanp/dramatiq.git#2c3c47cc356e3034db002555a9ddd216e73a12ce#egg=dramatiq
--e .
+-e file:///Users/bagel/Documents/yurika
 asn1crypto==0.24.0        # via cryptography
 attrs==18.1.0             # via automat, service-identity
 automat==0.6.0            # via twisted
@@ -21,6 +20,7 @@ django-fsm==2.6.0
 django-model-utils==3.1.2
 django==1.11.13           # via django-dramatiq, django-environ, django-model-utils, jsonfield2
 djangorestframework==3.8.2
+dramatiq==1.2.0           # via django-dramatiq
 elasticsearch-dsl==6.1.0
 elasticsearch==6.2.0      # via elasticsearch-dsl
 hyperlink==18.0.0         # via twisted
@@ -31,8 +31,8 @@ jsonfield2==3.0.1
 lxml==4.2.1               # via parsel, scrapy
 nltk==3.3.0
 parsel==1.4.0             # via scrapy
-progressbar2==3.37.1
-prometheus-client==0.0.20
+progressbar2==3.38.0
+prometheus-client==0.0.20  # via dramatiq
 pyasn1-modules==0.2.1     # via service-identity
 pyasn1==0.4.3             # via pyasn1-modules, service-identity
 pycparser==2.18           # via cffi
@@ -42,7 +42,7 @@ python-dateutil==2.7.3    # via elasticsearch-dsl
 python-utils==2.3.0       # via progressbar2
 pytz==2018.4              # via django
 queuelib==1.5.0           # via scrapy
-raven==6.8.0
+raven==6.9.0
 redis==2.10.6
 scrapy==1.5.0
 service-identity==17.0.0  # via scrapy
