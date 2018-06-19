@@ -1,5 +1,6 @@
 from multiprocessing import Process
 
+import django.db
 import dramatiq
 from dramatiq.middleware import Shutdown, TimeLimitExceeded
 
@@ -11,6 +12,9 @@ def crawl(task_id):
     # NOTE: wrapping the crawler in a task enables pipelining and offloading to
     #       a remote worker. Otherwise this would be unnecessary indirection.
     task = models.CrawlerTask.objects.get(pk=task_id)
+
+    # Close the database connections so they aren't shared with the subprocess.
+    django.db.connections.close_all()
 
     proc = Process(target=crawler.crawl, args=(task, ))
     proc.start()
