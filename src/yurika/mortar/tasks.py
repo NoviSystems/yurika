@@ -1,10 +1,13 @@
-from multiprocessing import Process
+from multiprocessing import get_context
 
-import django.db
 import dramatiq
 from dramatiq.middleware import Shutdown, TimeLimitExceeded
 
-from . import crawler, models
+from . import models
+from .crawler import process
+
+
+spawn = get_context('spawn')
 
 
 @dramatiq.actor(max_retries=0, notify_shutdown=True)
@@ -13,10 +16,7 @@ def crawl(task_id):
     #       a remote worker. Otherwise this would be unnecessary indirection.
     task = models.CrawlerTask.objects.get(pk=task_id)
 
-    # Close the database connections so they aren't shared with the subprocess.
-    django.db.connections.close_all()
-
-    proc = Process(target=crawler.crawl, args=(task, ))
+    proc = spawn.Process(target=process.crawl, args=(task_id, ))
     proc.start()
 
     try:
