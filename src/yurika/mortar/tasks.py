@@ -30,9 +30,10 @@ def crawl(task_id):
 
             proc.join(.5)
 
-    except (Shutdown, TimeLimitExceeded):
+    except (Shutdown, TimeLimitExceeded) as exc:
         # Shutdown/TimeLimitExceeded are interrupts, not errors.
-        raise
+        task.log_error('Dramatiq process terminated.')
+        raise task.Abort from exc
 
     except Exception as exc:
         task.log_exception(exc)
