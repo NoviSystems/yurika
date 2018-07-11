@@ -22,7 +22,7 @@ requirements = [
 
     # Additional dependencies
     'beautifulsoup4',
-    'dramatiq>=1.1.0',
+    'dramatiq>=1.2.0',
     'elasticsearch>=6',
     'elasticsearch-dsl>=6',
     'jsonfield2',
