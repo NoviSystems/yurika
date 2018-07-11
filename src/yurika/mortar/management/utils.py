@@ -5,7 +5,7 @@ vt100_re = re.compile(r'(\x1b\(0(.*?)\x1b\(B)', flags=re.IGNORECASE)
 
 
 def vt100_strip(line):
-    """
+    r"""
     Strip the line of the VT100 escape sequences that switch to the special
     graphics set. This is useful for getting actual length of the line.
 
