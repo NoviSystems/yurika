@@ -24,28 +24,6 @@ class BaseDocument(Document):
         return handler(client, docs, **kwargs)
 
 
-class Document(BaseDocument):
-    url = field.Keyword()
-    referer = field.Keyword()
-    title = field.Text()
-    html = field.Text()
-    text = field.Text()
-    timestamp = field.Date(default_timezone=settings.TIME_ZONE)
-
-
-class Sentence(BaseDocument):
-    document_id = field.Keyword()
-    text = field.Text()
-
-
-class Dictionary(BaseDocument):
-    name = field.Keyword()
-    terms = field.Keyword()
-
-    class Index:
-        name = 'dictionaries'
-
-
 class DocumentContext:
     def __init__(self, document_cls, using=None, index=None):
         self.document_cls = document_cls
@@ -76,3 +54,25 @@ class DocumentContext:
         using = using or self.using
         index = index or self.index
         return self.document_cls.bulk_create(docs, using, index, **kwargs)
+
+
+class Document(BaseDocument):
+    url = field.Keyword()
+    referer = field.Keyword()
+    title = field.Text()
+    html = field.Text()
+    text = field.Text()
+    timestamp = field.Date(default_timezone=settings.TIME_ZONE)
+
+
+class Sentence(BaseDocument):
+    document_id = field.Keyword()
+    text = field.Text()
+
+
+class Dictionary(BaseDocument):
+    name = field.Keyword()
+    terms = field.Keyword()
+
+    class Index:
+        name = 'dictionaries'
