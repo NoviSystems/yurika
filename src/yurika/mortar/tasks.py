@@ -10,7 +10,7 @@ from .crawler import process
 spawn = get_context('spawn')
 
 
-@dramatiq.actor(max_retries=0, notify_shutdown=True)
+@dramatiq.actor(max_retries=0, time_limit=float('inf'), notify_shutdown=True)
 def crawl(task_id):
     # NOTE: wrapping the crawler in a task enables pipelining and offloading to
     #       a remote worker. Otherwise this would be unnecessary indirection.
