@@ -475,7 +475,7 @@ class Command(BaseCommand):
         self.stdout.write(table.table)
 
     def count(self, crawler, **options):
-        urls = [url for url in start_urls.split("\n")]
+        urls = [url for url in crawler.start_urls.split("\n")]
         data = []
         for url in urls:
             data.append(str(crawler.documents.search({"query": {"prefix": {"url": url}}}).count()) + " | " + url)
