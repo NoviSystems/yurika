@@ -4,7 +4,6 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
--e file:///Users/bagel/Documents/yurika
 asn1crypto==0.24.0        # via cryptography
 attrs==18.1.0             # via automat, service-identity
 automat==0.7.0            # via twisted

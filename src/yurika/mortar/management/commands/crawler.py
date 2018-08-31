@@ -199,6 +199,11 @@ class Command(BaseCommand):
         # #### STATS ######################################################### #
         parser = subparsers.add_parser('stats', cmd=self)
 
+        # #################################################################### #
+        # #### CRAWLER STATS ################################################# #
+        parser = subparsers.add_parser('count', cmd=self)
+        parser.add_argument('crawler', type=crawler, help="Crawler ID or UUID.")
+
     def handle(self, command, **options):
         handler = getattr(self, command)
 
@@ -467,4 +472,13 @@ class Command(BaseCommand):
         ))
         table.inner_heading_row_border = False
 
+        self.stdout.write(table.table)
+
+    def count(self, crawler, **options):
+        urls = [url for url in start_urls.split("\n")]
+        data = []
+        for url in urls:
+            data.append(str(crawler.documents.search({"query": {"prefix": {"url": url}}}).count()) + " | " + url)
+
+        table = SingleTable(data, title="Document Count | Start URL")
         self.stdout.write(table.table)
