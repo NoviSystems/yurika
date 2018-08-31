@@ -478,7 +478,7 @@ class Command(BaseCommand):
         urls = [url for url in crawler.start_urls.split("\n")]
         data = []
         for url in urls:
-            data.append(str(crawler.documents.search({"query": {"prefix": {"url": url}}}).count()) + " | " + url)
+            data.append(str(crawler.documents.search().update_from_dict({"query": {"prefix": {"url": url}}}).count()) + " | " + url)
 
         table = SingleTable(data, title="Document Count | Start URL")
         self.stdout.write(table.table)
