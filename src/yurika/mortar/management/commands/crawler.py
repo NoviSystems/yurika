@@ -481,4 +481,5 @@ class Command(BaseCommand):
         ]
 
         table = SingleTable(data, title="Document Count | Start URL")
+        table.inner_heading_row_border = False
         self.stdout.write(table.table)
