@@ -476,9 +476,9 @@ class Command(BaseCommand):
 
     def count(self, crawler, **options):
         urls = crawler.start_urls.splitlines()
-        urls = [url.replace("http://","").replace("https://","").split("/")[0] for url in urls]
+        urls = [url.replace("http://","").replace("https://","").replace("www.", "").split("/")[0] for url in urls]
         data = [
-            [str(crawler.documents.search().update_from_dict({"query": {"match_phrase": {"url": url}}}).count()) + " | " + url] for url in urls
+            [str(crawler.documents.search().update_from_dict({"query": {"match": {"url": url}}}).count()) + " | " + url] for url in urls
         ]
 
         table = SingleTable(data, title="Document Count | Start URL")
