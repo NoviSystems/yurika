@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from bs4 import BeautifulSoup
+from bs4.element import CData, NavigableString
 from django.utils import timezone
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
@@ -50,7 +51,7 @@ class WebCrawler(CrawlSpider):
         for element in soup(['script', 'style']):
             element.decompose()
 
-        text = soup.get_text()
+        text = get_text(soup)
         text = [line.strip() for line in text.splitlines()]
         text = [line for line in text if line]
         text = '\n'.join(text)
@@ -70,3 +71,30 @@ class WebCrawler(CrawlSpider):
         # parse sentences from document
         if tokenizer is not None:
             tokenizer.tokenize(doc)
+
+def _all_strings(soup, strip=False, types=(NavigableString, CData)):
+    '''
+    Like `bs4.element.Tag._get_strings()`, except `<br>` tags are turned into
+    newlines.
+    '''
+    for descendant in soup.descendants:
+        if descendant.name == 'br':
+            yield '\n'
+        if (
+            (types is None and not isinstance(descendant, NavigableString))
+            or
+            (types is not None and type(descendant) not in types)):
+            continue
+        if strip:
+            descendant = descendant.strip()
+            if len(descendant) == 0:
+                continue
+        yield descendant
+
+def get_text(soup, separator="", strip=False,
+                types=(NavigableString, CData)):
+    """
+    Like `bs4.element.Tag.get_text()`, except `<br>` tags are turned into
+    newlines.
+    """
+    return separator.join(_all_strings(soup, strip, types=types))
