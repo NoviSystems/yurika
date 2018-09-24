@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 from django.utils import timezone
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
-
+import hashlib
 from .. import documents
 
 
@@ -57,12 +57,15 @@ class WebCrawler(CrawlSpider):
 
         doc = documents.Document(
             url=response.url,
+            url_text=response.url,
             referer=str(response.request.headers.get('Referer', None)),
             title=soup.title.string if soup.title else "",
             html=response.text,
             text=text,
             timestamp=datetime.strftime(timezone.now(), "%Y-%m-%dT%H:%M:%S.%f"),
         )
+
+        doc.meta.id = str(hashlib.md5(response.url.encode()).hexdigest())
 
         # save doc to crawler's document index
         crawler.documents.create(doc)

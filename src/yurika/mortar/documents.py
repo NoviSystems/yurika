@@ -58,6 +58,7 @@ class DocumentContext:
 
 class Document(BaseDocument):
     url = field.Keyword()
+    url_text = field.Text()
     referer = field.Keyword()
     title = field.Text()
     html = field.Text()
