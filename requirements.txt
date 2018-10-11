@@ -4,6 +4,7 @@
 #
 #    pip-compile --output-file requirements.txt requirements.in
 #
+-e file:///home/mejohn10/yurika
 asn1crypto==0.24.0        # via cryptography
 attrs==18.1.0             # via automat, service-identity
 automat==0.7.0            # via twisted
@@ -49,6 +50,7 @@ shortuuid==0.5.0
 six==1.11.0               # via automat, cryptography, elasticsearch-dsl, nltk, parsel, progressbar2, pyopenssl, python-dateutil, python-utils, scrapy, w3lib
 terminaltables==3.1.0
 twisted==18.4.0           # via scrapy
+tqdm==4.26.0
 urllib3==1.23             # via elasticsearch
 w3lib==1.19.0             # via parsel, scrapy
 zope.interface==4.5.0     # via twisted

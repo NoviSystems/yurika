@@ -1,5 +1,6 @@
 import json
 import uuid
+import tqdm
 from argparse import ArgumentTypeError
 
 import elasticsearch
@@ -480,7 +481,7 @@ class Command(BaseCommand):
         #data = crawler.documents.search().update_from_dict({"aggs":{"urls":{"terms":{"field":"url", "size": 400000}}}})
         count = {}
         documents = crawler.documents.search()
-        for doc in documents.scan():
+        for doc in tqdm(documents.scan(), total=documents.count()):
             clean_url = doc.url.replace("http://","").replace("https://","").split("/")[0]
             if clean_url not in count.keys():
                 count[clean_url] = 1
