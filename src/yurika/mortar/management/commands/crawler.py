@@ -487,7 +487,7 @@ class Command(BaseCommand):
                 count[clean_url] += 1
 
         data = [
-            [ count[url] + " | " + url ] for url in count
+            [ str(count[url]) + " | " + url ] for url in count
         ]
         table = SingleTable(data, title="Document Count | Start URL")
         table.inner_heading_row_border = False
