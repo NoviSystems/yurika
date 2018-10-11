@@ -475,10 +475,20 @@ class Command(BaseCommand):
         self.stdout.write(table.table)
 
     def count(self, crawler, **options):
-        urls = crawler.start_urls.splitlines()
-        urls = [url.replace("http://","http?://*.").replace("https://","http?://*.").replace("www.", "").split("/")[0]  + "*" for url in urls]
-        data = crawler.documents.search().update_from_dict({"aggs":{"urls":{"terms":{"field":"url", "size": 400000}}}})
+        #urls = crawler.start_urls.splitlines()
+        #urls = [url.replace("http://","http?://*.").replace("https://","http?://*.").replace("www.", "").split("/")[0]  + "*" for url in urls]
+        #data = crawler.documents.search().update_from_dict({"aggs":{"urls":{"terms":{"field":"url", "size": 400000}}}})
+        count = {}
+        for doc in crawler.documents.scan():
+            clean_url = doc.url.replace("http://","").replace("https://","").split("/")[0]
+            if clean_url not in count.keys():
+                count[clean_url] = 1
+            else:
+                count[clean_url] += 1
 
+        data = [
+            [ count[url] + " | " + url ] for url in count
+        ]
         table = SingleTable(data, title="Document Count | Start URL")
         table.inner_heading_row_border = False
         self.stdout.write(table.table)
