@@ -479,7 +479,8 @@ class Command(BaseCommand):
         #urls = [url.replace("http://","http?://*.").replace("https://","http?://*.").replace("www.", "").split("/")[0]  + "*" for url in urls]
         #data = crawler.documents.search().update_from_dict({"aggs":{"urls":{"terms":{"field":"url", "size": 400000}}}})
         count = {}
-        for doc in crawler.documents.scan():
+        documents = crawler.documents.search()
+        for doc in documents.scan():
             clean_url = doc.url.replace("http://","").replace("https://","").split("/")[0]
             if clean_url not in count.keys():
                 count[clean_url] = 1

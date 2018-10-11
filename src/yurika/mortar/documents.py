@@ -35,9 +35,6 @@ class DocumentContext:
         index = index or self.index
         return self.document_cls.search(using, index)
 
-    def scan(self):
-        return self.document_cls.scan()
-
     def get(self, id, using=None, index=None, **kwargs):
         using = using or self.using
         index = index or self.index
