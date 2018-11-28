@@ -417,7 +417,7 @@ class Annotation(models.Model):
 
 class Document(models.Model):
     annotation = models.ForeignKey(Annotation, on_delete=models.CASCADE)
-    elastic_id = models.CharField(max_length=20)
+    elastic_id = models.TextField()
     url = models.URLField(max_length=2083)
     timestamp = models.DateTimeField()
     text = models.TextField()
@@ -425,6 +425,6 @@ class Document(models.Model):
 
 class Sentence(models.Model):
     annotation = models.ForeignKey(Annotation, on_delete=models.CASCADE)
-    elastic_id = models.CharField(max_length=20)
+    elastic_id = models.TextField()
     document = models.ForeignKey(Document, on_delete=models.CASCADE)
     text = models.TextField()
