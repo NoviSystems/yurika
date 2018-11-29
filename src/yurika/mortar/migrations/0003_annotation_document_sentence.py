@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
             name='Document',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('elastic_id', models.CharField(max_length=20)),
+                ('elastic_id', models.TextField()),
                 ('url', models.URLField(max_length=2083)),
                 ('timestamp', models.DateTimeField()),
                 ('text', models.TextField()),
@@ -39,7 +39,7 @@ class Migration(migrations.Migration):
             name='Sentence',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('elastic_id', models.CharField(max_length=20)),
+                ('elastic_id', models.TextField()),
                 ('text', models.TextField()),
                 ('annotation', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='mortar.Annotation')),
                 ('document', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='mortar.Document')),
